@@ -2,7 +2,7 @@
 
 class Grep_Signifyd_Model_Setup extends Mage_Core_Model_Resource_Setup
 {
-    const REGISTER_URL = 'http://grep.net.au/someurl';
+    const REGISTER_URL = 'https://signifyd.com/magento/installs';
     
     public function register()
     {
@@ -10,12 +10,11 @@ class Grep_Signifyd_Model_Setup extends Mage_Core_Model_Resource_Setup
             $helper = Mage::helper('grep_signifyd');
             Mage::getConfig()->reinit();
             $data = array(
-                'name' => $helper->getStoreName(),
-                'email' => $helper->getStoreEmail(),
-                'url' => $helper->getStoreUrl()
+                'url' => $helper->getStoreUrl(),
+                'email' => $helper->getStoreEmail()
             );
             
-            $helper->request(self::REGISTER_URL, http_build_query($data));
+            $helper->request(self::REGISTER_URL, json_encode($data), 'application/json');
         } catch (Exception $e) {}
     }
 }
