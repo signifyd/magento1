@@ -91,14 +91,6 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
         Mage::getModel('grep_signifyd/case')->getCollection()->delete();
     }
     
-    public function credentials()
-    {
-        $this->model->setUrl('https://api.signifyd.com/v1/cases');
-        $this->model->setAuth('1ZM6tPDEZbf1TadYv8RCfPIkS');
-        $this->model->setForceProcess(1);
-        $this->model->setEnabled(1);
-    }
-    
     public function setUp()
     {
         Mage::app();
@@ -175,6 +167,27 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(1, $case['purchase']['products'][0]['itemQuantity']);
         $this->assertEquals(198, $case['purchase']['products'][0]['itemPrice']);
         $this->assertEquals(0, $case['purchase']['products'][0]['itemWeight']);
+    }
+    
+    public function testRunOnce()
+    {
+        $order = Mage::getModel('sales/order')->setIncrementId('999');
+        $helper = Mage::helper('grep_signifyd');
+        
+        $helper->unmarkProcessed($order);
+        
+        $is_processed = $helper->isProcessed($order);
+        $this->assertEquals(0, $is_processed);
+        
+        $helper->markProcessed($order);
+        
+        $is_processed = $helper->isProcessed($order);
+        $this->assertEquals(1, $is_processed);
+        
+        $helper->unmarkProcessed($order);
+        
+        $is_processed = $helper->isProcessed($order);
+        $this->assertEquals(0, $is_processed);
     }
     
     public function testNoCard()

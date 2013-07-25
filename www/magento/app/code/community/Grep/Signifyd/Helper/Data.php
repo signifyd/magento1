@@ -63,6 +63,15 @@ class Grep_Signifyd_Helper_Data extends Mage_Core_Helper_Abstract
         $case->save();
     }
     
+    public function unmarkProcessed($order)
+    {
+        $collection = Mage::getModel('grep_signifyd/case')->getCollection()->addFieldToFilter('order_increment', $order->getIncrementId());
+        
+        foreach ($collection as $case) {
+            $case->delete();
+        }
+    }
+    
     public function request($url, $data=null, $auth=null, $contenttype="application/x-www-form-urlencoded")
     {
         if (Mage::getStoreConfig('grep_signifyd/log/request')) {
