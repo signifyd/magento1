@@ -72,10 +72,18 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
             $item = Mage::getModel('sales/quote_item')->addData($item_data);
             
             if (isset($products[$item_id])) {
-                $item->setProduct($products[$item_id]);
+                $item->setData('product', $products[$item_id]);
             }
             
             $this->quote->getItemsCollection()->addItem($item);
+            
+            $items[$item_id] = $item;
+            
+            if ($item->getParentItemId()) {
+                if (in_array($item->getParentItemId(), array_keys($items))) {
+                    $item->setData('parent', $items[$item->getParentItemId()]);
+                }
+            }
         }
         
         $this->model->order = $this->order;
@@ -129,7 +137,6 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
         
         $this->assertEquals("127.0.0.1", $case['purchase']['browserIpAddress']);
         $this->assertEquals("100000033", $case['purchase']['orderId']);
-        $this->assertEquals("2013-07-24T02:51:45+00:00", $case['purchase']['createdAt']);
         $this->assertEquals("USD", $case['purchase']['currency']);
         $this->assertEquals(203.0, $case['purchase']['totalPrice']);
         $this->assertEquals(5, $case['purchase']['shippingPrice']);
@@ -145,6 +152,7 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
         
         $case = $this->model->generateCase();
         
+        $this->assertEquals(1, count($case['purchase']['products']));
         $this->assertEquals("amuletum-ring-sterling-silver", $case['purchase']['products'][0]['itemId']);
         $this->assertEquals("Amuletum Ring: Recycled Sterling Silver", $case['purchase']['products'][0]['itemName']);
         // The URL may vary depending on the testing environment, so images & links are not asserted here
@@ -162,11 +170,25 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
         
         $case = $this->model->generateCase();
         
+        $this->assertEquals(1, count($case['purchase']['products']));
         $this->assertEquals("amuletum-ring-sterling-silver", $case['purchase']['products'][0]['itemId']);
         $this->assertEquals("Amuletum Ring: Recycled Sterling Silver", $case['purchase']['products'][0]['itemName']);
         $this->assertEquals(1, $case['purchase']['products'][0]['itemQuantity']);
         $this->assertEquals(198, $case['purchase']['products'][0]['itemPrice']);
         $this->assertEquals(0, $case['purchase']['products'][0]['itemWeight']);
+    }
+    
+    public function testConfigurable()
+    {
+        $this->weightData();
+        $this->initData();
+        
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+        
+        $case = $this->model->generateCase();
+        
+        $this->assertEquals(1, count($case['purchase']['products']));
+        $this->assertEquals(1.0, $case['purchase']['products'][0]['itemWeight']);
     }
     
     public function testRunOnce()
@@ -232,6 +254,10 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
         
         $case = $this->model->generateCase();
         
+        $this->assertEquals("Frank Guest", $case['card']['cardHolderName']);
+        $this->assertEquals("1111", $case['card']['last4']);
+        $this->assertEquals("1", $case['card']['expiryMonth']);
+        $this->assertEquals("2015", $case['card']['expiryYear']);
         $this->assertEquals(null, $case['card']['bin']);
     }
     
@@ -263,9 +289,7 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
         $this->assertEquals("guest@example.com", $case['userAccount']['emailAddress']);
         $this->assertEquals(null, $case['userAccount']['username']);
         $this->assertEquals("1234123", $case['userAccount']['phone']);
-        $this->assertEquals("2013-01-09T23:51:59+00:00", $case['userAccount']['createdDate']);
         $this->assertEquals("2", $case['userAccount']['accountNumber']);
-        $this->assertEquals("2013-07-24T03:57:34+00:00", $case['userAccount']['lastUpdateDate']);
         // The user doesn't really exist or have orders, so we don't assert the aggregate order value, last order & order count
     }
     
@@ -287,7 +311,7 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
     {
         $this->defaultData();
         
-        $this->customer_data = json_decode('{"website_id":"1","entity_id":"2","entity_type_id":"1","attribute_set_id":"0","email":"guest@example.com","group_id":"1","increment_id":null,"store_id":"1","created_at":"2013-01-09 23:51:59","updated_at":"2013-07-24 03:57:34","is_active":"1","disable_auto_group_change":"0","firstname":"Andrew","lastname":"Moon","password_hash":"bd54ffd4de1e2d9152c9c7d88ebb11a5:PO","created_in":"English","default_billing":"1","default_shipping":"1","tax_class_id":"3","parent_id":0,"confirmation":null}', true);
+        $this->customer_data = json_decode('{"website_id":"1","entity_id":"2","entity_type_id":"1","attribute_set_id":"0","email":"guest@example.com","group_id":"1","increment_id":null,"store_id":"1","created_at":"2013-01-09 23:51:59","updated_at":"2013-07-24 03:57:34","is_active":"1","disable_auto_group_change":"0","firstname":"Frank","lastname":"Guest","password_hash":"bd54ffd4de1e2d9152c9c7d88ebb11a5:PO","created_in":"English","default_billing":"1","default_shipping":"1","tax_class_id":"3","parent_id":0,"confirmation":null}', true);
     }
     
     public function ccData()
@@ -310,6 +334,14 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
         
         $this->items_data = json_decode('{"59":{"item_id":"59","quote_id":"37","created_at":"2013-07-23 06:52:12","updated_at":"2013-07-23 06:52:12","product_id":"539","store_id":"1","parent_item_id":null,"is_virtual":"0","sku":"kbr-5","name":"Kissing Bird Ring: 14K Gold","description":null,"applied_rule_ids":"","additional_data":null,"free_shipping":false,"is_qty_decimal":"0","no_discount":"0","weight":"1.0000","qty":2,"price":385,"base_price":385,"custom_price":null,"discount_percent":0,"discount_amount":0,"base_discount_amount":0,"tax_percent":0,"tax_amount":0,"base_tax_amount":0,"row_total":770,"base_row_total":770,"row_total_with_discount":"0.0000","row_weight":2,"product_type":"simple","base_tax_before_discount":null,"tax_before_discount":null,"original_custom_price":null,"gift_message_id":null,"weee_tax_applied":"a:0:{}","weee_tax_applied_amount":0,"weee_tax_applied_row_amount":0,"base_weee_tax_applied_amount":0,"base_weee_tax_applied_row_amnt":null,"weee_tax_disposition":0,"weee_tax_row_disposition":0,"base_weee_tax_disposition":0,"base_weee_tax_row_disposition":0,"redirect_url":null,"base_cost":null,"price_incl_tax":385,"base_price_incl_tax":385,"row_total_incl_tax":770,"base_row_total_incl_tax":770,"hidden_tax_amount":null,"base_hidden_tax_amount":null,"qty_options":[],"product":{},"tax_class_id":"2","is_recurring":"0","has_error":false,"is_nominal":false,"base_calculation_price":385,"calculation_price":385,"converted_price":385,"base_original_price":385,"taxable_amount":770,"base_taxable_amount":770,"is_price_incl_tax":false,"base_weee_tax_applied_row_amount":0,"original_price":385},"65":{"item_id":"65","quote_id":"37","created_at":"2013-07-24 03:53:15","updated_at":"2013-07-24 03:53:39","product_id":"507","store_id":"1","parent_item_id":null,"is_virtual":"0","sku":"protector-serpent-ring-brass","name":"Protector Serpent Ring: Recycled Brass","description":null,"applied_rule_ids":"","additional_data":null,"free_shipping":false,"is_qty_decimal":"0","no_discount":"0","weight":"0.0000","qty":1,"price":120,"base_price":120,"custom_price":null,"discount_percent":0,"discount_amount":0,"base_discount_amount":0,"tax_percent":0,"tax_amount":0,"base_tax_amount":0,"row_total":120,"base_row_total":120,"row_total_with_discount":"0.0000","row_weight":0,"product_type":"simple","base_tax_before_discount":null,"tax_before_discount":null,"original_custom_price":null,"gift_message_id":null,"weee_tax_applied":"a:0:{}","weee_tax_applied_amount":0,"weee_tax_applied_row_amount":0,"base_weee_tax_applied_amount":0,"base_weee_tax_applied_row_amnt":null,"weee_tax_disposition":0,"weee_tax_row_disposition":0,"base_weee_tax_disposition":0,"base_weee_tax_row_disposition":0,"redirect_url":null,"base_cost":null,"price_incl_tax":120,"base_price_incl_tax":120,"row_total_incl_tax":120,"base_row_total_incl_tax":120,"hidden_tax_amount":null,"base_hidden_tax_amount":null,"qty_options":[],"product":{},"tax_class_id":"2","is_recurring":"0","has_error":false,"is_nominal":false,"base_calculation_price":120,"calculation_price":120,"converted_price":120,"base_original_price":120,"taxable_amount":120,"base_taxable_amount":120,"is_price_incl_tax":false,"base_weee_tax_applied_row_amount":0,"original_price":120}}', true);
         $this->products_data = json_decode('{"59":{"entity_id":"539","entity_type_id":"10","attribute_set_id":"65","type_id":"simple","sku":"kbr-5","created_at":"2012-11-26 19:33:02","updated_at":"2013-01-09 03:19:25","has_options":"0","required_options":"0","name":"Kissing Bird Ring: 14K Gold","small_image":"no_selection","url_key":"kissing-bird-ring-14k-gold","thumbnail":"no_selection","gift_message_available":"0","url_path":"kissing-bird-ring-14k-gold-549.html","msrp_enabled":"2","msrp_display_actual_price_type":"4","status":"1","tax_class_id":"2","visibility":"4","enable_googlecheckout":"1","is_recurring":"0","weight":"1.0000","price":"385.0000","cost":null,"special_price":null,"msrp":null,"special_from_date":null,"special_to_date":null,"is_salable":"1","stock_item":{},"request_path":"kissing-bird-ring-14k-gold-549.html","tier_price":[],"is_in_stock":"1","store_id":"1","customer_group_id":"1","final_price":null,"group_price":[],"group_price_changed":0},"65":{"entity_id":"507","entity_type_id":"10","attribute_set_id":"66","type_id":"simple","sku":"protector-serpent-ring-brass","created_at":"2012-11-26 19:32:25","updated_at":"2012-11-26 19:32:25","has_options":"0","required_options":"0","name":"Protector Serpent Ring: Recycled Brass","small_image":"\/p\/r\/protectorring1_18.jpg","url_key":"protector-serpent-ring-brass","thumbnail":"\/p\/r\/protectorring1_18.jpg","gift_message_available":"0","url_path":"protector-serpent-ring-brass.html","msrp_enabled":"2","msrp_display_actual_price_type":"4","status":"1","tax_class_id":"2","visibility":"4","enable_googlecheckout":"1","is_recurring":"0","price":"120.0000","cost":null,"weight":"0.0000","special_price":null,"msrp":null,"special_from_date":null,"special_to_date":null,"is_salable":"1","stock_item":{},"request_path":"protector-serpent-ring-brass.html","tier_price":[],"is_in_stock":"1","store_id":"1","customer_group_id":"1","final_price":null,"group_price":[],"group_price_changed":0}}', true);
+    }
+    
+    public function weightData()
+    {
+        $this->defaultData();
+        
+        $this->items_data = json_decode('{"21":{"store_id":"1","quote_item_id":"3","quote_parent_item_id":null,"product_id":"2","product_type":"configurable","qty_backordered":null,"product_options":"a:6:{s:15:\"info_buyRequest\";a:5:{s:4:\"uenc\";s:92:\"aHR0cDovLzEyNy4wLjAuMS9tYWdlbnRvL2NhdC9jb25maWd1cmFibGUuaHRtbD9fX19TSUQ9VSZvcHRpb25zPWNhcnQ,\";s:7:\"product\";s:1:\"2\";s:15:\"related_product\";s:0:\"\";s:15:\"super_attribute\";a:1:{i:80;s:1:\"5\";}s:3:\"qty\";s:1:\"1\";}s:15:\"attributes_info\";a:1:{i:0;a:2:{s:5:\"label\";s:5:\"Color\";s:5:\"value\";s:3:\"Red\";}}s:11:\"simple_name\";s:3:\"Red\";s:10:\"simple_sku\";s:3:\"red\";s:20:\"product_calculations\";i:1;s:13:\"shipment_type\";i:0;}","sku":"test-configurable","name":"Configurable","description":null,"weight":"1.0000","is_qty_decimal":"0","qty_ordered":1,"is_virtual":"0","original_price":1,"applied_rule_ids":"","additional_data":null,"price":1,"base_price":"1.0000","tax_percent":0,"tax_amount":0,"tax_before_discount":null,"base_tax_before_discount":null,"tax_string":null,"row_weight":1,"row_total":1,"base_original_price":"1.0000","base_tax_amount":0,"base_row_total":1,"base_cost":null,"price_incl_tax":null,"base_price_incl_tax":null,"row_total_incl_tax":null,"base_row_total_incl_tax":null,"weee_tax_applied":"a:0:{}","weee_tax_applied_amount":0,"weee_tax_applied_row_amount":0,"base_weee_tax_applied_amount":0,"base_weee_tax_applied_row_amount":0,"weee_tax_disposition":0,"base_weee_tax_disposition":0,"weee_tax_row_disposition":0,"base_weee_tax_row_disposition":0,"discount_percent":0,"discount_amount":0,"base_discount_amount":0,"gift_message_id":null,"gift_message_available":"2","order_id":"11","has_children":true,"created_at":"2013-07-25 01:27:02","updated_at":"2013-07-25 01:27:02","item_id":"21"},"22":{"store_id":"1","quote_item_id":"4","quote_parent_item_id":"3","product_id":"1","product_type":"simple","qty_backordered":null,"product_options":"a:1:{s:15:\"info_buyRequest\";a:5:{s:4:\"uenc\";s:92:\"aHR0cDovLzEyNy4wLjAuMS9tYWdlbnRvL2NhdC9jb25maWd1cmFibGUuaHRtbD9fX19TSUQ9VSZvcHRpb25zPWNhcnQ,\";s:7:\"product\";s:1:\"2\";s:15:\"related_product\";s:0:\"\";s:15:\"super_attribute\";a:1:{i:80;s:1:\"5\";}s:3:\"qty\";s:1:\"1\";}}","sku":"red","name":"Red","description":null,"weight":"1.0000","is_qty_decimal":"0","qty_ordered":1,"is_virtual":"0","original_price":0,"applied_rule_ids":"","additional_data":null,"price":0,"base_price":"0.0000","tax_percent":"0.0000","tax_amount":"0.0000","tax_before_discount":null,"base_tax_before_discount":null,"tax_string":null,"row_weight":"0.0000","row_total":"0.0000","base_original_price":"0.0000","base_tax_amount":"0.0000","base_row_total":"0.0000","base_cost":null,"price_incl_tax":null,"base_price_incl_tax":null,"row_total_incl_tax":null,"base_row_total_incl_tax":null,"weee_tax_applied":"a:0:{}","weee_tax_applied_amount":"0.0000","weee_tax_applied_row_amount":"0.0000","base_weee_tax_applied_amount":"0.0000","base_weee_tax_applied_row_amount":"0.0000","weee_tax_disposition":"0.0000","base_weee_tax_disposition":"0.0000","weee_tax_row_disposition":"0.0000","base_weee_tax_row_disposition":"0.0000","discount_percent":"0.0000","discount_amount":"0.0000","base_discount_amount":"0.0000","gift_message_id":null,"gift_message_available":"2","order_id":"11","parent_item_id":"21","created_at":"2013-07-25 01:27:03","updated_at":"2013-07-25 01:27:03","item_id":"22"}}', true);
+        $this->products_data = json_decode('{"21":{"entity_id":"2","entity_type_id":"4","attribute_set_id":"4","type_id":"configurable","sku":"test-configurable","has_options":"1","required_options":"1","created_at":"2013-07-25 01:12:29","updated_at":"2013-07-25 01:12:29","price":"1.0000","special_price":null,"name":"Configurable","meta_title":"","meta_description":"","url_key":"configurable","url_path":"configurable.html","custom_design":"","page_layout":"","options_container":"container2","gift_message_available":"2","description":"Test","short_description":"Test","meta_keyword":"","custom_layout_update":"","special_from_date":null,"special_to_date":null,"news_from_date":null,"news_to_date":null,"custom_design_from":null,"custom_design_to":null,"status":"1","tax_class_id":"0","visibility":"4","enable_googlecheckout":"1","tier_price":[],"tier_price_changed":0,"media_gallery":{"images":[],"values":[]},"stock_item":{},"is_in_stock":"1","is_salable":"1"},"22":{"entity_id":"1","entity_type_id":"4","attribute_set_id":"4","type_id":"simple","sku":"red","has_options":"0","required_options":"0","created_at":"2013-07-25 01:12:14","updated_at":"2013-07-25 01:12:14","weight":"1.0000","price":"1.0000","special_price":null,"cost":null,"name":"Red","meta_title":"","meta_description":"","url_key":"red","url_path":"red.html","custom_design":"","page_layout":"","options_container":"container2","gift_message_available":"2","description":"red","short_description":"red","meta_keyword":"","custom_layout_update":"","special_from_date":null,"special_to_date":null,"news_from_date":null,"news_to_date":null,"custom_design_from":null,"custom_design_to":null,"status":"1","color":"5","visibility":"1","tax_class_id":"0","enable_googlecheckout":"1","tier_price":[],"tier_price_changed":0,"media_gallery":{"images":[],"values":[]},"stock_item":{},"is_in_stock":"1","is_salable":"1"}}', true);
     }
     
     public function noData()
