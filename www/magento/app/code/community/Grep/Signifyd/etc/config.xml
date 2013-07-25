@@ -91,6 +91,7 @@
                                     <children>
                                         <grep_signifyd>
                                             <title>Signifyd</title>
+                                            <sort_order>9999</sort_order>
                                         </grep_signifyd>
                                     </children>
                                 </config>
