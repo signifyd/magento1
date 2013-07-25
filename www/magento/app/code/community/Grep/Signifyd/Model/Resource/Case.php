@@ -1,6 +1,6 @@
 <?php
 
-class Grep_Signifyd_Model_Resource_Case extends Mage_Core_Model_Resource_Db_Abstract
+class Grep_Signifyd_Model_Resource_Case extends Mage_Core_Model_Mysql4_Abstract
 {
     protected function _construct()
     {  
