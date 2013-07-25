@@ -7,7 +7,7 @@ Running the unit tests for this extension requires the following:
 1. A linux-based system, preferably Ubuntu for following these instructions
 2. PHP 5.3+
 3. PHPUnit and the related dependences (see below)
-4. php5-curl
+4. All the usual Magento dependencies, including php5-curl
 5. A working (supported) Magento installation
 6. This extension, installed correctly (see the README.txt document)
 
@@ -30,4 +30,16 @@ Running the unit tests for this extension requires the following:
     $ cd app/code/community/Grep/Signifyd/tests/
 
 2. Run PHPUnit:
-    $ phpunit Grep_Signifyd_ObserverTest observer.php
+    $ phpunit Grep_Signifyd_SignifydTest signifyd.php
+
+
+== Testing tools ==
+
+A number of scripts for automated testing are available in ./testbed. The system works like this:
+
+1. Any number of Magento distributions are downloaded and extracted into uniquely named folders under ./testbed
+2. The install.sh script is run once per desired instance (usage info is available on first run). This will take a very long time if there are more than a few Magento instances.
+3. The ./deploy.sh script is run once to copy the extension into the correct place for each install.
+4. The ./init.sh script is run once to finalise installation of each copy of the extension. Fix any errors that occur.
+5. The ./test.sh script will attempt to automatically run the phpunit tests for each Magento install.
+6. After each change to the extension/tests, run ./clean.sh then ./deploy.sh again. Caches may also need to be flushed, etc.

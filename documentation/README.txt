@@ -9,7 +9,7 @@ See: http://signifyd.com for further information.
 The following stable versions of Magento are supported:
 
 Magento Community Edition 1.4.0.0 - 1.7.0.2
-Magento Enterprise Edition 1.9.0.0 - 1.13.0.1
+Magento Enterprise Edition 1.9.0.0 - 1.12.0.2
 
 
 == Installation ==
