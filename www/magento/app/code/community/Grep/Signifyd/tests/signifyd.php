@@ -2,7 +2,7 @@
 
 require_once '../../../../../Mage.php';
  
-class Grep_Signifyd_ObserverTest extends PHPUnit_Framework_TestCase
+class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
 {
     protected $products = null;
     protected $items = null;
@@ -252,7 +252,6 @@ class Grep_Signifyd_ObserverTest extends PHPUnit_Framework_TestCase
         $this->assertEquals("1234123", $case['userAccount']['phone']);
         $this->assertEquals("2013-01-09T23:51:59+00:00", $case['userAccount']['createdDate']);
         $this->assertEquals("2", $case['userAccount']['accountNumber']);
-        $this->assertEquals("100000004", $case['userAccount']['lastOrderId']);
         $this->assertEquals("2013-07-24T03:57:34+00:00", $case['userAccount']['lastUpdateDate']);
         // The user doesn't really exist or have orders, so we don't assert the aggregate order value, last order & order count
     }
