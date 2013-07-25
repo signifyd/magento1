@@ -69,6 +69,7 @@
         <grep_signifyd>
             <settings>
                 <enabled>0</enabled>
+                <url>https://api.signifyd.com</url>
             </settings>
             <log>
                 <request>0</request>
