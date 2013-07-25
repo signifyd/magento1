@@ -15,18 +15,64 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
         $helper = Mage::helper('grep_signifyd');
         
         foreach ($this->quote->getAllItems() as $item) {
-            if ($item->getProductType() == 'simple') {
-                $product = array();
+            if (!$item->getProductType() || $item->getProductType() == 'simple') {
+                $product_object = $item->getData('product');
                 
-                $product['itemId'] = $item->getSku();
-                $product['itemName'] = $item->getName();
-                $product['itemUrl'] = $helper->getProductUrl($item->getProduct());
-                $product['itemImage'] = $helper->getProductImage($item->getProduct());
-                $product['itemQuantity'] = intval($item->getQty());
-                $product['itemPrice'] = floatval($item->getBasePrice());
-                $product['itemWeight'] = intval($item->getProduct()->getWeight());
+                if (!$product_object || !$product_object->getId()) {
+                    $product_object = Mage::getModel('catalog/product')->load($item->getProductId());
+                }
                 
-                $products[] = $product;
+                if ($product_object) {
+                    $product = array();
+                    
+                    $product['itemId'] = $item->getSku();
+                    $product['itemName'] = $item->getName();
+                    $product['itemUrl'] = $helper->getProductUrl($product_object);
+                    $product['itemImage'] = $helper->getProductImage($product_object);
+                    
+                    $qty = 1;
+                    if ($item->getQty()) {
+                        $qty = $item->getQty();
+                    } else if ($item->getQtyOrdered()) {
+                        $qty = $item->getQtyOrdered();
+                    }
+                    
+                    $price = 0;
+                    if ($item->getBasePrice() > 0) {
+                        $price = $item->getBasePrice();
+                    } else if ($item->getPrice() > 0) {
+                        $price = $item->getPrice();
+                    } else if ($product_object->getData('price') > 0) {
+                        $price = $product_object->getData('price');
+                    } else {
+                        $parent = $item->getData('parent');
+                        
+                        if (!$parent) {
+                            $parent = $item->getParentItem();
+                        }
+                        
+                        if ($parent) {
+                            if ($parent->getBasePrice() > 0) {
+                                $price = $parent->getBasePrice();
+                            } else if ($parent->getPrice()) {
+                                $price = $parent->getPrice();
+                            }
+                        }
+                    }
+                    
+                    $weight = 0;
+                    if ($item->hasWeight()) {
+                        $weight = $item->getWeight();
+                    } else if ($product_object->hasWeight()) {
+                        $weight = $product_object->getWeight();
+                    }
+                    
+                    $product['itemQuantity'] = intval($qty);
+                    $product['itemPrice'] = floatval($price);
+                    $product['itemWeight'] = floatval($weight);
+                    
+                    $products[] = $product;
+                }
             }
         }
         
@@ -170,7 +216,11 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
         $recipient = array();
         
         $recipient['fullName'] = $this->shipping_address->getFirstname() . ' ' . $this->shipping_address->getLastname();
-        $recipient['confirmationEmail'] = $this->shipping_address->getEmail(); // Note that this field is always the same as the email on the billing address
+        // Email: Note that this field is always the same for both addresses
+        $recipient['confirmationEmail'] = $this->shipping_address->getEmail();
+        if (!$recipient['confirmationEmail']) {
+            $recipient['confirmationEmail'] = $this->order->getCustomerEmail();
+        }
         $recipient['confirmationPhone'] = $this->shipping_address->getTelephone();
         
         $recipient['deliveryAddress'] = $this->getShippingAddress();
@@ -305,6 +355,12 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
                 
                 $this->quote = $order->getQuote();
                 
+                if (!$this->quote) {
+                    $this->quote = $order;
+                }
+                
+                $this->logData();
+                
                 $case = $this->generateCase();
                 
                 $this->submitCase($case);
@@ -331,7 +387,8 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
         
         foreach ($this->quote->getAllItems() as $item) {
             $items[$item->getId()] = $item->getData();
-            $products[$item->getId()] = $item->getProduct()->getData();
+            $product = Mage::getModel('catalog/product')->load($item->getProductId());
+            $products[$item->getId()] = $product->getData();
         }
         
         $items = json_encode($items);
