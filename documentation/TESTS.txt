@@ -1,0 +1,33 @@
+Testing
+
+== Dependencies ==
+
+Running the unit tests for this extension requires the following:
+
+1. A linux-based system, preferably Ubuntu for following these instructions
+2. PHP 5.3+
+3. PHPUnit and the related dependences (see below)
+4. php5-curl
+5. A working (supported) Magento installation
+6. This extension, installed correctly (see the README.txt document)
+
+== Install PHPUnit ==
+
+1. Install pear: $ sudo apt-get install php-pear
+
+2. Install PHPUnit and the related dependencies:
+    # pear config-set auto_discover 1
+    # pear install pear.phpunit.de/PHPUnit
+    # pear install pear.phpunit.de/PHP_Invoker
+    # pear install pear.phpunit.de/DbUnit
+    # pear install pear.phpunit.de/PHPUnit_Selenium
+    
+    These dependencies may vary depending on system configuration. If the tests die with a "No such file" error, usually a dependency will be missing. See here for other possibilities: http://phpunit.de/manual/3.7/en/installation.html
+
+== Running Tests ==
+
+1. cd to the tests directory:
+    $ cd app/code/community/Grep/Signifyd/tests/
+
+2. Run PHPUnit:
+    $ phpunit Grep_Signifyd_ObserverTest observer.php

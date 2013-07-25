@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Grep_Signifyd>
+            <active>true</active>
+            <codePool>community</codePool>
+        </Grep_Signifyd>
+    </modules>
+</config>
