@@ -6,10 +6,17 @@ When enabled, each new order will be submited as a new signifyd case, allowing m
 
 See: http://signifyd.com for further information.
 
+
+
+== Requirements ==
+
+This extension requires Magento to be configured to retrieve the correct customer IP address when your store is running behind a load-balancer. This requires a minor local.xml configuration change. See app/etc/local.xml.additional for an example.
+
 The following stable versions of Magento are supported:
 
 Magento Community Edition 1.4.0.0 - 1.7.0.2
 Magento Enterprise Edition 1.9.0.0 - 1.12.0.2
+
 
 
 == Installation ==
