@@ -2,9 +2,11 @@
 
 This extension can be packaged with the Magento connect packaging tool, or manually with GNU tar.
 
+
+
 == Packaging for Connect ==
 
-Follow these steps to create a package to upload to Magento Connect
+Follow these steps to create a package to upload to Magento Connect. Start from any working Magento installation with the extension installed.
 
 1. Navigate to the Magento Connect packaging tool:
     Magento Admin -> System -> Magento Connect -> Package Extensions
@@ -18,8 +20,13 @@ Follow these steps to create a package to upload to Magento Connect
     PHP < 6.0.0
 
 4. The following contents should be entered:
-    Magento Global Configuration | Grep_Signifyd.xml | File |   |
-    Magento community module file | Grep/Signifyd | Recursive Dir | (etc|Model|Helper) |
+    Magento Global Configuration | modules/Grep_Signifyd.xml | File |   |
+    Magento community module file | Grep/Signifyd | Recursive Dir | #(etc|Model|Helper|sql)# |
+
+5. Click "Save Data and Create Package"
+
+6. The package should be created in ./var/connect.
+
 
 
 == Packaging for manual distribution ==
@@ -31,6 +38,7 @@ Follow these steps to create a tar package:
 
 2. Run the following tar command:
     $ tar -zcvf grep_signifyd-1.0.0.tar.gz app/etc/modules/Grep_Signifyd.xml app/code/community/Grep/Signifyd/etc app/code/community/Grep/Signifyd/Model app/code/community/Grep/Signifyd/Helper
+
 
 
 == Upload a package to Magento connect ==
