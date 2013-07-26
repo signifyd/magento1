@@ -1,6 +1,6 @@
 <?php
 
-class Grep_Signifyd_Helper_Data extends Mage_Core_Helper_Abstract
+class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 {
     public function getProductUrl($product)
     {
@@ -47,7 +47,7 @@ class Grep_Signifyd_Helper_Data extends Mage_Core_Helper_Abstract
     
     public function isProcessed($order)
     {
-        $collection = Mage::getModel('grep_signifyd/case')->getCollection()->addFieldToFilter('order_increment', $order->getIncrementId());
+        $collection = Mage::getModel('signifyd_connect/case')->getCollection()->addFieldToFilter('order_increment', $order->getIncrementId());
         
         if (count($collection)) {
             return true;
@@ -58,14 +58,14 @@ class Grep_Signifyd_Helper_Data extends Mage_Core_Helper_Abstract
     
     public function markProcessed($order)
     {
-        $case = Mage::getModel('grep_signifyd/case');
+        $case = Mage::getModel('signifyd_connect/case');
         $case->setOrderIncrement($order->getIncrementId());
         $case->save();
     }
     
     public function unmarkProcessed($order)
     {
-        $collection = Mage::getModel('grep_signifyd/case')->getCollection()->addFieldToFilter('order_increment', $order->getIncrementId());
+        $collection = Mage::getModel('signifyd_connect/case')->getCollection()->addFieldToFilter('order_increment', $order->getIncrementId());
         
         foreach ($collection as $case) {
             $case->delete();
@@ -74,8 +74,8 @@ class Grep_Signifyd_Helper_Data extends Mage_Core_Helper_Abstract
     
     public function request($url, $data=null, $auth=null, $contenttype="application/x-www-form-urlencoded")
     {
-        if (Mage::getStoreConfig('grep_signifyd/log/request')) {
-            Mage::log("Request:\nURL: $url \nAuth: $auth\nData: $data", null, 'grep_signifyd.log');
+        if (Mage::getStoreConfig('signifyd_connect/log/request')) {
+            Mage::log("Request:\nURL: $url \nAuth: $auth\nData: $data", null, 'signifyd_connect.log');
         }
         
         $curl = curl_init();
@@ -107,15 +107,15 @@ class Grep_Signifyd_Helper_Data extends Mage_Core_Helper_Abstract
         $response_data = curl_getinfo($curl);
         $response->addData($response_data);
         
-        if (Mage::getStoreConfig('grep_signifyd/log/response')) {
-            Mage::log("Response ($url):\n " . print_r($response, true), null, 'grep_signifyd.log');
+        if (Mage::getStoreConfig('signifyd_connect/log/response')) {
+            Mage::log("Response ($url):\n " . print_r($response, true), null, 'signifyd_connect.log');
         }
         
         if ($raw_response === false || curl_errno($curl)) {
             $error = curl_error($curl);
             
-            if (Mage::getStoreConfig('grep_signifyd/log/error')) {
-                Mage::log("ERROR ($url):\n$error", null, 'grep_signifyd.log');
+            if (Mage::getStoreConfig('signifyd_connect/log/error')) {
+                Mage::log("ERROR ($url):\n$error", null, 'signifyd_connect.log');
             }
             
             $response->setData('error', $error);

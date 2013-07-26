@@ -1,4 +1,4 @@
-== Grep_Signifyd ==
+== Signifyd_Connect ==
 
 Integrates the Signifyd fraud detection service with Magento
 
@@ -48,12 +48,12 @@ To install via Magento connect:
 To install manually:
 
 1. Upload the extension tarball into the Magento root directory. e.g:
-    $ scp grep_signifyd-1.0.0.tar.gz example.com:/path/to/magento/
+    $ scp signifyd_connect-1.0.0.tar.gz example.com:/path/to/magento/
 
 2. Extract the tarball into the root directory. e.g:
     $ ssh example.com
     $ cd /path/to/magento
-    $ tar -zxvf grep_signifyd-1.0.0.tar.gz
+    $ tar -zxvf signifyd_connect-1.0.0.tar.gz
 
 3. Navigate to the cache management page in the Magento admin panel:
     Magento Admin -> System -> Cache Management

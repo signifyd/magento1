@@ -2,71 +2,71 @@
 
 <config>
     <modules>
-        <Grep_Signifyd>
+        <Signifyd_Connect>
             <version>1.0.0</version>
-        </Grep_Signifyd>
+        </Signifyd_Connect>
     </modules>
     <global>
         <models>
-            <grep_signifyd>
-                <class>Grep_Signifyd_Model</class>
-                <resourceModel>grep_signifyd_resource</resourceModel>
-            </grep_signifyd>
-            <grep_signifyd_resource>
-                <class>Grep_Signifyd_Model_Resource</class>
+            <signifyd_connect>
+                <class>Signifyd_Connect_Model</class>
+                <resourceModel>signifyd_connect_resource</resourceModel>
+            </signifyd_connect>
+            <signifyd_connect_resource>
+                <class>Signifyd_Connect_Model_Resource</class>
                 <entities>
                     <case>
-                        <table>grep_signifyd_case</table>
+                        <table>signifyd_connect_case</table>
                     </case>
                 </entities>
-            </grep_signifyd_resource>
+            </signifyd_connect_resource>
         </models>
         <resources>
-            <grep_signifyd_setup>
+            <signifyd_connect_setup>
                 <setup>
-                    <module>Grep_Signifyd</module>
-                    <class>Grep_Signifyd_Model_Setup</class>
+                    <module>Signifyd_Connect</module>
+                    <class>Signifyd_Connect_Model_Setup</class>
                 </setup>
                 <connection>
                     <use>core_setup</use>
                 </connection>
-            </grep_signifyd_setup>
-            <grep_signifyd_write>
+            </signifyd_connect_setup>
+            <signifyd_connect_write>
                 <connection>
                     <use>core_write</use>
                 </connection>
-            </grep_signifyd_write>
-            <grep_signifyd_read>
+            </signifyd_connect_write>
+            <signifyd_connect_read>
                 <connection>
                     <use>core_read</use>
                 </connection>
-            </grep_signifyd_read>
+            </signifyd_connect_read>
         </resources>
         <helpers>
-            <grep_signifyd>
-                <class>Grep_Signifyd_Helper</class>
-            </grep_signifyd>
+            <signifyd_connect>
+                <class>Signifyd_Connect_Helper</class>
+            </signifyd_connect>
         </helpers>
         <blocks>
-            <grep_signifyd>
-                <class>Grep_Signifyd_Block</class>
-            </grep_signifyd>
+            <signifyd_connect>
+                <class>Signifyd_Connect_Block</class>
+            </signifyd_connect>
         </blocks>
     </global>
     <frontend>
         <events>
             <model_save_after>
                 <observers>
-                    <grep_signifyd>
-                        <class>grep_signifyd/observer</class>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
                         <method>openCase</method>
-                    </grep_signifyd>
+                    </signifyd_connect>
                 </observers>
             </model_save_after>
         </events>
     </frontend>
     <default>
-        <grep_signifyd>
+        <signifyd_connect>
             <settings>
                 <enabled>0</enabled>
                 <url>https://api.signifyd.com</url>
@@ -76,7 +76,7 @@
                 <response>0</response>
                 <error>1</error>
             </log>
-        </grep_signifyd>
+        </signifyd_connect>
     </default>
     <adminhtml>
         <acl>
@@ -90,10 +90,10 @@
                             <children>
                                 <config>
                                     <children>
-                                        <grep_signifyd>
+                                        <signifyd_connect>
                                             <title>Signifyd</title>
                                             <sort_order>9999</sort_order>
-                                        </grep_signifyd>
+                                        </signifyd_connect>
                                     </children>
                                 </config>
                             </children>

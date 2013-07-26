@@ -20,8 +20,8 @@ Follow these steps to create a package to upload to Magento Connect. Start from 
     PHP < 6.0.0
 
 4. The following contents should be entered:
-    Magento Global Configuration | modules/Grep_Signifyd.xml | File |   |
-    Magento community module file | Grep/Signifyd | Recursive Dir | #(etc|Model|Helper|sql)# |
+    Magento Global Configuration | modules/Signifyd_Connect.xml | File |   |
+    Magento community module file | Signifyd/Connect | Recursive Dir | #(etc|Model|Helper|sql)# |
 
 5. Click "Save Data and Create Package"
 
@@ -37,7 +37,7 @@ Follow these steps to create a tar package:
     $ cd /path/to/magento
 
 2. Run the following tar command:
-    $ tar -zcvf grep_signifyd-1.0.0.tar.gz app --exclude="app/code/community/Grep/Signifyd/tests"
+    $ tar -zcvf grep_signifyd-1.0.0.tar.gz app --exclude="app/code/community/Signifyd/Connect/tests"
 
 
 

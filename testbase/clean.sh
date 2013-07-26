@@ -1,3 +1,3 @@
 #!/bin/bash
 
-rm -rf */app/code/community/Grep/Signifyd */app/etc/modules/Grep_Signifyd.xml
+rm -rf */app/code/community/Signifyd/Connect */app/etc/modules/Signifyd_Connect.xml

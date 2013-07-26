@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <config>
     <tabs>
-        <signifyd translate="label" module="grep_signifyd">
+        <signifyd translate="label" module="signifyd_connect">
             <label>Signifyd</label>
             <sort_order>999999</sort_order>
         </signifyd>
     </tabs>
     <sections>
-        <grep_signifyd translate="label" module="grep_signifyd">
+        <signifyd_connect translate="label" module="signifyd_connect">
             <label>Signifyd</label>
             <tab>signifyd</tab>
             <frontend_type>text</frontend_type>
@@ -89,6 +89,6 @@
                     </fields>
                 </log>
             </groups>
-        </grep_signifyd>
+        </signifyd_connect>
     </sections>
 </config>

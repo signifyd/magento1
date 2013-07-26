@@ -2,7 +2,7 @@
 
 require_once '../../../../../Mage.php';
  
-class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
+class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
 {
     protected $products = null;
     protected $items = null;
@@ -96,13 +96,13 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
     
     public function clearHistory()
     {
-        Mage::getModel('grep_signifyd/case')->getCollection()->delete();
+        Mage::getModel('signifyd_connect/case')->getCollection()->delete();
     }
     
     public function setUp()
     {
         Mage::app();
-        $this->model = Mage::getModel('grep_signifyd/observer');
+        $this->model = Mage::getModel('signifyd_connect/observer');
         
         $this->defaultData();
         $this->initData();
@@ -194,7 +194,7 @@ class Grep_Signifyd_SignifydTest extends PHPUnit_Framework_TestCase
     public function testRunOnce()
     {
         $order = Mage::getModel('sales/order')->setIncrementId('999');
-        $helper = Mage::helper('grep_signifyd');
+        $helper = Mage::helper('signifyd_connect');
         
         $helper->unmarkProcessed($order);
         

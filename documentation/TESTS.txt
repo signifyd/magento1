@@ -27,10 +27,10 @@ Running the unit tests for this extension requires the following:
 == Running Tests ==
 
 1. cd to the tests directory:
-    $ cd app/code/community/Grep/Signifyd/tests/
+    $ cd app/code/community/Signifyd/Connect/tests/
 
 2. Run PHPUnit:
-    $ phpunit Grep_Signifyd_SignifydTest signifyd.php
+    $ phpunit Signifyd_Connect_SignifydTest signifyd.php
 
 
 == Testing tools ==

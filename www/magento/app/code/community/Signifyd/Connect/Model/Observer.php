@@ -1,6 +1,6 @@
 <?php
 
-class Grep_Signifyd_Model_Observer extends Varien_Object
+class Signifyd_Connect_Model_Observer extends Varien_Object
 {
     public $customer = null;
     public $order = null;
@@ -12,7 +12,7 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
     public function getProducts()
     {
         $products = array();
-        $helper = Mage::helper('grep_signifyd');
+        $helper = Mage::helper('signifyd_connect');
         
         foreach ($this->quote->getAllItems() as $item) {
             if (!$item->getProductType() || $item->getProductType() == 'simple') {
@@ -289,7 +289,7 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
             return $this->getData('url');
         }
         
-        return Mage::getStoreConfig('grep_signifyd/settings/url') . '/v1/cases';
+        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/v1/cases';
     }
     
     public function getAuth()
@@ -298,14 +298,14 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
             return $this->getData('auth');
         }
         
-        return Mage::getStoreConfig('grep_signifyd/settings/key');
+        return Mage::getStoreConfig('signifyd_connect/settings/key');
     }
     
     public function submitCase($case)
     {
         $case = json_encode($case);
         
-        return Mage::helper('grep_signifyd')->request($this->getUrl(), $case, $this->getAuth(), 'application/json');
+        return Mage::helper('signifyd_connect')->request($this->getUrl(), $case, $this->getAuth(), 'application/json');
     }
     
     public function generateCase()
@@ -323,7 +323,7 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
     public function openCase($observer)
     {
         try {
-            if (!Mage::getStoreConfig('grep_signifyd/settings/enabled') && !$this->getEnabled()) {
+            if (!Mage::getStoreConfig('signifyd_connect/settings/enabled') && !$this->getEnabled()) {
                 return;
             }
             
@@ -335,7 +335,7 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
             }
             
             if ($order && $order->getId()) {
-                if (Mage::helper('grep_signifyd')->isProcessed($order) && !$this->getForceProcess()) {
+                if (Mage::helper('signifyd_connect')->isProcessed($order) && !$this->getForceProcess()) {
                     return;
                 }
                 
@@ -363,10 +363,10 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
                 
                 $this->submitCase($case);
                 
-                Mage::helper('grep_signifyd')->markProcessed($order);
+                Mage::helper('signifyd_connect')->markProcessed($order);
             }
         } catch (Exception $e) {
-            Mage::log($e->__toString(), null, 'grep_signifyd.log');
+            Mage::log($e->__toString(), null, 'signifyd_connect.log');
         }
     }
     
@@ -392,13 +392,13 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
         $items = json_encode($items);
         $products = json_encode($products);
         
-        Mage::log("Order:\n $order_data", null, 'grep_signifyd_objects.log');
-        Mage::log("Billing:\n $billing_data", null, 'grep_signifyd_objects.log');
-        Mage::log("Shipping:\n $shipping_data", null, 'grep_signifyd_objects.log');
-        Mage::log("Customer:\n $customer_data", null, 'grep_signifyd_objects.log');
-        Mage::log("Payment:\n $payment_data", null, 'grep_signifyd_objects.log');
-        Mage::log("Quote:\n $quote_data", null, 'grep_signifyd_objects.log');
-        Mage::log("Items:\n $items", null, 'grep_signifyd_objects.log');
-        Mage::log("Products:\n $products", null, 'grep_signifyd_objects.log');
+        Mage::log("Order:\n $order_data", null, 'signifyd_connect_objects.log');
+        Mage::log("Billing:\n $billing_data", null, 'signifyd_connect_objects.log');
+        Mage::log("Shipping:\n $shipping_data", null, 'signifyd_connect_objects.log');
+        Mage::log("Customer:\n $customer_data", null, 'signifyd_connect_objects.log');
+        Mage::log("Payment:\n $payment_data", null, 'signifyd_connect_objects.log');
+        Mage::log("Quote:\n $quote_data", null, 'signifyd_connect_objects.log');
+        Mage::log("Items:\n $items", null, 'signifyd_connect_objects.log');
+        Mage::log("Products:\n $products", null, 'signifyd_connect_objects.log');
     }
 }
