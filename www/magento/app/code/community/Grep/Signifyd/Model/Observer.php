@@ -359,8 +359,6 @@ class Grep_Signifyd_Model_Observer extends Varien_Object
                     $this->quote = $order;
                 }
                 
-                $this->logData();
-                
                 $case = $this->generateCase();
                 
                 $this->submitCase($case);
