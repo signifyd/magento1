@@ -16,7 +16,7 @@ Follow these steps to create a package to upload to Magento Connect. Start from 
     * http://www.magentocommerce.com/wiki/7_-_magento_connect/packaging_a_magento_extension
     
 3. The following dependencies should be entered:
-    PHP > 5.2.0
+    PHP > 5.3.0
     PHP < 6.0.0
 
 4. The following contents should be entered:
@@ -37,7 +37,7 @@ Follow these steps to create a tar package:
     $ cd /path/to/magento
 
 2. Run the following tar command:
-    $ tar -zcvf grep_signifyd-1.0.0.tar.gz app/etc/modules/Grep_Signifyd.xml app/code/community/Grep/Signifyd/etc app/code/community/Grep/Signifyd/Model app/code/community/Grep/Signifyd/Helper
+    $ tar -zcvf grep_signifyd-1.0.0.tar.gz app --exclude="app/code/community/Grep/Signifyd/tests"
 
 
 

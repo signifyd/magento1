@@ -75,4 +75,4 @@ This extension can be configured at the location below:
 
 Magento Admin -> System -> Configuration -> Signifyd -> Signifyd
 
-Please ensure to enter a valid API URL and Key before enabling the extension. If you do not have one of these details, please contact Signifyd support.
+Please enter a valid API URL and Key before enabling the extension. If you do not have one of these details, please contact Signifyd support.
