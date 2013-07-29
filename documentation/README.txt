@@ -37,11 +37,16 @@ To install via Magento connect:
 
 5. Paste the extension key into the appropriate field in the "Install New Extensions" section
 
-6. Click the "Install" button
+6. Click the "Install" button, and wait for the process to complete, taking notice of any errors and correcting them if possible
 
-7. Log out of the Magento Admin panel, and log back in (to refresh permissions)
+7. Navigate to the cache management page in the Magento admin panel:
+    Magento Admin -> System -> Cache Management
 
-8. Confirm that the extension has been installed correctly by navigating to its settings page:
+8. Flush the system cache by clicking the "Flush cache storage" button
+
+9. Log out of the Magento Admin panel, and log back in (to refresh permissions)
+
+10. Confirm that the extension has been installed correctly by navigating to its settings page:
     Magento Admin -> System -> Configuration -> Signifyd -> Signifyd
 
 
