@@ -247,11 +247,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         if ($customer && $customer->getId()) {
             $user['emailAddress'] = $customer->getEmail();
             
-            if ($customer->getDefaultBillingAddress() && $customer->getDefaultBillingAddress()->getTelephone()) {
-                $user['phone'] = $customer->getDefaultBillingAddress()->getTelephone();
-            } else {
-                $user['phone'] = $this->billing_address->getTelephone();
-            }
+            $user['phone'] = $this->billing_address->getTelephone();
             
             $user['createdDate'] = date('c', strtotime($customer->getCreatedAt()));
             $user['lastUpdateDate'] = date('c', strtotime($customer->getUpdatedAt()));
