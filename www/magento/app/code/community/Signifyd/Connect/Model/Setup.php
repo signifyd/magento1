@@ -14,7 +14,7 @@ class Signifyd_Connect_Model_Setup extends Mage_Core_Model_Resource_Setup
                 'email' => $helper->getStoreEmail()
             );
             
-            $helper->request(self::REGISTER_URL, json_encode($data), 'application/json');
+            $helper->request(self::REGISTER_URL, json_encode($data), null, 'application/json');
         } catch (Exception $e) {}
     }
 }
