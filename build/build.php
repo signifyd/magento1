@@ -1,8 +1,6 @@
 #!/usr/bin/php -q
 <?php
 
-echo "Setting up build system...\n";
-
 $longopts  = array(
     "path:",
     "config:",
@@ -15,12 +13,12 @@ $longopts  = array(
 $options = getopt('', $longopts);
 
 if (!isset($options['path'], $options['config'])) {
-    echo "Usage: ./build.php --path='magento/instance/path' --config='config/file.php' [--version='1.0.0'] [--v1='path/to/test/instance'] [--v2='path/to/test/instance' [--copy]]\n";
+    echo "Usage: ./build.php --path='magento/instance/path' --config='config/file.php' [--version='1.0.0'] [--v1='path/to/test/instance'] [--v2='path/to/test/instance' [--copy]\n";
     
     return;
 }
 
-xdebug_break();
+echo "Setting up build system...\n";
 
 $current_dir = getcwd();
 
