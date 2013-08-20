@@ -81,8 +81,15 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     
     public function getIPAddress()
     {
-        // Checks each configured value in app/etc/local.xml & falls back to REMOTE_ADDR. See app/etc/local.xml.additional for examples.
+        if ($this->order->getRemoteIp()) {
+            if ($this->order->getXForwardedFor()) {
+                return $this->order->getXForwardedFor();
+            }
+            
+            return $this->order->getRemoteIp();
+        }
         
+        // Checks each configured value in app/etc/local.xml & falls back to REMOTE_ADDR. See app/etc/local.xml.additional for examples.
         return Mage::helper('core/http')->getRemoteAddr(false);
     }
     
