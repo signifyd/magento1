@@ -86,15 +86,55 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         return Mage::helper('core/http')->getRemoteAddr(false);
     }
     
+    public function formatAvs($value)
+    {
+        // http://www.emsecommerce.net/avs_cvv2_response_codes.htm
+        $codes = array('X', 'Y', 'A', 'W', 'Z', 'N', 'U', 'R', 'E', 'S', 'D', 'M', 'B', 'P', 'C', 'I', 'G');
+        
+        if ($value) {
+            $value = strtoupper($value);
+            
+            if (strlen($value) > 1) {
+                if (preg_match('/\([A-Z]\)/', $value)) {
+                    $matches = array();
+                    
+                    preg_match('/\([A-Z]\)/', $value, $matches);
+                    
+                    foreach ($matches as $match) {
+                        $match = preg_replace('/[^A-Z]/', '', $match);
+                        
+                        if (in_array($match, $codes)) {
+                            $value = $match;
+                        }
+                    }
+                }
+            }
+            
+            if (strlen($value) > 1) {
+                $value = substr($value, 0, 1);
+            }
+            
+            if (!in_array($value, $codes)) {
+                $value = null;
+            }
+        }
+        
+        return $value;
+    }
+    
     public function getAvsResponse()
     {
         $payment = $this->payment;
         
+        $value = null;
+        
         if ($payment->getAdditionalInformation('paypal_avs_code')) {
-            return $payment->getAdditionalInformation('paypal_avs_code');
+            $value = $payment->getAdditionalInformation('paypal_avs_code');
+        } else if ($payment->getAdditionalInformation('cc_avs_status')) {
+            $value = $payment->getAdditionalInformation('cc_avs_status');
         }
         
-        return null;
+        return $this->formatAvs($value);
     }
     
     public function getCvvResponse()
@@ -316,6 +356,17 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         return $case;
     }
     
+    public function getInvoiced($order)
+    {
+        $collection = $order->getInvoiceCollection();
+        
+        foreach ($collection as $invoice) {
+            return true;
+        }
+        
+        return false;
+    }
+    
     public function openCase($observer)
     {
         try {
@@ -323,7 +374,14 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 return;
             }
             
-            $order = $observer->getEvent()->getObject();
+            $event = $observer->getEvent();
+            
+            if ($event->hasOrder()) {
+                $order = $event->getOrder();
+            } else if ($event->hasObject()) {
+                $order = $event->getObject();
+            }
+            
             $order_model = get_class(Mage::getModel('sales/order'));
             
             if (!($order instanceof $order_model)) {
@@ -335,18 +393,22 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                     return;
                 }
                 
-                $this->order = $order;
-                $this->billing_address = $order->getBillingAddress();
-                $this->shipping_address = $order->getShippingAddress();
-                
-                if ($order->getCustomer()) {
-                    $this->customer = $order->getCustomer();
+                if (!$this->getInvoiced($order)) {
+                    return;
                 }
                 
                 $payments = $order->getPaymentsCollection();
                 
                 foreach ($payments as $payment) {
                     $this->payment = $payment;
+                }
+                
+                $this->order = $order;
+                $this->billing_address = $order->getBillingAddress();
+                $this->shipping_address = $order->getShippingAddress();
+                
+                if ($order->getCustomer()) {
+                    $this->customer = $order->getCustomer();
                 }
                 
                 $this->quote = $order->getQuote();

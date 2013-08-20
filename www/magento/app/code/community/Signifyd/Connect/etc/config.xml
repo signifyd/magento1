@@ -52,8 +52,6 @@
                 <class>Signifyd_Connect_Block</class>
             </signifyd_connect>
         </blocks>
-    </global>
-    <frontend>
         <events>
             <model_save_after>
                 <observers>
@@ -64,7 +62,7 @@
                 </observers>
             </model_save_after>
         </events>
-    </frontend>
+    </global>
     <default>
         <signifyd_connect>
             <settings>
