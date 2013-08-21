@@ -400,14 +400,18 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                     return;
                 }
                 
-                if (!$this->getInvoiced($order)) {
-                    return;
-                }
-                
                 $payments = $order->getPaymentsCollection();
                 
                 foreach ($payments as $payment) {
                     $this->payment = $payment;
+                }
+                
+                $method = $this->payment->getMethod();
+                
+                $state = $order->getState();
+                
+                if (!$state || $state == Mage_Sales_Model_Order::STATE_PENDING_PAYMENT) {
+                    return;
                 }
                 
                 $this->order = $order;
