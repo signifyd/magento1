@@ -215,10 +215,9 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $card['bin'] = substr((string)$payment->getData('cc_number'), 0, 6);
         }
         
-        if ($card['expiryMonth'] !== null) {
-            // From the documentation, it appears that we only want to populate this field for credit card payments
-            // https://signifyd.com/docs/api
-            
+        if ($payment->getCcOwner()) {
+            $card['cardHolderName'] = $payment->getCcOwner();
+        } else {
             $card['cardHolderName'] = $billing->getFirstname() . ' ' . $billing->getLastname();
         }
         
