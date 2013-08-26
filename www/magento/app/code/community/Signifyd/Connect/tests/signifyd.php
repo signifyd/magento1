@@ -219,7 +219,7 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         
         $case = $this->model->generateCase();
         
-        $this->assertEquals(null, $case['card']['cardHolderName']);
+        $this->assertEquals("Frank Guest", $case['card']['cardHolderName']);
         $this->assertEquals(null, $case['card']['last4']);
         $this->assertEquals(null, $case['card']['expiryMonth']);
         $this->assertEquals(null, $case['card']['expiryYear']);
@@ -240,7 +240,7 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         
         $case = $this->model->generateCase();
         
-        $this->assertEquals("Frank Guest", $case['card']['cardHolderName']);
+        $this->assertEquals("A", $case['card']['cardHolderName']);
         $this->assertEquals("1111", $case['card']['last4']);
         $this->assertEquals("1", $case['card']['expiryMonth']);
         $this->assertEquals("2015", $case['card']['expiryYear']);
@@ -254,7 +254,7 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         
         $case = $this->model->generateCase();
         
-        $this->assertEquals("Frank Guest", $case['card']['cardHolderName']);
+        $this->assertEquals("A", $case['card']['cardHolderName']);
         $this->assertEquals("1111", $case['card']['last4']);
         $this->assertEquals("1", $case['card']['expiryMonth']);
         $this->assertEquals("2015", $case['card']['expiryYear']);
