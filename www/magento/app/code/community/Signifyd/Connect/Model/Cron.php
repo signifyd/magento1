@@ -6,15 +6,16 @@ class Signifyd_Connect_Model_Cron
     {
         try {
             $cases = Mage::getModel('signifyd_connect/case')->getCollection();
-            $cases->addFieldToSelect('*');
-            $cases->addFieldToFilter('status', 'PENDING');
+            //$cases->addFieldToSelect('*');
+            //$cases->addFieldToFilter('status', 'PENDING');
             $time = time();
             
             foreach ($cases as $case) {
                 $created_at = $case->getCreatedAt();
                 $code = $case->getCode();
+                $status = $case->getStatus();
                 
-                if ($created_at && $code) {
+                if ($created_at && $code && $status == 'PENDING') {
                     $created_at_time = strtotime($created_at);
                     $delta = $time - $created_at_time;
                     
