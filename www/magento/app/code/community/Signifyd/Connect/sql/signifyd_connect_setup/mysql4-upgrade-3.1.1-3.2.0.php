@@ -8,7 +8,6 @@ ALTER TABLE  `{$this->getTable('signifyd_connect_case')}` ADD  `status` VARCHAR(
     ADD  `score` FLOAT NULL DEFAULT NULL ,
     ADD  `entries` TEXT NOT NULL ,
     ADD  `created_at` TIMESTAMP NULL DEFAULT NULL ,
-    ADD  `updated_at` TIMESTAMP NULL DEFAULT NULL ,
-    ADD  `code` VARCHAR( 255 ) NULL DEFAULT NULL ;
+    ADD  `updated_at` TIMESTAMP NULL DEFAULT NULL ;
 ");
 $this->endSetup();
