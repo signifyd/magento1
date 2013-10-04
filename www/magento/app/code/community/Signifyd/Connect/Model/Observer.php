@@ -429,9 +429,17 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 
                 $case = $this->generateCase();
                 
-                $this->submitCase($case);
+                $response = $this->submitCase($case);
                 
-                Mage::helper('signifyd_connect')->markProcessed($order);
+                $case_object = Mage::helper('signifyd_connect')->markProcessed($order);
+                
+                try {
+                    $response_data = json_decode($response->getRawResponse(), true);
+                    $case_object->setCode($response_data['investigationId']);
+                    $case_object->save();
+                } catch (Exception $e) {
+                    
+                }
             }
         } catch (Exception $e) {
             Mage::log($e->__toString(), null, 'signifyd_connect.log');
@@ -468,5 +476,12 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         Mage::log("Quote:\n $quote_data", null, 'signifyd_connect_objects.log');
         Mage::log("Items:\n $items", null, 'signifyd_connect_objects.log');
         Mage::log("Products:\n $products", null, 'signifyd_connect_objects.log');
+    }
+    
+    public function salesOrderGridCollectionLoadBefore($observer)
+    {
+        $collection = $observer->getOrderGridCollection();
+        $select = $collection->getSelect();
+        $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
     }
 }

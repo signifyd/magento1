@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<layout>
+    <signifyd_sales_order_grid_update_handle>
+        <reference name="sales_order.grid">
+            <action method="addColumnAfter">
+                <columnId>score</columnId>
+                <arguments>
+                    <header>Signifyd Score</header>
+                    <index>score</index>
+                    <filter_index>score</filter_index>
+                    <type>text</type>
+                    <width>100px</width>
+                </arguments>
+                <after>status</after>
+            </action>
+        </reference>
+    </signifyd_sales_order_grid_update_handle>
+    <adminhtml_sales_order_grid>
+        <!-- apply layout handle defined above -->
+        <update handle="signifyd_sales_order_grid_update_handle" />
+    </adminhtml_sales_order_grid>
+    <adminhtml_sales_order_index>
+        <!-- apply layout handle defined above -->
+        <update handle="signifyd_sales_order_grid_update_handle" />
+    </adminhtml_sales_order_index>
+</layout>
