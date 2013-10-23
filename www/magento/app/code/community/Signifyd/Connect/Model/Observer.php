@@ -417,6 +417,10 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 $this->billing_address = $order->getBillingAddress();
                 $this->shipping_address = $order->getShippingAddress();
                 
+                if (!$this->shipping_address) {
+                    $this->shipping_address = $this->billing_address;
+                }
+                
                 if ($order->getCustomer()) {
                     $this->customer = $order->getCustomer();
                 }
