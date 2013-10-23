@@ -60,11 +60,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     {
         $case = Mage::getModel('signifyd_connect/case');
         $case->setOrderIncrement($order->getIncrementId());
-        $case->setCreatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
-        $case->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
-        
-        return $case;
     }
     
     public function unmarkProcessed($order)
@@ -76,7 +72,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
     
-    public function request($url, $data=null, $auth=null, $contenttype="application/x-www-form-urlencoded", $accept=null)
+    public function request($url, $data=null, $auth=null, $contenttype="application/x-www-form-urlencoded")
     {
         if (Mage::getStoreConfig('signifyd_connect/log/request')) {
             Mage::log("Request:\nURL: $url \nAuth: $auth\nData: $data", null, 'signifyd_connect.log');
@@ -84,7 +80,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         
         $curl = curl_init();
         $response = new Varien_Object;
-        $headers = array();
 
         curl_setopt($curl, CURLOPT_URL, $url);
         
@@ -99,20 +94,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
             curl_setopt($curl, CURLOPT_USERPWD, $auth);
         }
-        
-        if ($accept) {
-            $headers[] = 'Accept: ' . $accept;
-        }
 
         if ($data) {
             curl_setopt($curl, CURLOPT_POST, 1);
-            $headers[] = "Content-Type: $contenttype";
-            $headers[] = "Content-length: " . strlen($data);
+            curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-Type: $contenttype", "Content-length: " . strlen($data)));
             curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-        }
-        
-        if (count($headers)) {
-            curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
         }
 
         $raw_response = curl_exec($curl);
