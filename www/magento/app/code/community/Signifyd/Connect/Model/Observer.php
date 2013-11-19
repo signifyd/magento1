@@ -331,7 +331,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             return $this->getData('url');
         }
         
-        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/v1/cases';
+        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/v2/cases';
     }
     
     public function getAuth()
