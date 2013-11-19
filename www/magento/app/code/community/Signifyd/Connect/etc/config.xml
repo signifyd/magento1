@@ -67,7 +67,7 @@
         <signifyd_connect>
             <settings>
                 <enabled>0</enabled>
-                <url>https://api.signifyd.com</url>
+                <url>https://api.signifyd.com/v2</url>
             </settings>
             <log>
                 <request>0</request>
