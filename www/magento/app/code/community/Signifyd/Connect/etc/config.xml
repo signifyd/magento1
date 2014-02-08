@@ -6,6 +6,18 @@
             <version>3.2.2</version>
         </Signifyd_Connect>
     </modules>
+    <crontab>
+        <jobs>
+            <signifyd_connect>
+                <schedule>
+                    <cron_expr>*/5 * * * *</cron_expr>
+                </schedule>
+                <run>
+                    <model>signifyd_connect/cron::update</model>
+                </run>
+            </signifyd_connect>
+        </jobs>
+    </crontab>
     <global>
         <models>
             <signifyd_connect>
