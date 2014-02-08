@@ -80,6 +80,7 @@
             <settings>
                 <enabled>0</enabled>
                 <url>https://api.signifyd.com/v2</url>
+                <retrieve_score>0</retrieve_score>
             </settings>
             <log>
                 <request>0</request>

@@ -554,24 +554,26 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     
     public function coreBlockAbstractToHtmlBefore(Varien_Event_Observer $observer)
     {
-        $helper	= Mage::helper('signifyd_connect');
-        $block = $observer->getEvent()->getBlock();
-        
-        if ($block->getId() == 'sales_order_grid') {
-            $block->addColumnAfter(
-                'score',
-                array(
-                    'header' => $helper->__('Signifyd Score'),
-                    'align' => 'left',
-                    'type' => 'text',
-                    'index' => 'score',
-                    'filter_index' => 'score',
-                    'width' => '100px',
-                ),
-                'status'
-            );
+        if (Mage::getStoreConfig('signifyd_connect/settings/retrieve_score')) {
+            $helper	= Mage::helper('signifyd_connect');
+            $block = $observer->getEvent()->getBlock();
             
-            $block->sortColumnsByOrder();
+            if ($block->getId() == 'sales_order_grid') {
+                $block->addColumnAfter(
+                    'score',
+                    array(
+                        'header' => $helper->__('Signifyd Score'),
+                        'align' => 'left',
+                        'type' => 'text',
+                        'index' => 'score',
+                        'filter_index' => 'score',
+                        'width' => '100px',
+                    ),
+                    'status'
+                );
+                
+                $block->sortColumnsByOrder();
+            }
         }
     }
 }

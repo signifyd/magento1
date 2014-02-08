@@ -5,26 +5,30 @@ class Signifyd_Connect_Model_Cron
     public function update()
     {
         try {
-            $cases = Mage::getModel('signifyd_connect/case')->getCollection();
-            $cases->addFieldToSelect('*');
-            $cases->addFieldToFilter('status', 'PENDING');
-            $time = time();
-            
-            foreach ($cases as $case) {
-                $created_at = $case->getCreatedAt();
-                $code = $case->getCode();
-                $status = $case->getStatus();
+            if (Mage::getStoreConfig('signifyd_connect/settings/retrieve_score')) {
+                $cases = Mage::getModel('signifyd_connect/case')->getCollection();
+                $cases->addFieldToSelect('*');
+                $cases->addFieldToFilter('status', 'PENDING');
+                $time = time();
                 
-                if ($created_at && $code && $status == 'PENDING') {
-                    $created_at_time = strtotime($created_at);
-                    $delta = $time - $created_at_time;
+                foreach ($cases as $case) {
+                    $created_at = $case->getCreatedAt();
+                    $code = $case->getCode();
+                    $status = $case->getStatus();
                     
-                    if ($delta > 60) {
-                        $this->updateCase($case);
+                    if ($created_at && $code && $status == 'PENDING') {
+                        $created_at_time = strtotime($created_at);
+                        $delta = $time - $created_at_time;
+                        
+                        if ($delta > 300) {
+                            $this->updateCase($case);
+                        }
                     }
                 }
             }
-        } catch (Exception $e) {}
+        } catch (Exception $e) {
+            Mage::log('cron issue: ' . $e->__toString(), null, 'signifyd_connect.log');
+        }
     }
     
     public function getAuth()
