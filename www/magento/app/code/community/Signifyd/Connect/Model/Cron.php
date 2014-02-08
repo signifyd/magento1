@@ -6,8 +6,8 @@ class Signifyd_Connect_Model_Cron
     {
         try {
             $cases = Mage::getModel('signifyd_connect/case')->getCollection();
-            //$cases->addFieldToSelect('*');
-            //$cases->addFieldToFilter('status', 'PENDING');
+            $cases->addFieldToSelect('*');
+            $cases->addFieldToFilter('status', 'PENDING');
             $time = time();
             
             foreach ($cases as $case) {
@@ -34,7 +34,7 @@ class Signifyd_Connect_Model_Cron
     
     public function getUrl($code)
     {
-        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases/' . $code;
+        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/v2/cases/' . $code;
     }
     
     public function getScore($case)

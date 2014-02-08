@@ -331,7 +331,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             return $this->getData('url');
         }
         
-        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases';
+        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/v1/cases';
     }
     
     public function getAuth()
@@ -433,9 +433,17 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 
                 $case = $this->generateCase();
                 
-                $this->submitCase($case);
+                $response = $this->submitCase($case);
                 
-                Mage::helper('signifyd_connect')->markProcessed($order);
+                $case_object = Mage::helper('signifyd_connect')->markProcessed($order);
+                
+                try {
+                    $response_data = json_decode($response->getRawResponse(), true);
+                    $case_object->setCode($response_data['investigationId']);
+                    $case_object->save();
+                } catch (Exception $e) {
+                    
+                }
             }
         } catch (Exception $e) {
             Mage::log($e->__toString(), null, 'signifyd_connect.log');
@@ -472,5 +480,98 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         Mage::log("Quote:\n $quote_data", null, 'signifyd_connect_objects.log');
         Mage::log("Items:\n $items", null, 'signifyd_connect_objects.log');
         Mage::log("Products:\n $products", null, 'signifyd_connect_objects.log');
+    }
+    
+    public function eavCollectionAbstractLoadBefore($observer)
+    {
+        $x = $observer->getCollection();
+        
+        $request = Mage::app()->getRequest();
+        $module = $request->getModuleName();
+        $controller = $request->getControllerName();
+        $action = $request->getActionName();
+        
+        if ($module != 'admin' || $controller != 'sales_order') {
+            return;
+        }
+        
+        $clss = get_class($x);
+        if ($clss == 'Mage_Sales_Model_Mysql4_Order_Collection') {
+            $observer->setOrderGridCollection($x);
+            return $this->salesOrderGridCollectionLoadBefore($observer);
+        }
+    }
+    
+    public function coreCollectionAbstractLoadBefore($observer)
+    {
+        $x = $observer->getCollection();
+        
+        $request = Mage::app()->getRequest();
+        $module = $request->getModuleName();
+        $controller = $request->getControllerName();
+        $action = $request->getActionName();
+        
+        if ($module != 'admin' || $controller != 'sales_order') {
+            return;
+        }
+        
+        $clss = get_class($x);
+        if ($clss == 'Mage_Sales_Model_Mysql4_Order_Collection') {
+            $observer->setOrderGridCollection($x);
+            return $this->salesOrderGridCollectionLoadBefore($observer);
+        }
+    }
+    
+    public function isCe()
+    {
+        return !@class_exists('Enterprise_Cms_Helper_Data');
+    }
+    
+    public function belowSix()
+    {
+        $version = Mage::getVersion();
+        
+        if ($this->isCe()) {
+            return version_compare($version, '1.6.0.0', '<');
+        } else {
+            return version_compare($version, '1.11.0.0', '<');
+        }
+        
+        return false;
+    }
+    
+    public function salesOrderGridCollectionLoadBefore($observer)
+    {
+        $collection = $observer->getOrderGridCollection();
+        $select = $collection->getSelect();
+        
+        if ($this->belowSix()) {
+            $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
+        } else {
+            $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
+        }
+    }
+    
+    public function coreBlockAbstractToHtmlBefore(Varien_Event_Observer $observer)
+    {
+        $helper	= Mage::helper('signifyd_connect');
+        $block = $observer->getEvent()->getBlock();
+        
+        if ($block->getId() == 'sales_order_grid') {
+            $block->addColumnAfter(
+                'score',
+                array(
+                    'header' => $helper->__('Signifyd Score'),
+                    'align' => 'left',
+                    'type' => 'text',
+                    'index' => 'score',
+                    'filter_index' => 'score',
+                    'width' => '100px',
+                ),
+                'status'
+            );
+            
+            $block->sortColumnsByOrder();
+        }
     }
 }
