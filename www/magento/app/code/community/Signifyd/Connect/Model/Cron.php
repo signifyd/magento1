@@ -7,7 +7,6 @@ class Signifyd_Connect_Model_Cron
         try {
             if (Mage::getStoreConfig('signifyd_connect/settings/retrieve_score')) {
                 $cases = Mage::getModel('signifyd_connect/case')->getCollection();
-                $cases->addFieldToSelect('*');
                 $cases->addFieldToFilter('status', 'PENDING');
                 $time = time();
                 
