@@ -38,7 +38,7 @@ class Signifyd_Connect_Model_Cron
     
     public function getUrl($code)
     {
-        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/v2/cases/' . $code;
+        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases/' . $code;
     }
     
     public function getScore($case)
