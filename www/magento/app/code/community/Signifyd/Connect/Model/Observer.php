@@ -567,6 +567,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                         'type' => 'text',
                         'index' => 'score',
                         'filter_index' => 'score',
+                        'renderer' => 'signifyd_connect/renderer',
                         'width' => '100px',
                     ),
                     'status'

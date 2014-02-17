@@ -15,6 +15,17 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $url;
     }
     
+    public function getCaseUrl($order_id)
+    {
+        $collection = Mage::getModel('signifyd_connect/case')->getCollection()->addFieldToFilter('order_increment', $order_id);
+        
+        foreach ($collection as $case) {
+            if ($case->getCode()) {
+                return "https://www.signifyd.com/cases/" . $case->getCode();
+            }
+        }
+    }
+    
     public function getProductImage($product, $size="150")
     {
         $image = null;
