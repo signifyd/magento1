@@ -542,13 +542,24 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     
     public function salesOrderGridCollectionLoadBefore($observer)
     {
+        $request = Mage::app()->getRequest();
+        $module = $request->getModuleName();
+        $controller = $request->getControllerName();
+        $action = $request->getActionName();
+        
+        if ($module != 'admin' || $controller != 'sales_order') {
+            return;
+        }
+        
         $collection = $observer->getOrderGridCollection();
         $select = $collection->getSelect();
         
-        if ($this->belowSix()) {
-            $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
-        } else {
-            $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
+        if (Mage::getStoreConfig('signifyd_connect/settings/retrieve_score')) {
+            if ($this->belowSix()) {
+                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
+            } else {
+                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
+            }
         }
     }
     
