@@ -2,7 +2,7 @@
 
 return array(
     "form_key" => "mcFhkWzshRMenR6h",
-    "package_path" => "var/connect",
+    "package_path" => "var/pear",
     "_create" => 1,
     "file_name" => '',
     "name" => "Signifyd_Connect",
@@ -15,7 +15,7 @@ return array(
     "description" => "Supports all versions of Magento",
     "license" => "OSL",
     "license_uri" => "http://opensource.org/licenses/osl-3.0.php",
-    "version" => "3.1.3",
+    "version" => "3.2.1",
     "stability" => "stable",
     "notes" => "Supports all versions of Magento",
     "authors" => array(
@@ -88,7 +88,7 @@ return array(
         "include" => array(
             "0" => '',
             "1" => '',
-            "2" => "#(etc|Model|Helper|sql)#"
+            "2" => "#(etc|Model|Helper|sql|Block)#"
         ),
 
         "ignore" => array(
