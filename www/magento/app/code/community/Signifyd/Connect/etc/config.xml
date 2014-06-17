@@ -3,7 +3,7 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>3.2.3</version>
+            <version>3.3.0</version>
         </Signifyd_Connect>
     </modules>
     <crontab>
@@ -81,6 +81,8 @@
                 <enabled>0</enabled>
                 <url>https://api.signifyd.com/v2</url>
                 <retrieve_score>0</retrieve_score>
+                <hold_orders>0</hold_orders>
+                <hold_orders_threshold>500</hold_orders_threshold>
             </settings>
             <log>
                 <request>0</request>

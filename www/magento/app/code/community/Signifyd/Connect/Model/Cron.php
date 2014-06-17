@@ -7,20 +7,45 @@ class Signifyd_Connect_Model_Cron
         try {
             if (Mage::getStoreConfig('signifyd_connect/settings/retrieve_score')) {
                 $cases = Mage::getModel('signifyd_connect/case')->getCollection();
-                $cases->addFieldToFilter('status', 'PENDING');
+                $cases->addFieldToFilter('signifyd_status', 'PENDING');
                 $time = time();
                 
                 foreach ($cases as $case) {
                     $created_at = $case->getCreatedAt();
                     $code = $case->getCode();
-                    $status = $case->getStatus();
+                    $status = $case->getSignifydStatus();
                     
                     if ($created_at && $code && $status == 'PENDING') {
                         $created_at_time = strtotime($created_at);
                         $delta = $time - $created_at_time;
                         
                         if ($delta > 300) {
-                            $this->updateCase($case);
+                            $case = $this->updateCase($case);
+                            
+                            $score = $case->getScore();
+                            
+                            if ($case->getSignifydStatus() == 'PENDING' || $case->getSignifydStatus() == 'ERROR' || !$score || !is_numeric($score)) {
+                                continue;
+                            }
+                            
+                            try {
+                                if (Mage::getStoreConfig('signifyd_connect/settings/hold_orders')) {
+                                    $threshold = (int)Mage::getStoreConfig('signifyd_connect/settings/hold_orders_threshold');
+                                    
+                                    if ($threshold) {
+                                        if ($score < $threshold) {
+                                            $order = Mage::getModel('sales/order')->loadByIncrementId($case->getOrderIncrement());
+                                            
+                                            if ($order && $order->getId()) {
+                                                $order->hold();
+                                                $order->save();
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Exception $e) {
+                                Mage::log($e->__toString(), null, 'signifyd_connect.log');
+                            }
                         }
                     }
                 }
@@ -53,7 +78,7 @@ class Signifyd_Connect_Model_Cron
         $response_code = $response->getHttpCode();
         if (substr($response_code, 0, 1) != '2') {
             if (substr($response_code, 0, 1) != '5') {
-                $case->setStatus('ERROR');
+                $case->setSignifydStatus('ERROR');
             }
             
             return;
@@ -61,7 +86,7 @@ class Signifyd_Connect_Model_Cron
         
         $data = json_decode($response->getRawResponse(), true);
         
-        $case->setStatus($data['status']);
+        $case->setSignifydStatus($data['status']);
         $case->setScore($data['score']);
     }
     
@@ -78,7 +103,7 @@ class Signifyd_Connect_Model_Cron
         $response_code = $response->getHttpCode();
         if (substr($response_code, 0, 1) != '2') {
             if (substr($response_code, 0, 1) != '5') {
-                $case->setStatus('ERROR');
+                $case->setSignifydStatus('ERROR');
             }
             
             return;
@@ -96,5 +121,7 @@ class Signifyd_Connect_Model_Cron
         
         $case->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
+        
+        return $case;
     }
 }
