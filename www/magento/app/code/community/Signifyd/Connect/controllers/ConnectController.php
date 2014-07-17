@@ -52,12 +52,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             return $post;
         }
         
-        $post = http_get_request_body();
-        
-        if ($post) {
-            return $post;
-        }
-        
         return '';
     }
     
