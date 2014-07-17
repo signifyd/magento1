@@ -79,7 +79,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     
     public function validRequest($request, $hash)
     {
-        $check = hash_hmac('sha256', $request, $this->getApiKey());
+        $check = base64_encode(hash_hmac('sha256', $request, $this->getApiKey(), true));
         
         if ($this->logRequest()) {
             Mage::log('API request hash check: ' . $check, null, 'signifyd_connect.log');
