@@ -96,7 +96,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     {
         $this->_request = json_decode($request, true);
         
-        $topic = $this->getHeader('X_SIGNIFYD_WEBHOOK_TOPIC');
+        $topic = $this->getHeader('HTTP_X_SIGNIFYD_WEBHOOK_TOPIC');
         
         $this->_topic = $topic;
         
@@ -160,7 +160,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         if ($this->canHold()) {
             $order = Mage::getModel('sales/order')->loadByIncrementId($case->getOrderIncrement());
             
-            if ($this->_request['reviewDisposition'] == 'BAD') {
+            if ($this->_request['reviewDisposition'] == 'FRAUDULENT') {
                 if ($order->canHold()) {
                     $order->hold();
                     $order->save();
@@ -200,7 +200,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         
         $request = $this->getRawPost();
         
-        $hash = $this->getHeader('X_SIGNIFYD_HMAC_SHA256');
+        $hash = $this->getHeader('HTTP_X_SIGNIFYD_HMAC_SHA256');
         
         if ($this->logRequest()) {
             Mage::log('API request: ' . $request, null, 'signifyd_connect.log');
