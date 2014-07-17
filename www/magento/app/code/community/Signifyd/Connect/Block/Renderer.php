@@ -9,11 +9,11 @@ class Signifyd_Connect_Block_Renderer extends Mage_Adminhtml_Block_Widget_Grid_C
         
         $url = $helper->getCaseUrl($row->getIncrementId());
         
-        $value = round($value, 0);
-
-        if (!$value) {
+        if (!is_numeric($value)) {
             return $helper->__('N/A');
         }
+        
+        $value = round($value, 0);
         
         if ($url) {
             $value = "<a href=\"$url\" target=\"_blank\">$value</a>";
