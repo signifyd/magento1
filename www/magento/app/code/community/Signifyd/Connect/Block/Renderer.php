@@ -13,7 +13,7 @@ class Signifyd_Connect_Block_Renderer extends Mage_Adminhtml_Block_Widget_Grid_C
             return $helper->__('N/A');
         }
         
-        $value = round($value, 0);
+        $value = floor($value);
         
         if ($url) {
             $value = "<a href=\"$url\" target=\"_blank\">$value</a>";
