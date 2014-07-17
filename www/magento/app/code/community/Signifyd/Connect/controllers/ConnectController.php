@@ -102,7 +102,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         
         if (isset($this->_request['orderId'])) {
             $cases = Mage::getModel('signifyd_connect/case')->getCollection();
-            $cases->addFieldToFilter('signifyd_status', $this->_request['orderId']);
+            $cases->addFieldToFilter('order_increment', $this->_request['orderId']);
             
             foreach ($cases as $case) {
                 $this->_case = $case;
