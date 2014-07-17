@@ -139,11 +139,13 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             
             $threshold = $this->holdThreshold();
             if ($threshold && $case->getScore() <= $threshold) {
-                $order->hold();
-                $order->save();
-                
-                if ($this->logRequest()) {
-                    Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
+                if ($order->canHold()) {
+                    $order->hold();
+                    $order->save();
+                    
+                    if ($this->logRequest()) {
+                        Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
+                    }
                 }
             }
         }
@@ -156,6 +158,17 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         if (!$case) {
             return;
         }
+        
+        if (isset($this->_request['score'])) {
+            $case->setScore($this->_request['score']);
+        }
+        
+        if (isset($this->_request['status'])) {
+            $case->setStatus($this->_request['status']);
+        }
+        
+        $case->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
+        $case->save();
         
         if ($this->canHold()) {
             $order = Mage::getModel('sales/order')->loadByIncrementId($case->getOrderIncrement());
