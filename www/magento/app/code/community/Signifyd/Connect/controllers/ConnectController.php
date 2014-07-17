@@ -41,11 +41,17 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     
     public function getRawPost()
     {
-        if ($HTTP_RAW_POST_DATA) {
+        if (isset($HTTP_RAW_POST_DATA) && $HTTP_RAW_POST_DATA) {
             return $HTTP_RAW_POST_DATA;
         }
         
         $post = file_get_contents("php://input");
+        
+        if ($post) {
+            return $post;
+        }
+        
+        $post = http_get_request_body();
         
         if ($post) {
             return $post;
@@ -200,7 +206,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             Mage::log('API request hash: ' . $hash, null, 'signifyd_connect.log');
         }
         
-        if ($request && $hash) {
+        if ($request) {
             if ($this->validRequest($request, $hash)) {
                 $this->initRequest($request);
                 
@@ -233,11 +239,11 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                         $this->unsupported();
                 }
             } else {
-                Mage::helper('core/http')->authFailed();
-                
                 if ($this->logRequest()) {
                     Mage::log('API request failed auth', null, 'signifyd_connect.log');
                 }
+                
+                Mage::helper('core/http')->authFailed();
             }
         } else {
             echo $this->getDefaultMessage();
