@@ -24,7 +24,9 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     
     public function enabled()
     {
-        return Mage::getStoreConfig('signifyd_connect/settings/enabled') && Mage::getStoreConfig('signifyd_connect/advanced/retrieve_scores');
+        $retrieve_scores = Mage::getStoreConfig('signifyd_connect/advanced/retrieve_score');
+        $enabled = Mage::getStoreConfig('signifyd_connect/settings/enabled');
+        return $enabled && $retrieve_scores;
     }
     
     public function logErrors()
@@ -171,6 +173,16 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 }
             }
         }
+    }
+    
+    public function getHeader($header)
+    {
+        $temp = 'HTTP_' . strtoupper(str_replace('-', '_', $header));
+        if (isset($_SERVER[$temp])) {
+            return $_SERVER[$temp];
+        }
+        
+        return '';
     }
     
     public function apiAction()
