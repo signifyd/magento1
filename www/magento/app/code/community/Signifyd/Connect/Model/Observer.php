@@ -554,7 +554,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         $collection = $observer->getOrderGridCollection();
         $select = $collection->getSelect();
         
-        if (Mage::getStoreConfig('signifyd_connect/settings/retrieve_score')) {
+        if (Mage::getStoreConfig('signifyd_connect/advanced/show_scores')) {
             if ($this->belowSix()) {
                 $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
             } else {
@@ -565,7 +565,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     
     public function coreBlockAbstractToHtmlBefore(Varien_Event_Observer $observer)
     {
-        if (Mage::getStoreConfig('signifyd_connect/settings/retrieve_score')) {
+        if (Mage::getStoreConfig('signifyd_connect/advanced/show_scores')) {
             $helper	= Mage::helper('signifyd_connect');
             $block = $observer->getEvent()->getBlock();
             

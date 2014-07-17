@@ -3,21 +3,9 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>3.3.0</version>
+            <version>3.4.0</version>
         </Signifyd_Connect>
     </modules>
-    <crontab>
-        <jobs>
-            <signifyd_connect>
-                <schedule>
-                    <cron_expr>*/5 * * * *</cron_expr>
-                </schedule>
-                <run>
-                    <model>signifyd_connect/cron::update</model>
-                </run>
-            </signifyd_connect>
-        </jobs>
-    </crontab>
     <global>
         <models>
             <signifyd_connect>
@@ -75,15 +63,29 @@
             </model_save_after>
         </events>
     </global>
+    <frontend>
+        <routers>
+            <signifyd_connect>
+                <use>standard</use>
+                <args>
+                    <module>Signifyd_Connect</module>
+                    <frontName>signifyd</frontName>
+                </args>
+            </signifyd_connect>
+        </routers>
+    </frontend>
     <default>
         <signifyd_connect>
             <settings>
                 <enabled>0</enabled>
                 <url>https://api.signifyd.com/v2</url>
+            </settings>
+            <advanced>
                 <retrieve_score>0</retrieve_score>
+                <show_scores>0</show_scores>
                 <hold_orders>0</hold_orders>
                 <hold_orders_threshold>500</hold_orders_threshold>
-            </settings>
+            </advanced>
             <log>
                 <request>0</request>
                 <response>0</response>
