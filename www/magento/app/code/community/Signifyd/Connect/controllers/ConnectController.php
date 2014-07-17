@@ -19,24 +19,25 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     
     public function canHold()
     {
-        Mage::getStoreConfig('signifyd_connect/advanced/hold_orders');
+        return Mage::getStoreConfig('signifyd_connect/advanced/hold_orders');
     }
     
     public function enabled()
     {
         $retrieve_scores = Mage::getStoreConfig('signifyd_connect/advanced/retrieve_score');
         $enabled = Mage::getStoreConfig('signifyd_connect/settings/enabled');
+        
         return $enabled && $retrieve_scores;
     }
     
     public function logErrors()
     {
-        Mage::getStoreConfig('signifyd_connect/log/error');
+        return Mage::getStoreConfig('signifyd_connect/log/error');
     }
     
     public function logRequest()
     {
-        Mage::getStoreConfig('signifyd_connect/log/request');
+        return Mage::getStoreConfig('signifyd_connect/log/request');
     }
     
     public function getRawPost()
