@@ -60,6 +60,11 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         return 'This URL is working! Please copy & paste the current URL into your <a href="https://signifyd.com/settings">settings</a> page in the Notifications section';
     }
     
+    public function getDisabledMessage()
+    {
+        return 'This URL is disabled in the Magento admin panel! Please enable score retrieval under Admin>System>Config>Signifyd Connect>Advanced before setting this url in your Signifyd <a href="https://signifyd.com/settings">settings</a> page.';
+    }
+    
     public function unsupported()
     {
         echo 'This request type is currently unsupported';
@@ -202,6 +207,8 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     public function apiAction()
     {
         if (!$this->enabled()) {
+            echo $this->getDisabledMessage();
+            
             return;
         }
         
