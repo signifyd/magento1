@@ -41,7 +41,7 @@
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
-                            <comment><![CDATA[You will find this in <a href="http://signifyd.com/team">http://signifyd.com/team</a> after you create a Signifyd account]]></comment>
+                            <comment><![CDATA[You will find this in <a href="http://signifyd.com/settings/teams">http://signifyd.com/settings/teams</a> after you create a Signifyd account]]></comment>
                         </key>
                         <url translate="label">
                             <label>Signifyd API URL</label>
@@ -70,7 +70,7 @@
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
-                            <comment><![CDATA[Turn this on if you would like to receive signifyd scores]]></comment>
+                            <comment><model>signifyd_connect/link</model></comment>
                         </retrieve_score>
                         <show_scores translate="label">
                             <label>Show Scores in Magento Order Grid</label>
