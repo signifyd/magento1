@@ -2,6 +2,8 @@
 
 try {
     $this->startSetup();
+    $this->register();
+    $this->checkColumns();
     $this->run("ALTER TABLE  `{$this->getTable('signifyd_connect_case')}` ADD INDEX (  `order_increment` );");
     $this->endSetup();
 } catch (Exception $e) {
