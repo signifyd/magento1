@@ -76,6 +76,15 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         exit;
     }
     
+    public function complete()
+    {
+        Mage::app()->getResponse()
+            ->setHeader('HTTP/1.1','200 Ok')
+            ->sendResponse();
+        
+        exit;
+    }
+    
     public function validRequest($request, $hash)
     {
         $check = base64_encode(hash_hmac('sha256', $request, $this->getApiKey(), true));
@@ -158,12 +167,14 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             return;
         }
         
+        $original_status = $case->getSignifydStatus();
+        
         if (isset($this->_request['score'])) {
             $case->setScore($this->_request['score']);
         }
         
         if (isset($this->_request['status'])) {
-            $case->setStatus($this->_request['status']);
+            $case->setSignifydStatus($this->_request['status']);
         }
         
         $case->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
@@ -172,24 +183,110 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         if ($this->canHold()) {
             $order = Mage::getModel('sales/order')->loadByIncrementId($case->getOrderIncrement());
             
-            if ($this->_request['reviewDisposition'] == 'FRAUDULENT') {
-                if ($order->canHold()) {
-                    $order->hold();
-                    $order->save();
-                    
-                    if ($this->logRequest()) {
-                        Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
+            if ($original_status == 'PENDING') { // i.e. First update
+                $threshold = $this->holdThreshold();
+                if ($threshold && $case->getScore() <= $threshold) {
+                    if ($order->canHold()) {
+                        $order->hold();
+                        $order->save();
+                        
+                        if ($this->logRequest()) {
+                            Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
+                        }
                     }
                 }
-            } else if ($this->_request['reviewDisposition'] == 'GOOD') {
-                if ($order->canUnhold()) {
-                    $order->unhold();
-                    $order->save();
-                    
-                    if ($this->logRequest()) {
-                        Mage::log('Order ' . $order->getId() . ' unheld', null, 'signifyd_connect.log');
+            } else {
+                if ($this->_request['reviewDisposition'] == 'FRAUDULENT') {
+                    if ($order->canHold()) {
+                        $order->hold();
+                        $order->save();
+                        
+                        if ($this->logRequest()) {
+                            Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
+                        }
+                    }
+                } else if ($this->_request['reviewDisposition'] == 'GOOD') {
+                    if ($order->canUnhold()) {
+                        $order->unhold();
+                        $order->save();
+                        
+                        if ($this->logRequest()) {
+                            Mage::log('Order ' . $order->getId() . ' unheld', null, 'signifyd_connect.log');
+                        }
                     }
                 }
+            }
+        }
+    }
+    
+    public function getUrl($code)
+    {
+        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases/' . $code;
+    }
+    
+    public function caseLookup()
+    {
+        $result = false;
+        $case = $this->_case;
+        
+        try {
+            $url = $this->getUrl($case->getCode());
+            
+            $response = Mage::helper('signifyd_connect')->request($url, null, $this->getApiKey(), null, 'application/json');
+            
+            $response_code = $response->getHttpCode();
+            
+            if (substr($response_code, 0, 1) == '2') {
+                $result = json_decode($response->getRawResponse(), true);
+            } else {
+                if ($this->logRequest()) {
+                    Mage::log('Fallback request received a ' . $response_code . ' response from Signifyd', null, 'signifyd_connect.log');
+                }
+            }
+        } catch (Exception $e) {
+            if ($this->logErrors()) {
+                Mage::log('Fallback issue: ' . $e->__toString(), null, 'signifyd_connect.log');
+            }
+        }
+        
+        return $result;
+    }
+    
+    public function processFallback($request)
+    {
+        if ($this->logRequest()) {
+            Mage::log('Attempting auth via fallback request', null, 'signifyd_connect.log');
+        }
+        
+        $request = json_decode($request, true);
+        
+        $this->_topic = "cases/review"; // Topic header is most likely not available
+        
+        if (is_array($request) && isset($request['orderId'])) {
+            $cases = Mage::getModel('signifyd_connect/case')->getCollection();
+            $cases->addFieldToFilter('order_increment', $request['orderId']);
+            
+            foreach ($cases as $case) {
+                $this->_case = $case;
+                break;
+            }
+        }
+        
+        if ($this->_case) {
+            $lookup = $this->caseLookup();
+            
+            if ($lookup && is_array($lookup)) {
+                $this->_request = $lookup;
+                
+                $this->processReview();
+            } else {
+                if ($this->logRequest()) {
+                    Mage::log('Fallback failed with an invalid response from Signifyd', null, 'signifyd_connect.log');
+                }
+            }
+        } else {
+            if ($this->logRequest()) {
+                Mage::log('Fallback failed with no matching case found', null, 'signifyd_connect.log');
             }
         }
     }
@@ -258,10 +355,12 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                     Mage::log('API request failed auth', null, 'signifyd_connect.log');
                 }
                 
-                Mage::helper('core/http')->authFailed();
+                $this->processFallback($request);
             }
         } else {
             echo $this->getDefaultMessage();
         }
+        
+        $this->complete();
     }
 }

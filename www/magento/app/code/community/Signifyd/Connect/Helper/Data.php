@@ -126,6 +126,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
         }
 
+        curl_setopt($curl, CURLOPT_TIMEOUT, 4);
+        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 4);
+
         $raw_response = curl_exec($curl);
         $response->setRawResponse($raw_response);
         
