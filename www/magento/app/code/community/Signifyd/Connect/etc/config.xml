@@ -118,14 +118,6 @@
             </resources>
         </acl>
         <events>
-            <eav_collection_abstract_load_before>
-                <observers>
-                    <signifyd_connect>
-                        <model>signifyd_connect/observer</model>
-                        <method>eavCollectionAbstractLoadBefore</method>
-                    </signifyd_connect>
-                </observers>
-            </eav_collection_abstract_load_before>
             <core_collection_abstract_load_before>
                 <observers>
                     <signifyd_connect>
