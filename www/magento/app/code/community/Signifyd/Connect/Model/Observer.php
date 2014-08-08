@@ -533,12 +533,12 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         return !@class_exists('Enterprise_Cms_Helper_Data');
     }
     
-    public function belowSix()
+    public function oldSupport()
     {
         $version = Mage::getVersion();
         
         if ($this->isCe()) {
-            return version_compare($version, '1.6.0.0', '<');
+            return version_compare($version, '1.4.1.0', '<');
         } else {
             return version_compare($version, '1.11.0.0', '<');
         }
@@ -561,7 +561,11 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         $select = $collection->getSelect();
         
         if (Mage::getStoreConfig('signifyd_connect/advanced/show_scores')) {
-            $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
+            if ($this->oldSupport()) {
+                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
+            } else {
+                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
+            }
         }
     }
     
