@@ -521,7 +521,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         }
         
         $clss = get_class($x);
-        if ($clss == 'Mage_Sales_Model_Mysql4_Order_Collection') {
+        
+        if ($clss == 'Mage_Sales_Model_Mysql4_Order_Collection' || $clss == 'Mage_Sales_Model_Mysql4_Order_Grid_Collection') {
             $observer->setOrderGridCollection($x);
             return $this->salesOrderGridCollectionLoadBefore($observer);
         }
@@ -560,11 +561,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         $select = $collection->getSelect();
         
         if (Mage::getStoreConfig('signifyd_connect/advanced/show_scores')) {
-            if ($this->belowSix()) {
-                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
-            } else {
-                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
-            }
+            $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
         }
     }
     

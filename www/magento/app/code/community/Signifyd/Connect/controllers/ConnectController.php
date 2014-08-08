@@ -132,14 +132,14 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         }
         
         if (isset($this->_request['status'])) {
-            $case->setStatus($this->_request['status']);
+            $case->setSignifydStatus($this->_request['status']);
         }
         
         $case->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
         
         if ($this->logRequest()) {
-            Mage::log('Case ' . $case->getId() . ' created with status ' . $case->getStatus() . ' and score ' . $case->getScore(), null, 'signifyd_connect.log');
+            Mage::log('Case ' . $case->getId() . ' created with status ' . $case->getSignifydStatus() . ' and score ' . $case->getScore(), null, 'signifyd_connect.log');
         }
         
         if ($this->canHold()) {
