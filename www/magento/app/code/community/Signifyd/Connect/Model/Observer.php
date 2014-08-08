@@ -9,6 +9,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     public $shipping_address = null;
     public $billing_address = null;
     
+    public $joins = 0;
+    
     public function getProducts()
     {
         $products = array();
@@ -501,7 +503,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         }
         
         $clss = get_class($x);
-        if ($clss == 'Mage_Sales_Model_Mysql4_Order_Collection') {
+        if ($clss == 'Mage_Sales_Model_Mysql4_Order_Collection' || $clss == 'Mage_Sales_Model_Mysql4_Order_Grid_Collection') {
             $observer->setOrderGridCollection($x);
             return $this->salesOrderGridCollectionLoadBefore($observer);
         }
@@ -540,6 +542,19 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         if ($this->isCe()) {
             return version_compare($version, '1.4.1.0', '<');
         } else {
+            return version_compare($version, '1.10.0.0', '<');
+        }
+        
+        return false;
+    }
+    
+    public function belowSix()
+    {
+        $version = Mage::getVersion();
+        
+        if ($this->isCe()) {
+            return version_compare($version, '1.6.0.0', '<');
+        } else {
             return version_compare($version, '1.11.0.0', '<');
         }
         
@@ -548,23 +563,29 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     
     public function salesOrderGridCollectionLoadBefore($observer)
     {
-        $request = Mage::app()->getRequest();
-        $module = $request->getModuleName();
-        $controller = $request->getControllerName();
-        $action = $request->getActionName();
-        
-        if ($module != 'admin' || $controller != 'sales_order') {
-            return;
-        }
-        
-        $collection = $observer->getOrderGridCollection();
-        $select = $collection->getSelect();
-        
-        if (Mage::getStoreConfig('signifyd_connect/advanced/show_scores')) {
-            if ($this->oldSupport()) {
-                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
-            } else {
-                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
+        if ($this->joins === 0) {
+            $request = Mage::app()->getRequest();
+            $module = $request->getModuleName();
+            $controller = $request->getControllerName();
+            $action = $request->getActionName();
+            
+            if ($module != 'admin' || $controller != 'sales_order') {
+                return;
+            }
+            
+            $collection = $observer->getOrderGridCollection();
+            $select = $collection->getSelect();
+            
+            if (Mage::getStoreConfig('signifyd_connect/advanced/show_scores')) {
+                if ($this->oldSupport()) {
+                    $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
+                    $this->joins++;
+                } else {
+                    $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
+                    $this->joins++;
+                }
+                
+                Mage::log('joined');
             }
         }
     }
@@ -572,7 +593,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     public function coreBlockAbstractToHtmlBefore(Varien_Event_Observer $observer)
     {
         if (Mage::getStoreConfig('signifyd_connect/advanced/show_scores')) {
-            $helper	= Mage::helper('signifyd_connect');
+            $helper = Mage::helper('signifyd_connect');
             $block = $observer->getEvent()->getBlock();
             
             if ($block->getId() == 'sales_order_grid') {
