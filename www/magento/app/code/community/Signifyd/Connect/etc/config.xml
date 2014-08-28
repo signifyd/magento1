@@ -93,6 +93,17 @@
             </log>
         </signifyd_connect>
     </default>
+    <admin>
+        <routers>
+            <adminhtml>
+                <args>
+                    <modules>
+                        <signifyd_connect before="Mage_Adminhtml">Signifyd_Connect_Adminhtml</signifyd_connect>
+                    </modules>
+                </args>
+            </adminhtml>
+        </routers>
+    </admin>
     <adminhtml>
         <acl>
             <resources>
