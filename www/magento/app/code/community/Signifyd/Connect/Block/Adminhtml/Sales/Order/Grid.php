@@ -14,7 +14,7 @@ class Signifyd_Connect_Block_Adminhtml_Sales_Order_Grid extends Mage_Adminhtml_B
     
     public function oldSupport()
     {
-        $model = Mage::getModel('signifyd_connect/observer');
+        $model = Mage::getSingleton('signifyd_connect/observer');
         
         return $model->oldSupport();
     }
@@ -24,12 +24,6 @@ class Signifyd_Connect_Block_Adminhtml_Sales_Order_Grid extends Mage_Adminhtml_B
         $collection = Mage::getResourceModel('sales/order_collection');
         
         if ($this->oldSupport()) {
-            $collection->addExpressionFieldToSelect(
-                'fullname',
-                'CONCAT({{customer_firstname}}, \' \', {{customer_lastname}})',
-                array('customer_firstname' => 'e.customer_firstname', 'customer_lastname' => 'e.customer_lastname')
-            );
-            
             $collection->getSelect()->joinLeft(
                 array('signifyd' => Mage::getSingleton('core/resource')->getTableName('signifyd_connect_case')),
                 'signifyd.order_increment = e.increment_id',
@@ -74,11 +68,13 @@ class Signifyd_Connect_Block_Adminhtml_Sales_Order_Grid extends Mage_Adminhtml_B
             'index'  => 'created_at'
         ));
         
-        $this->addColumn('fullname', array(
-            'header'       => $helper->__('Name'),
-            'index'        => 'fullname',
-            'filter_index' => 'CONCAT(customer_firstname, \' \', customer_lastname)'
-        ));
+        if (!$this->oldSupport()) {
+            $this->addColumn('fullname', array(
+                'header'       => $helper->__('Name'),
+                'index'        => 'fullname',
+                'filter_index' => 'CONCAT(customer_firstname, \' \', customer_lastname)'
+            ));
+        }
         
         $this->addColumn('grand_total', array(
             'header'        => $helper->__('Grand Total'),

@@ -4,7 +4,7 @@
         <sales>
             <children>
                 <signifyd_connect translate="title" module="signifyd_connect">
-                    <sort_order>10</sort_order>
+                    <sort_order>50</sort_order>
                     <title>Signifyd Scores</title>
                     <action>adminhtml/signifyd/</action>
                 </signifyd_connect>
