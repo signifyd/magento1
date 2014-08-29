@@ -593,6 +593,15 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     public function coreBlockAbstractToHtmlBefore(Varien_Event_Observer $observer)
     {
         if (Mage::getStoreConfig('signifyd_connect/advanced/show_scores')) {
+            $request = Mage::app()->getRequest();
+            $module = $request->getModuleName();
+            $controller = $request->getControllerName();
+            $action = $request->getActionName();
+            
+            if ($module != 'admin' || $controller != 'sales_order') {
+                return;
+            }
+            
             $helper = Mage::helper('signifyd_connect');
             $block = $observer->getEvent()->getBlock();
             
