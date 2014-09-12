@@ -338,6 +338,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                             }
                         }
                         break;
+                    case "cases/rescore":
                     case "cases/review":
                         try {
                             $this->processReview($request);
