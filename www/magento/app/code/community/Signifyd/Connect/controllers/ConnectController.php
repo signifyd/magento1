@@ -117,6 +117,10 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 break;
             }
         }
+        
+        if (!$this->_case && $this->logRequest()) {
+            Mage::log('No matching case was found for this request. order_increment: ' . $this->_request['orderId'], null, 'signifyd_connect.log');
+        }
     }
     
     public function processCreation()
@@ -129,10 +133,26 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         
         if (isset($this->_request['score'])) {
             $case->setScore($this->_request['score']);
+            
+            if ($this->logRequest()) {
+                Mage::log('Set score to ' . $this->_request['score'], null, 'signifyd_connect.log');
+            }
+        } else {
+            if ($this->logRequest()) {
+                Mage::log('No score value available', null, 'signifyd_connect.log');
+            }
         }
         
         if (isset($this->_request['status'])) {
             $case->setSignifydStatus($this->_request['status']);
+            
+            if ($this->logRequest()) {
+                Mage::log('Set status to ' . $this->_request['status'], null, 'signifyd_connect.log');
+            }
+        } else {
+            if ($this->logRequest()) {
+                Mage::log('No status value available', null, 'signifyd_connect.log');
+            }
         }
         
         $case->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
@@ -171,10 +191,26 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         
         if (isset($this->_request['score'])) {
             $case->setScore($this->_request['score']);
+            
+            if ($this->logRequest()) {
+                Mage::log('Set score to ' . $this->_request['score'], null, 'signifyd_connect.log');
+            }
+        } else {
+            if ($this->logRequest()) {
+                Mage::log('No score value available', null, 'signifyd_connect.log');
+            }
         }
         
         if (isset($this->_request['status'])) {
             $case->setSignifydStatus($this->_request['status']);
+            
+            if ($this->logRequest()) {
+                Mage::log('Set status to ' . $this->_request['status'], null, 'signifyd_connect.log');
+            }
+        } else {
+            if ($this->logRequest()) {
+                Mage::log('No status value available', null, 'signifyd_connect.log');
+            }
         }
         
         $case->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
