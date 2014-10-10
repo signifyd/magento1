@@ -435,9 +435,9 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 
                 $case = $this->generateCase();
                 
-                $response = $this->submitCase($case);
-                
                 $case_object = Mage::helper('signifyd_connect')->markProcessed($order);
+                
+                $response = $this->submitCase($case);
                 
                 try {
                     $response_code = $response->getHttpCode();
@@ -445,6 +445,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                     if (substr($response_code, 0, 1) == '2') {
                         $response_data = json_decode($response->getRawResponse(), true);
                         
+                        $case_object->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
                         $case_object->setCode($response_data['investigationId']);
                         $case_object->save();
                     }
