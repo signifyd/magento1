@@ -3,7 +3,7 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>3.4.4</version>
+            <version>3.4.5</version>
         </Signifyd_Connect>
     </modules>
     <global>
@@ -124,6 +124,14 @@
                                 </config>
                             </children>
                         </system>
+                        <sales>
+                            <children>
+                                <signifyd_connect>
+                                    <sort_order>50</sort_order>
+                                    <title>Signifyd Scores</title>
+                                </signifyd_connect>
+                            </children>
+                        </sales>
                     </children>
                 </admin>
             </resources>

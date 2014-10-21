@@ -67,12 +67,17 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return false;
     }
     
+    public function generateCase($order)
+    {
+        return $this->markProcessed($order);
+    }
+    
     public function markProcessed($order)
     {
         $case = Mage::getModel('signifyd_connect/case');
         $case->setOrderIncrement($order->getIncrementId());
-        $case->setCreatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
-        $case->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
+        $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
+        $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
         
         return $case;

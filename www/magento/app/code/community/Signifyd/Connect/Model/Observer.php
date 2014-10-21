@@ -85,14 +85,19 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     {
         if ($this->order->getRemoteIp()) {
             if ($this->order->getXForwardedFor()) {
-                return $this->order->getXForwardedFor();
+                return $this->filterIp($this->order->getXForwardedFor());
             }
             
-            return $this->order->getRemoteIp();
+            return $this->filterIp($this->order->getRemoteIp());
         }
         
         // Checks each configured value in app/etc/local.xml & falls back to REMOTE_ADDR. See app/etc/local.xml.additional for examples.
-        return Mage::helper('core/http')->getRemoteAddr(false);
+        return $this->filterIp(Mage::helper('core/http')->getRemoteAddr(false));
+    }
+    
+    public function filterIp($ip)
+    {
+        return preg_replace('/[^0-9a-zA-Z:\.]/', '', strtok($ip, "\n"));
     }
     
     public function formatAvs($value)
@@ -445,7 +450,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                     if (substr($response_code, 0, 1) == '2') {
                         $response_data = json_decode($response->getRawResponse(), true);
                         
-                        $case_object->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
+                        $case_object = Mage::getModel('signifyd_connect/case')->load($case_object->getId());
+                        $case_object->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                         $case_object->setCode($response_data['investigationId']);
                         $case_object->save();
                     }
@@ -490,6 +496,28 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         Mage::log("Products:\n $products", null, 'signifyd_connect_objects.log');
     }
     
+    public function getAdminRoute()
+    {
+        $route = false;
+        
+        try {
+            // 1.4.0.0 support means we need to hard code these paths
+            if ((bool)(string)Mage::getConfig()->getNode('default/admin/url/use_custom_path')) {
+                $route = Mage::getConfig()->getNode('default/admin/url/custom_path');
+            } else {
+                $route = Mage::getConfig()->getNode('admin/routers/adminhtml/args/frontName');
+            }
+        } catch (Exception $e) {
+            
+        }
+        
+        if (!$route) {
+            $route = 'admin';
+        }
+        
+        return $route;
+    }
+    
     public function eavCollectionAbstractLoadBefore($observer)
     {
         $x = $observer->getCollection();
@@ -499,7 +527,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         $controller = $request->getControllerName();
         $action = $request->getActionName();
         
-        if ($module != 'admin' || $controller != 'sales_order') {
+        if ($module != $this->getAdminRoute() || $controller != 'sales_order') {
             return;
         }
         
@@ -519,7 +547,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         $controller = $request->getControllerName();
         $action = $request->getActionName();
         
-        if ($module != 'admin' || $controller != 'sales_order') {
+        if ($module != $this->getAdminRoute() || $controller != 'sales_order') {
             return;
         }
         
@@ -570,7 +598,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $controller = $request->getControllerName();
             $action = $request->getActionName();
             
-            if ($module != 'admin' || $controller != 'sales_order') {
+            if ($module != $this->getAdminRoute() || $controller != 'sales_order') {
                 return;
             }
             
@@ -599,7 +627,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $controller = $request->getControllerName();
             $action = $request->getActionName();
             
-            if ($module != 'admin' || $controller != 'sales_order') {
+            if ($module != $this->getAdminRoute() || $controller != 'sales_order') {
                 return;
             }
             
@@ -614,7 +642,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                         'align' => 'left',
                         'type' => 'text',
                         'index' => 'score',
-                        'filter_index' => 'score',
+                        'filter' => false,
                         'renderer' => 'signifyd_connect/renderer',
                         'width' => '100px',
                     ),

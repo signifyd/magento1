@@ -93,7 +93,7 @@ class Signifyd_Connect_Block_Adminhtml_Sales_Order_Grid extends Mage_Adminhtml_B
             'align' => 'left',
             'type' => 'text',
             'index' => 'score',
-            'filter_index' => 'score',
+            'filter' => false,
             'renderer' => 'signifyd_connect/renderer',
             'width' => '100px',
         ));

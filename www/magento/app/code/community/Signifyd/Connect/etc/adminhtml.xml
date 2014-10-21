@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <config>
+<!--
     <menu>
         <sales>
             <children>
@@ -11,4 +12,5 @@
             </children>
         </sales>
     </menu>
+-->
 </config>

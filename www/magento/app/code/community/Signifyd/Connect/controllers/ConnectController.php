@@ -100,6 +100,31 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         return false;
     }
     
+    public function initCase($order_increment)
+    {
+        $case = false;
+        
+        if (isset($this->_request['orderId'])) {
+            $cases = Mage::getModel('signifyd_connect/case')->getCollection();
+            $cases->addFieldToFilter('order_increment', $this->_request['orderId']);
+            
+            foreach ($cases as $c) {
+                $case = $c;
+                break;
+            }
+        }
+        
+        if (!$case) {
+            $order = Mage::getModel('sales/order')->loadByIncrementId($order_increment);
+            
+            if ($order && $order->getId()) {
+                $case = Mage::helper('signifyd_connect')->generateCase($order);
+            }
+        }
+        
+        return $case;
+    }
+    
     public function initRequest($request)
     {
         $this->_request = json_decode($request, true);
@@ -108,15 +133,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         
         $this->_topic = $topic;
         
-        if (isset($this->_request['orderId'])) {
-            $cases = Mage::getModel('signifyd_connect/case')->getCollection();
-            $cases->addFieldToFilter('order_increment', $this->_request['orderId']);
-            
-            foreach ($cases as $case) {
-                $this->_case = $case;
-                break;
-            }
-        }
+        $this->_case = $this->initCase($this->_request['orderId']);
         
         if (!$this->_case && $this->logRequest()) {
             Mage::log('No matching case was found for this request. order_increment: ' . $this->_request['orderId'], null, 'signifyd_connect.log');
@@ -155,7 +172,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             }
         }
         
-        $case->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
+        $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
         
         if ($this->logRequest()) {
@@ -213,7 +230,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             }
         }
         
-        $case->setUpdatedAt(strftime('%Y-%m-%d %H:%M:%S', time()));
+        $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
         
         if ($this->canHold()) {
@@ -305,6 +322,16 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             foreach ($cases as $case) {
                 $this->_case = $case;
                 break;
+            }
+            
+            if (!$this->_case && isset($request['investigationId'])) {
+                $case = Mage::getModel('signifyd_connect/case');
+                $case->setOrderIncrement($request['orderId']);
+                $case->setCode($request['investigationId']);
+                $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
+                $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
+                
+                $this->_case = $case;
             }
         }
         
