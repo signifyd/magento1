@@ -114,6 +114,8 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             }
         }
         
+        /*
+        // Do not create cases if not found -- potential concurrency issues
         if (!$case) {
             $order = Mage::getModel('sales/order')->loadByIncrementId($order_increment);
             
@@ -121,6 +123,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 $case = Mage::helper('signifyd_connect')->generateCase($order);
             }
         }
+        */
         
         return $case;
     }
@@ -324,6 +327,8 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 break;
             }
             
+            /*
+            // Do not create cases if not found -- potential concurrency issues
             if (!$this->_case && isset($request['investigationId'])) {
                 $case = Mage::getModel('signifyd_connect/case');
                 $case->setOrderIncrement($request['orderId']);
@@ -333,6 +338,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 
                 $this->_case = $case;
             }
+            */
         }
         
         if ($this->_case) {
