@@ -22,6 +22,11 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         return Mage::getStoreConfig('signifyd_connect/advanced/hold_orders');
     }
     
+    public function canInvoice()
+    {
+        return Mage::getStoreConfig('signifyd_connect/advanced/invoice_orders');
+    }
+    
     public function enabled()
     {
         $retrieve_scores = Mage::getStoreConfig('signifyd_connect/advanced/retrieve_score');
@@ -143,6 +148,84 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         }
     }
     
+    public function holdOrder($order)
+    {
+        if ($order->canHold() && $this->canHold()) {
+            $order->hold();
+            $order->save();
+            
+            if ($this->logRequest()) {
+                Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
+            }
+        }
+    }
+    
+    public function notifyCustomer()
+    {
+        return Mage::getStoreConfig('signifyd_connect/advanced/invoice_orders_notify');
+    }
+    
+    public function invoiceOrder($order)
+    {
+        if ($order->canInvoice() && $this->canInvoice()) {
+            $items = array();
+            foreach ($order->getAllItems() as $item) {
+                $items[$item->getId()] = $item->getQtyOrdered();
+            }
+            
+            $invoice_api = Mage::getModel('sales/order_invoice_api');
+            
+            $notify = $this->notifyCustomer();
+            
+            $invoice_id = $invoice_api->create($order->getIncrementId(), $items, null, $notify, true);
+            
+            $invoice_api->capture($invoice_id);
+        }
+    }
+    
+    public function processAdditional($case, $original_status=false)
+    {
+        if ($this->canHold() || $this->canInvoice()) {
+            $order = Mage::getModel('sales/order')->loadByIncrementId($case->getOrderIncrement());
+            $held = false;
+            
+            if ($this->canHold()) {
+                $threshold = $this->holdThreshold();
+                
+                if (!$original_status || $original_status == 'PENDING') {
+                    if ($threshold && $case->getScore() <= $threshold) {
+                        $this->holdOrder($order);
+                        $held = true;
+                    }
+                } else if ($original_status) {
+                    if ($this->_request['reviewDisposition'] == 'FRAUDULENT') {
+                        if ($order->canHold()) {
+                            $order->hold();
+                            $order->save();
+                            
+                            if ($this->logRequest()) {
+                                Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
+                            }
+                        }
+                    } else if ($this->_request['reviewDisposition'] == 'GOOD') {
+                        if ($order->canUnhold()) {
+                            $order->unhold();
+                            $order->save();
+                            
+                            if ($this->logRequest()) {
+                                Mage::log('Order ' . $order->getId() . ' unheld', null, 'signifyd_connect.log');
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if ($this->canInvoice() && !$held && !$original_status) {
+                $this->invoiceOrder();
+            }
+        }
+    }
+    
     public function processCreation()
     {
         $case = $this->_case;
@@ -182,21 +265,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             Mage::log('Case ' . $case->getId() . ' created with status ' . $case->getSignifydStatus() . ' and score ' . $case->getScore(), null, 'signifyd_connect.log');
         }
         
-        if ($this->canHold()) {
-            $order = Mage::getModel('sales/order')->loadByIncrementId($case->getOrderIncrement());
-            
-            $threshold = $this->holdThreshold();
-            if ($threshold && $case->getScore() <= $threshold) {
-                if ($order->canHold()) {
-                    $order->hold();
-                    $order->save();
-                    
-                    if ($this->logRequest()) {
-                        Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
-                    }
-                }
-            }
-        }
+        $this->processAdditional($case);
     }
     
     public function processReview()
@@ -236,43 +305,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
         
-        if ($this->canHold()) {
-            $order = Mage::getModel('sales/order')->loadByIncrementId($case->getOrderIncrement());
-            
-            if ($original_status == 'PENDING') { // i.e. First update
-                $threshold = $this->holdThreshold();
-                if ($threshold && $case->getScore() <= $threshold) {
-                    if ($order->canHold()) {
-                        $order->hold();
-                        $order->save();
-                        
-                        if ($this->logRequest()) {
-                            Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
-                        }
-                    }
-                }
-            } else {
-                if ($this->_request['reviewDisposition'] == 'FRAUDULENT') {
-                    if ($order->canHold()) {
-                        $order->hold();
-                        $order->save();
-                        
-                        if ($this->logRequest()) {
-                            Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
-                        }
-                    }
-                } else if ($this->_request['reviewDisposition'] == 'GOOD') {
-                    if ($order->canUnhold()) {
-                        $order->unhold();
-                        $order->save();
-                        
-                        if ($this->logRequest()) {
-                            Mage::log('Order ' . $order->getId() . ' unheld', null, 'signifyd_connect.log');
-                        }
-                    }
-                }
-            }
-        }
+        $this->processAdditional($case, $original_status);
     }
     
     public function getUrl($code)

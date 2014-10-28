@@ -85,6 +85,7 @@
                 <show_scores>0</show_scores>
                 <hold_orders>0</hold_orders>
                 <hold_orders_threshold>500</hold_orders_threshold>
+                <invoice_orders>0</invoice_orders>
             </advanced>
             <log>
                 <request>0</request>
