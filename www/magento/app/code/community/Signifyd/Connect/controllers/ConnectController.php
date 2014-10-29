@@ -175,11 +175,15 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             
             $invoice_api = Mage::getModel('sales/order_invoice_api');
             
-            $notify = $this->notifyCustomer();
-            
-            $invoice_id = $invoice_api->create($order->getIncrementId(), $items, null, $notify, true);
-            
-            $invoice_api->capture($invoice_id);
+            try {
+                $invoice_id = $invoice_api->create($order->getIncrementId(), $items, null, false, true);
+                
+                $invoice_api->capture($invoice_id);
+            } catch (Exception $e) {
+                if ($this->logErrors()) {
+                    Mage::log('Exception while creating invoice: ' . $e->__toString(), null, 'signifyd_connect.log');
+                }
+            }
         }
     }
     
@@ -221,7 +225,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             }
             
             if ($this->canInvoice() && !$held && !$original_status) {
-                $this->invoiceOrder();
+                $this->invoiceOrder($order);
             }
         }
     }
