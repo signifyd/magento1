@@ -113,7 +113,7 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                             <depends><retrieve_score>1</retrieve_score></depends>
-                            <comment><![CDATA[Orders that have not been held will be fully invoiced after receiving a Signifyd score when this setting is enabled. If the order cannot be invoiced, no action will be taken.]]></comment>
+                            <comment><![CDATA[Attempt to invoice (and capture) orders after receiving a Signifyd score where the order has not been held. If the order cannot be invoiced, no action will be taken. This will invoice the whole order, so is not suitable for workflows where partial invoices are needed.]]></comment>
                         </invoice_orders>
                         <invoice_orders_notify translate="label">
                             <label>Notify customer</label>
