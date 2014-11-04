@@ -97,7 +97,17 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     
     public function filterIp($ip)
     {
-        return preg_replace('/[^0-9a-zA-Z:\.]/', '', strtok($ip, "\n"));
+        $matches = array();
+        
+        if (preg_match('/[0-9]{1,3}(?:\.[0-9]{1,3}){3}/', $ip, $matches)) { //ipv4
+            return current($matches);
+        }
+        
+        if (preg_match('/[a-f0-9]{0,4}(?:\:[a-f0-9]{0,4}){2,7}/', strtolower($ip), $matches)) { //ipv6
+            return current($matches);
+        }
+        
+        return preg_replace('/[^0-9a-zA-Z:\.]/', '', strtok(str_replace($ip, ',', "\n"), "\n"));
     }
     
     public function formatAvs($value)
