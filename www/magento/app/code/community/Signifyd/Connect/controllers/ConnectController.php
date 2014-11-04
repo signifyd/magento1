@@ -5,6 +5,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     public $_request = array();
     public $_topic = false;
     public $_order = false;
+    public $_store_id = null;
     public $_case = false;
     
     public function getApiKey()
@@ -14,17 +15,22 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     
     public function holdThreshold()
     {
-        return (int)Mage::getStoreConfig('signifyd_connect/advanced/hold_orders_threshold');
+        return (int)Mage::getStoreConfig('signifyd_connect/advanced/hold_orders_threshold', $this->_store_id);
     }
     
     public function canHold()
     {
-        return Mage::getStoreConfig('signifyd_connect/advanced/hold_orders');
+        return Mage::getStoreConfig('signifyd_connect/advanced/hold_orders', $this->_store_id);
     }
     
     public function canInvoice()
     {
-        return Mage::getStoreConfig('signifyd_connect/advanced/invoice_orders');
+        return Mage::getStoreConfig('signifyd_connect/advanced/invoice_orders', $this->_store_id);
+    }
+    
+    public function notifyCustomer()
+    {
+        return Mage::getStoreConfig('signifyd_connect/advanced/invoice_orders_notify', $this->_store_id);
     }
     
     public function enabled()
@@ -33,6 +39,12 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         $enabled = Mage::getStoreConfig('signifyd_connect/settings/enabled');
         
         return $enabled && $retrieve_scores;
+    }
+    
+    
+    public function getUrl($code)
+    {
+        return Mage::getStoreConfig('signifyd_connect/settings/url', $this->_store_id) . '/cases/' . $code;
     }
     
     public function logErrors()
@@ -143,6 +155,12 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         
         $this->_case = $this->initCase($this->_request['orderId']);
         
+        $this->_order = Mage::getModel('sales/order')->loadByIncrementId($this->_request['orderId']);
+        
+        if ($this->_order && $this->_order->getId()) {
+            $this->_store_id = $this->_order->getStoreId();
+        }
+        
         if (!$this->_case && $this->logRequest()) {
             Mage::log('No matching case was found for this request. order_increment: ' . $this->_request['orderId'], null, 'signifyd_connect.log');
         }
@@ -150,7 +168,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     
     public function holdOrder($order)
     {
-        if ($order->canHold() && $this->canHold()) {
+        if ($order && $order->getId() && $order->canHold() && $this->canHold()) {
             $order->hold();
             $order->save();
             
@@ -160,14 +178,9 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         }
     }
     
-    public function notifyCustomer()
-    {
-        return Mage::getStoreConfig('signifyd_connect/advanced/invoice_orders_notify');
-    }
-    
     public function invoiceOrder($order)
     {
-        if ($order->canInvoice() && $this->canInvoice()) {
+        if ($order && $order->getId() && $order->canInvoice() && $this->canInvoice()) {
             $items = array();
             foreach ($order->getAllItems() as $item) {
                 $items[$item->getId()] = $item->getQtyOrdered();
@@ -190,10 +203,10 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     public function processAdditional($case, $original_status=false)
     {
         if ($this->canHold() || $this->canInvoice()) {
-            $order = Mage::getModel('sales/order')->loadByIncrementId($case->getOrderIncrement());
+            $order = $this->_order;
             $held = false;
             
-            if ($this->canHold()) {
+            if ($order && $order->getId() && $this->canHold()) {
                 $threshold = $this->holdThreshold();
                 
                 if (!$original_status || $original_status == 'PENDING') {
@@ -224,7 +237,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 }
             }
             
-            if ($this->canInvoice() && !$held && !$original_status) {
+            if ($order && $order->getId() && $this->canInvoice() && !$held && !$original_status) {
                 $this->invoiceOrder($order);
             }
         }
@@ -312,11 +325,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         $this->processAdditional($case, $original_status);
     }
     
-    public function getUrl($code)
-    {
-        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases/' . $code;
-    }
-    
     public function caseLookup()
     {
         $result = false;
@@ -376,6 +384,12 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 $this->_case = $case;
             }
             */
+        }
+        
+        $this->_order = Mage::getModel('sales/order')->loadByIncrementId($this->_request['orderId']);
+        
+        if ($this->_order && $this->_order->getId()) {
+            $this->_store_id = $this->_order->getStoreId();
         }
         
         if ($this->_case) {
