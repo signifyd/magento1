@@ -417,7 +417,8 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         if (isset($_SERVER[$temp])) {
             return $_SERVER[$temp];
         }
-        
+        Mage::log('Header Not Found: ' . $temp, null, 'signifyd_connect.log');
+                 
         return '';
     }
     
@@ -431,7 +432,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         
         $request = $this->getRawPost();
         
-        $hash = $this->getHeader('HTTP_X_SIGNIFYD_HMAC_SHA256');
+        $hash = $this->getHeader('X_SIGNIFYD_HMAC_SHA256');
         
         if ($this->logRequest()) {
             Mage::log('API request: ' . $request, null, 'signifyd_connect.log');
