@@ -413,11 +413,20 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     
     public function getHeader($header)
     {
-        $temp = 'HTTP_' . strtoupper(str_replace('-', '_', $header));
-        if (isset($_SERVER[$temp])) {
-            return $_SERVER[$temp];
+        // T379: Some frameworks add an extra HTTP_ before the header, so check for both names
+        $direct = strtoupper(str_replace('-', '_', $header));
+        $extraHttp = 'HTTP_' . strtoupper(str_replace('-', '_', $header));
+        
+        if (isset($_SERVER[$direct]) && isset($_SERVER[$extraHttp])) {
+            // Legitimate request should have one header or the other, but not both
+            Mage::log('Multiple Headers Found: ' . $direct . ' and ' . $extraHttp, null, 'signifyd_connect.log');
+        } else if (isset($_SERVER[$direct])){
+            return $_SERVER[$direct];
+        } else if (isset($_SERVER[$extraHttp])){
+            return $_SERVER[$extraHttp];            
         }
-        Mage::log('Header Not Found: ' . $temp, null, 'signifyd_connect.log');
+        
+        Mage::log('Valid Header Not Found: ' . $header, null, 'signifyd_connect.log');
                  
         return '';
     }
@@ -432,7 +441,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         
         $request = $this->getRawPost();
         
-        $hash = $this->getHeader('X_SIGNIFYD_HMAC_SHA256');
+        $hash = $this->getHeader('HTTP_X_SIGNIFYD_HMAC_SHA256');
         
         if ($this->logRequest()) {
             Mage::log('API request: ' . $request, null, 'signifyd_connect.log');
