@@ -2,7 +2,7 @@
 
 Integrates the Signifyd fraud detection service with Magento
 
-When enabled, each new order will be submited as a new signifyd case, allowing merchants to review fraud scores before shipment.
+When enabled, each new order will be submitted as a new signifyd case, allowing merchants to review fraud scores before shipment.
 
 See: http://signifyd.com for further information.
 
