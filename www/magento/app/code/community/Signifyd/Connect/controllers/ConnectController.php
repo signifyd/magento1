@@ -84,12 +84,10 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     
     public function unsupported()
     {
-        echo 'This request type is currently unsupported';
-        
         Mage::app()->getResponse()
             ->setHeader('HTTP/1.1','403 Forbidden')
             ->sendResponse();
-        
+        echo 'This request type is currently unsupported';
         exit;
     }
     
@@ -130,18 +128,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 break;
             }
         }
-        
-        /*
-        // Do not create cases if not found -- potential concurrency issues
-        if (!$case) {
-            $order = Mage::getModel('sales/order')->loadByIncrementId($order_increment);
-            
-            if ($order && $order->getId()) {
-                $case = Mage::helper('signifyd_connect')->generateCase($order);
-            }
-        }
-        */
-        
+
         return $case;
     }
     
@@ -371,19 +358,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 $this->_case = $case;
                 break;
             }
-            
-            /*
-            // Do not create cases if not found -- potential concurrency issues
-            if (!$this->_case && isset($request['investigationId'])) {
-                $case = Mage::getModel('signifyd_connect/case');
-                $case->setOrderIncrement($request['orderId']);
-                $case->setCode($request['investigationId']);
-                $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
-                $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
-                
-                $this->_case = $case;
-            }
-            */
         }
         
         $this->_order = Mage::getModel('sales/order')->loadByIncrementId($this->_request['orderId']);
