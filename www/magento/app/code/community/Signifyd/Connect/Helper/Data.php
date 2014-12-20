@@ -24,6 +24,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 return "https://www.signifyd.com/cases/" . $case->getCode();
             }
         }
+        Mage::log('Case URL not found: '.$order_id, null, 'signifyd_connect.log');
+        return '';
     }
     
     public function getProductImage($product, $size="150")
