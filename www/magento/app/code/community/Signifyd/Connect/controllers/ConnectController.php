@@ -388,8 +388,9 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     public function getHeader($header)
     {
         // T379: Some frameworks add an extra HTTP_ before the header, so check for both names
+        // Header values stored in the $_SERVER variable have dashes converted to underscores, hence str_replace
         $direct = strtoupper(str_replace('-', '_', $header));
-        $extraHttp = 'HTTP_' . strtoupper(str_replace('-', '_', $header));
+        $extraHttp = 'HTTP_' . $direct;
 
         // check the $_SERVER global
         if (isset($_SERVER[$direct]) && isset($_SERVER[$extraHttp])) {
