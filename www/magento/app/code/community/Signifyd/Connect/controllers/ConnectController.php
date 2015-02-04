@@ -136,7 +136,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     {
         $this->_request = json_decode($request, true);
         
-        $topic = $this->getHeader('HTTP_X_SIGNIFYD_WEBHOOK_TOPIC');
+        $topic = $this->getHeader('X-SIGNIFYD-TOPIC');
         
         $this->_topic = $topic;
         
@@ -387,12 +387,24 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     
     public function getHeader($header)
     {
-        $temp = 'HTTP_' . strtoupper(str_replace('-', '_', $header));
-        if (isset($_SERVER[$temp])) {
-            return $_SERVER[$temp];
+        // T379: Some frameworks add an extra HTTP_ before the header, so check for both names
+        // Header values stored in the $_SERVER variable have dashes converted to underscores, hence str_replace
+        $direct = strtoupper(str_replace('-', '_', $header));
+        $extraHttp = 'HTTP_' . $direct;
+
+        // check the $_SERVER global
+        if (isset($_SERVER[$direct]) && isset($_SERVER[$extraHttp])) {
+            // Legitimate request should have one header or the other, but not both
+            Mage::log('Multiple Headers Found ($_SERVER): ' . $direct . ' and ' . $extraHttp, null, 'signifyd_connect.log');
+        } else if (isset($_SERVER[$direct])) {
+            return $_SERVER[$direct];
+        } else if (isset($_SERVER[$extraHttp])) {
+            return $_SERVER[$extraHttp];
         }
-        
+
+        Mage::log('Valid Header Not Found: ' . $header, null, 'signifyd_connect.log');
         return '';
+
     }
     
     public function apiAction()
@@ -405,7 +417,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         
         $request = $this->getRawPost();
         
-        $hash = $this->getHeader('HTTP_X_SIGNIFYD_HMAC_SHA256');
+        $hash = $this->getHeader('X-SIGNIFYD-SEC-HMAC-SHA256');
         
         if ($this->logRequest()) {
             Mage::log('API request: ' . $request, null, 'signifyd_connect.log');
