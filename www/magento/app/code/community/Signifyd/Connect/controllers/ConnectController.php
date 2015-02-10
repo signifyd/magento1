@@ -392,6 +392,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         $direct = strtoupper(str_replace('-', '_', $header));
         $extraHttp = 'HTTP_' . $direct;
 
+        // Check the $_SERVER global
         if (isset($_SERVER[$direct])) {
             return $_SERVER[$direct];
         } else if (isset($_SERVER[$extraHttp])) {
