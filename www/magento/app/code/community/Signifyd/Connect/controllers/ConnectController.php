@@ -392,11 +392,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         $direct = strtoupper(str_replace('-', '_', $header));
         $extraHttp = 'HTTP_' . $direct;
 
-        // check the $_SERVER global
-        if (isset($_SERVER[$direct]) && isset($_SERVER[$extraHttp])) {
-            // Legitimate request should have one header or the other, but not both
-            Mage::log('Multiple Headers Found ($_SERVER): ' . $direct . ' and ' . $extraHttp, null, 'signifyd_connect.log');
-        } else if (isset($_SERVER[$direct])) {
+        if (isset($_SERVER[$direct])) {
             return $_SERVER[$direct];
         } else if (isset($_SERVER[$extraHttp])) {
             return $_SERVER[$extraHttp];
