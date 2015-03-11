@@ -180,8 +180,9 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     public function getPurchase()
     {
         $purchase = array();
-        
-        $purchase['browserIpAddress'] = $this->getIpAddress();
+
+        // T715: Send null rather than false when we can't get the IP Address
+        $purchase['browserIpAddress'] = ($this->getIpAddress() ? $this->getIpAddress() : null);
         $purchase['orderId'] = $this->order->getIncrementId();
         $purchase['createdAt'] = date('c', strtotime($this->order->getCreatedAt())); // e.g: 2004-02-12T15:19:21+00:00
         $purchase['currency'] = $this->order->getBaseCurrencyCode();
