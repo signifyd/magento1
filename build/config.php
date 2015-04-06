@@ -88,7 +88,7 @@ return array(
         "include" => array(
             "0" => '',
             "1" => '',
-            "2" => "#(etc|Model|Helper|sql|Block)#"
+            "2" => "#(etc|Model|Helper|sql|Block|Controller)#"
         ),
 
         "ignore" => array(
