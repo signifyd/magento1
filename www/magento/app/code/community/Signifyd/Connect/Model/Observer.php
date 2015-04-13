@@ -278,16 +278,20 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     public function getRecipient()
     {
         $recipient = array();
-        
-        $recipient['fullName'] = $this->shipping_address->getFirstname() . ' ' . $this->shipping_address->getLastname();
-        // Email: Note that this field is always the same for both addresses
-        $recipient['confirmationEmail'] = $this->shipping_address->getEmail();
+
+        // In the case of non-shipped (ex: downloadable) orders, shipping address will be null so
+        // in that case, we need to avoid the exception.
+        if($this->shipping_address) {
+            $recipient['deliveryAddress'] = $this->getShippingAddress();
+            $recipient['fullName'] = $this->shipping_address->getFirstname() . ' ' . $this->shipping_address->getLastname();
+            $recipient['confirmationPhone'] = $this->shipping_address->getTelephone();
+            // Email: Note that this field is always the same for both addresses
+            $recipient['confirmationEmail'] = $this->shipping_address->getEmail();
+        }
         if (!$recipient['confirmationEmail']) {
             $recipient['confirmationEmail'] = $this->order->getCustomerEmail();
         }
-        $recipient['confirmationPhone'] = $this->shipping_address->getTelephone();
-        
-        $recipient['deliveryAddress'] = $this->getShippingAddress();
+
         
         return $recipient;
     }
@@ -434,11 +438,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 $this->order = $order;
                 $this->billing_address = $order->getBillingAddress();
                 $this->shipping_address = $order->getShippingAddress();
-                
-                if (!$this->shipping_address) {
-                    $this->shipping_address = $this->billing_address;
-                }
-                
+
                 if ($order->getCustomer()) {
                     $this->customer = $order->getCustomer();
                 }
