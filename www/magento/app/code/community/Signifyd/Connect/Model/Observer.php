@@ -288,7 +288,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             // Email: Note that this field is always the same for both addresses
             $recipient['confirmationEmail'] = $this->shipping_address->getEmail();
         }
-        if (!$recipient['confirmationEmail']) {
+        if (!$recipient['confirmationEmail'] || $recipient['confirmationEmail'] == 'n/a@na.na') {
             $recipient['confirmationEmail'] = $this->order->getCustomerEmail();
         }
 
