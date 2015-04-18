@@ -196,49 +196,68 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         
         return $purchase;
     }
-    
+
+    public function isPaymentCC($payment)
+    {
+        // Although the payment structure only has the entity data for the payment
+        // the original payment method object is stored within the entity data.
+        // It's not a requirement, but every CC handler I've found subclasses
+        // from Mage_Payment_Model_Method_Cc, so we are using that as an
+        // assumption for whether a method is based on CC data
+        $method = $payment->getData('method_instance');
+        if($method)
+        {
+            return is_subclass_of($method, 'Mage_Payment_Model_Method_Cc');
+        }
+        return false;
+    }
+
     public function getCard()
     {
         $payment = $this->payment;
         $billing = $this->billing_address;
-        
+
         $card = array();
-        
+
         $card['cardHolderName'] = null;
         $card['bin'] = null;
         $card['last4'] = null;
         $card['expiryMonth'] = null;
         $card['expiryYear'] = null;
         $card['hash'] = null;
-        
+
         $card['billingAddress'] = $this->getBillingAddress();
-        
-        if ($payment->getData('cc_last4')) {
-            $card['last4'] = $payment->getData('cc_last4');
-        }
-        
-        if ($payment->getData('cc_exp_year')) {
-            $card['expiryYear'] = $payment->getData('cc_exp_year');
-        }
-        
-        if ($payment->getData('cc_exp_month')) {
-            $card['expiryMonth'] = $payment->getData('cc_exp_month');
-        }
-        
-        if ($payment->getData('cc_number_enc')) {
-            $card['hash'] = $payment->getData('cc_number_enc');
-        }
-        
-        if ($payment->getData('cc_number') && is_numeric($payment->getData('cc_number')) && strlen((string)$payment->getData('cc_number')) > 6) {
-            $card['bin'] = substr((string)$payment->getData('cc_number'), 0, 6);
-        }
-        
+
         if ($payment->getCcOwner()) {
             $card['cardHolderName'] = $payment->getCcOwner();
         } else {
             $card['cardHolderName'] = $billing->getFirstname() . ' ' . $billing->getLastname();
         }
-        
+
+        // Card data may be set on payment even if payment was not with card.
+        // If it is, we want to ignore the data
+        if(!$this->isPaymentCC($payment)) return $card;
+
+        if ($payment->getData('cc_last4')) {
+            $card['last4'] = $payment->getData('cc_last4');
+        }
+
+        if ($payment->getData('cc_exp_year')) {
+            $card['expiryYear'] = $payment->getData('cc_exp_year');
+        }
+
+        if ($payment->getData('cc_exp_month')) {
+            $card['expiryMonth'] = $payment->getData('cc_exp_month');
+        }
+
+        if ($payment->getData('cc_number_enc')) {
+            $card['hash'] = $payment->getData('cc_number_enc');
+        }
+
+        if ($payment->getData('cc_number') && is_numeric($payment->getData('cc_number')) && strlen((string)$payment->getData('cc_number')) > 6) {
+            $card['bin'] = substr((string)$payment->getData('cc_number'), 0, 6);
+        }
+
         return $card;
     }
     
