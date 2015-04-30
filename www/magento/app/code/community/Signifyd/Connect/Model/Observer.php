@@ -176,7 +176,12 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     {
         return $this->payment->getMethod();
     }
-    
+
+    private function getTransactionId()
+    {
+        return $this->payment->getTransactionId();
+    }
+
     public function getPurchase()
     {
         $purchase = array();
@@ -190,10 +195,11 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         $purchase['shippingPrice'] = floatval($this->order->getShippingAmount());
         $purchase['products'] = $this->getProducts();
         $purchase['paymentGateway'] = $this->getPaymentMethod();
-        
+        $purchase['transactionId'] = $this->getTransactionId();
+
         $purchase['avsResponseCode'] = $this->getAvsResponse();
         $purchase['cvvResponseCode'] = $this->getCvvResponse();
-        
+
         return $purchase;
     }
 
