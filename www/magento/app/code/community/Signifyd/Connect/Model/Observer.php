@@ -17,11 +17,12 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         $helper = Mage::helper('signifyd_connect');
         
         foreach ($this->quote->getAllItems() as $item) {
-            if (!$item->getProductType() || $item->getProductType() == 'simple') {
+            $product_type = $item->getProductType();
+            if (!$product_type || $product_type == 'simple' || $product_type == 'downloadable') {
                 $product_object = $item->getData('product');
                 
                 if (!$product_object || !$product_object->getId()) {
-                    $product_object = Mage::getModel('catalog/product')->load($item->getProductId());
+                    $product_object = Mage::getModel('catalog/product')->load($product_type);
                 }
                 
                 if ($product_object) {
