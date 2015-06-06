@@ -23,6 +23,7 @@ SELECT `order_increment`, `signifyd_status`, `code`, `score`, `entries`,
 FROM (SELECT `order_increment`, `signifyd_status`, `code`, `score`, `entries`, 
 `created`, `updated` FROM temp_signifyd ORDER BY updated DESC) as temp_by_updated
 GROUP BY `order_increment`;
+");
     $this->run("DROP TABLE temp_signifyd");
     $this->endSetup();
 } catch (Exception $e) {
