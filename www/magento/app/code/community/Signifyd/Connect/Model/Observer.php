@@ -444,17 +444,11 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             }
             
             if ($order && $order->getId()) {
-                if (Mage::helper('signifyd_connect')->isProcessed($order) && !$this->getForceProcess()) {
-                    return;
-                }
-                
                 $payments = $order->getPaymentsCollection();
                 
                 foreach ($payments as $payment) {
                     $this->payment = $payment;
                 }
-                
-                $method = $this->payment->getMethod();
                 
                 $state = $order->getState();
                 

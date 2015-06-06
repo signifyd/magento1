@@ -119,14 +119,9 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     {
         $case = false;
         
-        if (isset($this->_request['orderId'])) {
-            $cases = Mage::getModel('signifyd_connect/case')->getCollection();
-            $cases->addFieldToFilter('order_increment', $this->_request['orderId']);
-            
-            foreach ($cases as $c) {
-                $case = $c;
-                break;
-            }
+        if (isset($this->_request['orderId']))
+        {
+            $case = Mage::getModel('signifyd_connect/case')->load($this->_request['orderId']);
         }
 
         return $case;
@@ -350,14 +345,9 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         
         $this->_topic = "cases/review"; // Topic header is most likely not available
         
-        if (is_array($request) && isset($request['orderId'])) {
-            $cases = Mage::getModel('signifyd_connect/case')->getCollection();
-            $cases->addFieldToFilter('order_increment', $request['orderId']);
-            
-            foreach ($cases as $case) {
-                $this->_case = $case;
-                break;
-            }
+        if (is_array($request) && isset($request['orderId']))
+        {
+            $this->_case = Mage::getModel('signifyd_connect/case')->load($request['orderId']);
         }
         
         $this->_order = Mage::getModel('sales/order')->loadByIncrementId($this->_request['orderId']);
