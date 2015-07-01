@@ -43,6 +43,7 @@ class Signifyd_Connect_Block_Adminhtml_Sales_Order_Grid extends Mage_Adminhtml_B
                 'signifyd.order_increment = main_table.increment_id',
                 array(
                     'score' => 'score',
+                    'guarantee' => 'guarantee',
                 )
             );
         }
@@ -96,6 +97,14 @@ class Signifyd_Connect_Block_Adminhtml_Sales_Order_Grid extends Mage_Adminhtml_B
             'filter' => false,
             'renderer' => 'signifyd_connect/renderer',
             'width' => '100px',
+        ));
+
+        $this->addColumn('guarantee', array(
+            'header' => $helper->__('Signifyd Guarantee Status'),
+            'align' => 'left',
+            'type' => 'text',
+            'index' => 'guarantee',
+            'filter' => false,
         ));
         
         $this->addColumn('order_status', array(

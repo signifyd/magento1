@@ -482,14 +482,14 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             
                     if (substr($response_code, 0, 1) == '2') {
                         $response_data = json_decode($response->getRawResponse(), true);
-                        
-                        $case_object = Mage::getModel('signifyd_connect/case')->load($case_object->getId());
+
+                        $case_object = Mage::getModel('signifyd_connect/case')->load($case_object->getOrderIncrement());
                         $case_object->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                         $case_object->setCode($response_data['investigationId']);
                         $case_object->save();
                     }
                 } catch (Exception $e) {
-                    
+                    Mage::log($e->__toString(), null, 'signifyd_connect.log');
                 }
             }
         } catch (Exception $e) {
@@ -629,7 +629,6 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $request = Mage::app()->getRequest();
             $module = $request->getModuleName();
             $controller = $request->getControllerName();
-            $action = $request->getActionName();
             
             if ($module != $this->getAdminRoute() || $controller != 'sales_order') {
                 return;
@@ -637,13 +636,16 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             
             $collection = $observer->getOrderGridCollection();
             $select = $collection->getSelect();
-            
-            if (Mage::getStoreConfig('signifyd_connect/advanced/show_scores')) {
+
+            $show_scores = Mage::getStoreConfig('signifyd_connect/advanced/show_scores');
+            $show_guarantee = Mage::getStoreConfig('signifyd_connect/advanced/show_guarantee');
+            if ($show_scores || $show_guarantee) {
                 if ($this->oldSupport()) {
                     $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
                     $this->joins++;
                 } else {
-                    $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score'));
+                    $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score',
+                        'guarantee' => 'guarantee'));
                     $this->joins++;
                 }
                 
@@ -654,11 +656,12 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     
     public function coreBlockAbstractToHtmlBefore(Varien_Event_Observer $observer)
     {
-        if (Mage::getStoreConfig('signifyd_connect/advanced/show_scores')) {
+        $show_scores = Mage::getStoreConfig('signifyd_connect/advanced/show_scores');
+        $show_guarantee = Mage::getStoreConfig('signifyd_connect/advanced/show_guarantee');
+        if ($show_scores || $show_guarantee) {
             $request = Mage::app()->getRequest();
             $module = $request->getModuleName();
             $controller = $request->getControllerName();
-            $action = $request->getActionName();
             
             if ($module != $this->getAdminRoute() || $controller != 'sales_order') {
                 return;
@@ -668,20 +671,35 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $block = $observer->getEvent()->getBlock();
             
             if ($block->getId() == 'sales_order_grid') {
-                $block->addColumnAfter(
-                    'score',
-                    array(
-                        'header' => $helper->__('Signifyd Score'),
-                        'align' => 'left',
-                        'type' => 'text',
-                        'index' => 'score',
-                        'filter' => false,
-                        'renderer' => 'signifyd_connect/renderer',
-                        'width' => '100px',
-                    ),
-                    'status'
-                );
-                
+                if($show_scores) {
+                    $block->addColumnAfter(
+                        'score',
+                        array(
+                            'header' => $helper->__('Signifyd Score'),
+                            'align' => 'left',
+                            'type' => 'text',
+                            'index' => 'score',
+                            'filter' => false,
+                            'renderer' => 'signifyd_connect/renderer',
+                            'width' => '100px',
+                        ),
+                        'status'
+                    );
+                }
+                if($show_guarantee) {
+                    $block->addColumnAfter(
+                        'guarantee',
+                        array(
+                            'header' => $helper->__('Guarantee Status'),
+                            'align' => 'left',
+                            'type' => 'text',
+                            'index' => 'guarantee',
+                            'filter' => false,
+                            'width' => '100px',
+                        ),
+                        'status'
+                    );
+                }
                 $block->sortColumnsByOrder();
             }
         }
