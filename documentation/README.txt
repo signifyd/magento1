@@ -4,7 +4,7 @@ Integrates the Signifyd fraud detection service with Magento
 
 When enabled, each new order will be submitted as a new signifyd case, allowing merchants to review fraud scores before shipment.
 
-See: http://signifyd.com for further information.
+See: http://www.signifyd.com for further information.
 
 
 
@@ -14,7 +14,7 @@ This extension requires Magento to be configured to retrieve the correct custome
 
 The following stable versions of Magento are supported:
 
-Magento Community Edition 1.4.0.0 - 1.7.0.2
+Magento Community Edition 1.5.0.0 - 1.7.0.2
 Magento Enterprise Edition 1.9.0.0 - 1.12.0.2
 
 
