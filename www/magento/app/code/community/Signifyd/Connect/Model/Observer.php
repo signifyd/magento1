@@ -445,6 +445,9 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             }
             
             if ($order && $order->getId()) {
+                if (Mage::helper('signifyd_connect')->isProcessed($order)) {
+                    return;
+                }
                 $payments = $order->getPaymentsCollection();
                 
                 foreach ($payments as $payment) {
@@ -474,7 +477,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 $case = $this->generateCase();
                 
                 $case_object = Mage::helper('signifyd_connect')->markProcessed($order);
-                
+
                 $response = $this->submitCase($case);
                 
                 try {
