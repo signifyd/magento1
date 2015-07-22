@@ -60,7 +60,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
         
-        if ($case)
+        if ($case->getId())
         {
             return true;
         }
