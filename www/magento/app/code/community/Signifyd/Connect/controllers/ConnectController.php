@@ -40,7 +40,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     public function positiveGuaranteeAction()
     {
-        return 'nothing';
+        return Mage::getStoreConfig('signifyd_connect/advanced/guarantee_positive_action', $this->_store_id);
     }
 
     public function enabled()
@@ -225,6 +225,18 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         }
     }
 
+    public function unholdOrder($order)
+    {
+        if ($order && $order->getId() && $order->canUnhold()) {
+            $order->unhold();
+            $order->save();
+
+            if ($this->logRequest()) {
+                Mage::log('Order ' . $order->getId() . ' unheld', null, 'signifyd_connect.log');
+            }
+        }
+    }
+
     public function cancelOrder($order)
     {
         if ($order && $order->getId() && $order->canCancel()) {
@@ -268,6 +280,8 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             $threshold = $this->holdThreshold();
 
             $negativeAction = $this->negativeGuaranteeAction();
+            $positiveAction = $this->positiveGuaranteeAction();
+
             if ($this->_request['guaranteeDisposition'] == 'DECLINED' && $negativeAction != 'nothing') {
                 if($negativeAction == 'hold') {
                     $this->holdOrder($order);
@@ -280,7 +294,15 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 else {
                     Mage::log("Unknown action $negativeAction", null, 'signifyd_connect.log');
                 }
+            } else if($this->_request['guaranteeDisposition'] == 'APPROVED' && $positiveAction != 'nothing') {
+                if($positiveAction == 'unhold'){
+                    $this->unholdOrder($order);
+                }
+                else {
+                    Mage::log("Unknown action $positiveAction", null, 'signifyd_connect.log');
+                }
             }
+
             if (!$original_status || $original_status == 'PENDING') {
                 if ($threshold && $case->getScore() <= $threshold && $this->canReviewHold()) {
                     $this->holdOrder($order);
