@@ -10,12 +10,12 @@ See: http://www.signifyd.com for further information.
 
 == Requirements ==
 
-This extension requires Magento to be configured to retrieve the correct customer IP address when your store is running behind a load-balancer. This requires a minor local.xml configuration change. See app/etc/local.xml.additional for an example.
+This extension requires Magento to be configured to retrieve the correct customer IP address when your store is running behind a load-balancer. This requires a minor local.xml configuration change. See app/etc/local.xml.additional for an example (in the "remote_addr_headers" block).
 
 The following stable versions of Magento are supported:
 
-Magento Community Edition 1.5.0.0 - 1.7.0.2
-Magento Enterprise Edition 1.9.0.0 - 1.12.0.2
+Magento Community Edition 1.5.0.0 - 1.9.2.0
+Magento Enterprise Edition 1.9.0.0 - 1.14.2.0
 
 
 

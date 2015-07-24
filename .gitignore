@@ -1,2 +1,9 @@
 .idea/*
 *.iml
+
+# Ignore the files and directories created by Eclipse
+.cache
+.classpath
+.project
+.settings
+.buildpath
