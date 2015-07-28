@@ -18,7 +18,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         
         foreach ($this->quote->getAllItems() as $item) {
             $product_type = $item->getProductType();
-            if (!$product_type || $product_type == 'simple' || $product_type == 'downloadable') {
+            
+            if (!$product_type || $product_type == 'simple' || $product_type == 'downloadable' || $product_type == 'grouped') {
                 $product_object = $item->getData('product');
                 
                 if (!$product_object || !$product_object->getId()) {
@@ -651,8 +652,6 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                         'guarantee' => 'guarantee'));
                     $this->joins++;
                 }
-                
-                Mage::log('joined');
             }
         }
     }
