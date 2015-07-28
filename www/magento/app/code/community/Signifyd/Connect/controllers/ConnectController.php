@@ -282,24 +282,23 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             $negativeAction = $this->negativeGuaranteeAction();
             $positiveAction = $this->positiveGuaranteeAction();
 
-            if ($this->_request['guaranteeDisposition'] == 'DECLINED' && $negativeAction != 'nothing') {
-                if($negativeAction == 'hold') {
-                    $this->holdOrder($order);
-                    $impeded = true;
-                }
-                else if($negativeAction == 'cancel') {
-                    $this->cancelOrder($order);
-                    $impeded = true;
-                }
-                else {
-                    Mage::log("Unknown action $negativeAction", null, 'signifyd_connect.log');
-                }
-            } else if($this->_request['guaranteeDisposition'] == 'APPROVED' && $positiveAction != 'nothing') {
-                if($positiveAction == 'unhold'){
-                    $this->unholdOrder($order);
-                }
-                else {
-                    Mage::log("Unknown action $positiveAction", null, 'signifyd_connect.log');
+            if (isset($this->_request ['guaranteeDisposition'])) {
+                if ($this->_request ['guaranteeDisposition'] == 'DECLINED' && $negativeAction != 'nothing') {
+                    if ($negativeAction == 'hold') {
+                        $this->holdOrder($order);
+                        $impeded = true;
+                    } else if ($negativeAction == 'cancel') {
+                        $this->cancelOrder($order);
+                        $impeded = true;
+                    } else {
+                        Mage::log("Unknown action $negativeAction", null, 'signifyd_connect.log');
+                    }
+                } else if ($this->_request ['guaranteeDisposition'] == 'APPROVED' && $positiveAction != 'nothing') {
+                    if ($positiveAction == 'unhold') {
+                        $this->unholdOrder($order);
+                    } else {
+                        Mage::log("Unknown action $positiveAction", null, 'signifyd_connect.log');
+                    }
                 }
             }
 
