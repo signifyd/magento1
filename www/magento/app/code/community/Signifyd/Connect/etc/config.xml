@@ -170,6 +170,14 @@
                     </signifyd_connect>
                 </observers>
             </core_block_abstract_to_html_before>
+            <core_block_abstract_prepare_layout_before>
+                <observers>
+                    <signifyd_connect>
+                        <model>signifyd_connect/observer</model>
+                        <method>coreBlockAbstractPrepareLayoutBefore</method>
+                    </signifyd_connect>
+                </observers>
+            </core_block_abstract_prepare_layout_before>
         </events>
     </adminhtml>
 </config>
