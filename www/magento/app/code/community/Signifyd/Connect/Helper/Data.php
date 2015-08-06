@@ -210,7 +210,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $card['expiryYear'] = null;
         $card['hash'] = null;
 
-        $card['billingAddress'] = $billing;
+        $card['billingAddress'] = $this->getSignifydAddress($billing);
 
         if ($payment->getCcOwner()) {
             $card['cardHolderName'] = $payment->getCcOwner();
@@ -245,7 +245,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $card;
     }
 
-    public function getAddress($address_object)
+    public function getSignifydAddress($address_object)
     {
         $address = array();
 
@@ -276,7 +276,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         // in that case, we need to avoid the exception.
         $shipping_address = $order->getShippingAddress();
         if($shipping_address) {
-            $recipient['deliveryAddress'] = $shipping_address;
+            $recipient['deliveryAddress'] = $this->getSignifydAddress($shipping_address);
             $recipient['fullName'] = $shipping_address->getFirstname() . ' ' . $shipping_address->getLastname();
             $recipient['confirmationPhone'] = $shipping_address->getTelephone();
             // Email: Note that this field is always the same for both addresses
@@ -287,7 +287,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if (!$recipient['confirmationEmail'] || $recipient['confirmationEmail'] == 'n/a@na.na') {
             $recipient['confirmationEmail'] = $order->getCustomerEmail();
         }
-
 
         return $recipient;
     }
