@@ -158,29 +158,32 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     
     public function salesOrderGridCollectionLoadBefore($observer)
     {
-        if ($this->joins === 0) {
-            $request = Mage::app()->getRequest();
-            $module = $request->getModuleName();
-            $controller = $request->getControllerName();
-            
-            if ($module != $this->getAdminRoute() || $controller != 'sales_order') {
-                return;
-            }
-            
-            $collection = $observer->getOrderGridCollection();
-            $select = $collection->getSelect();
+        $request = Mage::app()->getRequest();
+        $module = $request->getModuleName();
+        $controller = $request->getControllerName();
+        
+        if ($module != $this->getAdminRoute() || $controller != 'sales_order') {
+            return;
+        }
+        
+        $collection = $observer->getOrderGridCollection();
+        $select = $collection->getSelect();
 
-            $show_scores = Mage::getStoreConfig('signifyd_connect/advanced/show_scores');
-            $show_guarantee = Mage::getStoreConfig('signifyd_connect/advanced/show_guarantee');
-            if ($show_scores || $show_guarantee) {
-                if ($this->oldSupport()) {
-                    $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
-                    $this->joins++;
-                } else {
-                    $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score',
-                        'guarantee' => 'guarantee'));
-                    $this->joins++;
-                }
+		// This will prevent us from rejoining.
+        if(strchr($select, 'signifyd')) {
+            return;
+        }
+
+        $show_scores = Mage::getStoreConfig('signifyd_connect/advanced/show_scores');
+        $show_guarantee = Mage::getStoreConfig('signifyd_connect/advanced/show_guarantee');
+        if ($show_scores || $show_guarantee) {
+            if ($this->oldSupport()) {
+                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
+                $this->joins++;
+            } else {
+                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score',
+                    'guarantee' => 'guarantee'));
+                $this->joins++;
             }
         }
     }
