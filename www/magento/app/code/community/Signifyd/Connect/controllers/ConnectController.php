@@ -482,6 +482,24 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     }
 
+    public function sendAction()
+    {
+        try {
+            // This request handles the send action only if we are using an unsecured
+            // connection. Otherwise, it does nothing
+            if (!Mage::getStoreConfig('signifyd_connect/settings/enabled') ||
+                !Mage::getStoreConfig('signifyd_connect/advanced/use_unsecure_requests')
+            ) {
+                Mage::log("Attempting to access send endpoint from frontend when it is currently disabled.", null, 'signifyd_connect.log');
+                return;
+            }
+            Mage::helper('signifyd_connect')->bulkSend($this);
+        } catch (Exception $e) {
+            Mage::log('Exception while sending: ' . $e->__toString(), null, 'signifyd_connect.log');
+        }
+        $this->_redirectReferer();
+    }
+
     public function apiAction()
     {
         if (!$this->enabled()) {

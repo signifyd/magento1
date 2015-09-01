@@ -156,6 +156,16 @@
                             <comment><![CDATA[Send email notification to customers after invoicing orders]]></comment>
                             <depends><invoice_orders>1</invoice_orders></depends>
                         </invoice_orders_notify>
+                        <use_unsecure_requests>
+                            <label>Use Unsecure Requests</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>100</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><![CDATA[For backend actions (such as bulk-send from the order grid), use the frontend controller instead of the secure backend controller. This is intended to work around some potential issues. Use only when necessary, and set it back once the actions are completed]]></comment>
+                        </use_unsecure_requests>
                     </fields>
                 </advanced>
                 <log translate="label">
