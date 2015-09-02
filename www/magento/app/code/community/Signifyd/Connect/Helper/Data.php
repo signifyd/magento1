@@ -507,7 +507,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function request($url, $data=null, $auth=null, $contenttype="application/x-www-form-urlencoded", $accept=null)
     {
         if (Mage::getStoreConfig('signifyd_connect/log/request')) {
-            Mage::log("Request:\nURL: $url \nAuth: $auth\nData: $data", null, 'signifyd_connect.log');
+            $authMask = preg_replace ( "/\S/", "*", $auth, strlen($auth) - 4 );
+            Mage::log("Request:\nURL: $url \nAuth: $authMask\nData: $data", null, 'signifyd_connect.log');
         }
         
         $curl = curl_init();
