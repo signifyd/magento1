@@ -88,8 +88,8 @@
                 <invoice_orders>0</invoice_orders>
             </advanced>
             <log>
-                <request>0</request>
-                <response>0</response>
+                <request>1</request>
+                <response>1</response>
                 <error>1</error>
             </log>
         </signifyd_connect>
