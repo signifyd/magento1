@@ -2,6 +2,10 @@
 
 class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 {
+    const UNPROCESSED_STATUS        = 0;
+    const CASE_CREATED_STATUS       = 1;
+    const TRANSACTION_SENT_STATUS   = 2;
+
     public function getProducts($quote)
     {
         $products = array();
@@ -160,6 +164,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return null;
     }
 
+    private function getTransactionId($payment)
+    {
+        return $payment->getCcTransId();
+    }
+
     public function getPurchase($order)
     {
         $purchase = array();
@@ -174,7 +183,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase['shippingPrice'] = floatval($order->getShippingAmount());
         $purchase['products'] = $this->getProducts($order);
         $purchase['paymentGateway'] = $payment->getMethod();
-        $purchase['transactionId'] = $payment->getTransactionId();
+        $purchase['transactionId'] = $this->getTransactionId($payment);
 
         $purchase['avsResponseCode'] = $this->getAvsResponse($payment);
         $purchase['cvvResponseCode'] = $this->getCvvResponse($payment);
@@ -369,6 +378,43 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return Mage::getStoreConfig('signifyd_connect/settings/key');
     }
 
+    public function sendOrderUpdateToSignifyd($order)
+    {
+        if ($order && $order->getId()) {
+            $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
+            $caseId = $case->getCode();
+
+            $updateData = array();
+            $payment = $order->getPayment();
+
+            // These are the only supported update fields
+            $purchase = array();
+            $purchase['paymentGateway'] = $payment->getMethod();
+            $purchase['transactionId'] = $this->getTransactionId($payment);
+            $purchase['avsResponseCode'] = $this->getAvsResponse($payment);
+            $purchase['cvvResponseCode'] = $this->getCvvResponse($payment);
+            $updateData['purchase'] = $purchase;
+
+            $data = json_encode($updateData);
+
+            $response = $this->request($this->getUrl() . "/$caseId", $data, $this->getAuth(), 'application/json', null, true);
+
+            try {
+                $response_code = $response->getHttpCode();
+
+                if (substr($response_code, 0, 1) == '2') {
+                    $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
+                    $case->setTransactionId($updateData['purchase']['transactionId']);
+                    $case->save();
+                    return "sent";
+                }
+            } catch (Exception $e) {
+                Mage::log($e->__toString(), null, 'signifyd_connect.log');
+                return "error";
+            }
+        }
+    }
+
     public function bulkSend($controller)
     {
         try {
@@ -404,8 +450,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function buildAndSendOrderToSignifyd($order, $forceSend = false)
     {
         if ($order && $order->getId()) {
-            if ($this->isProcessed($order) && !$forceSend) {
-                return "exists";
+            $processStatus = $this->processedStatus($order);
+            if ($processStatus > 0 && !$forceSend) {
+                if($processStatus == self::TRANSACTION_SENT_STATUS) return "exists";
+                else return $this->sendOrderUpdateToSignifyd($order);
             }
 
             $payments = $order->getPaymentsCollection();
@@ -440,6 +488,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     $case_object = Mage::getModel('signifyd_connect/case')->load($case_object->getOrderIncrement());
                     $case_object->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                     $case_object->setCode($response_data['investigationId']);
+                    $case_object->setTransactionId($case['purchase']['transactionId']);
                     $case_object->save();
                     return "sent";
                 }
@@ -504,16 +553,20 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return Mage::getBaseUrl();
     }
     
-    public function isProcessed($order)
+    public function processedStatus($order)
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
-        
-        if ($case->getId())
+
+        if ($case->getTransactionId)
         {
-            return true;
+            return self::TRANSACTION_SENT_STATUS;
+        }
+        else if ($case->getId())
+        {
+            return self::CASE_CREATED_STATUS;
         }
         
-        return false;
+        return self::UNPROCESSED_STATUS;
     }
     
     public function markProcessed($order)
@@ -536,7 +589,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
     
-    public function request($url, $data=null, $auth=null, $contenttype="application/x-www-form-urlencoded", $accept=null)
+    public function request($url, $data = null, $auth = null, $contenttype = "application/x-www-form-urlencoded",
+                            $accept = null, $is_update = false)
     {
         if (Mage::getStoreConfig('signifyd_connect/log/request')) {
             $authMask = preg_replace ( "/\S/", "*", $auth, strlen($auth) - 4 );
@@ -566,7 +620,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         if ($data) {
-            curl_setopt($curl, CURLOPT_POST, 1);
+            if($is_update) curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+            else curl_setopt($curl, CURLOPT_POST, 1);
+
             $headers[] = "Content-Type: $contenttype";
             $headers[] = "Content-length: " . strlen($data);
             curl_setopt($curl, CURLOPT_POSTFIELDS, $data);

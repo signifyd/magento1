@@ -198,17 +198,17 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         
         $helper->unmarkProcessed($order);
         
-        $is_processed = $helper->isProcessed($order);
+        $is_processed = $helper->processedStatus($order);
         $this->assertEquals(0, $is_processed);
         
         $helper->markProcessed($order);
         
-        $is_processed = $helper->isProcessed($order);
+        $is_processed = $helper->processedStatus($order);
         $this->assertEquals(1, $is_processed);
         
         $helper->unmarkProcessed($order);
         
-        $is_processed = $helper->isProcessed($order);
+        $is_processed = $helper->processedStatus($order);
         $this->assertEquals(0, $is_processed);
     }
     

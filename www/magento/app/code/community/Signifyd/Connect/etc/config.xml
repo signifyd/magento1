@@ -3,11 +3,16 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>3.10.1</version>
+            <version>3.12.0</version>
         </Signifyd_Connect>
     </modules>
     <global>
         <models>
+            <paygate>
+                <rewrite>
+                    <authorizenet>Signifyd_Connect_Model_Authnet</authorizenet>
+                </rewrite>
+            </paygate>
             <signifyd_connect>
                 <class>Signifyd_Connect_Model</class>
                 <resourceModel>signifyd_connect_resource</resourceModel>
