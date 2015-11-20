@@ -380,7 +380,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
     public function sendOrderUpdateToSignifyd($order)
     {
-        if ($order && $order->getId()) {
+        if ($order && $order->getId() && Mage::getStoreConfig('signifyd_connect/advanced/enable_payment_updates')) {
             $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
             $caseId = $case->getCode();
 
@@ -393,6 +393,16 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $purchase['transactionId'] = $this->getTransactionId($payment);
             $purchase['avsResponseCode'] = $this->getAvsResponse($payment);
             $purchase['cvvResponseCode'] = $this->getCvvResponse($payment);
+
+            // Do not make request if there is no data to send
+            if( $purchase['transactionId'] == null ||
+                $purchase['transactionId'] == null ||
+                $purchase['transactionId'] == null)
+            {
+                return "nodata";
+            }
+
+
             $updateData['purchase'] = $purchase;
 
             $data = json_encode($updateData);
@@ -436,6 +446,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                         Mage::getSingleton('adminhtml/session')->addSuccess(Mage::helper('adminhtml')->__('Successfully sent order ' . $order->getIncrementId() . '.'));
                     } else if ($result == "exists") {
                         Mage::getSingleton('adminhtml/session')->addWarning(Mage::helper('adminhtml')->__('Order ' . $order->getIncrementId() . ' has already been sent to Signifyd.'));
+                    } else if ($result == "nodata") {
+                        if(Mage::getStoreConfig('signifyd_connect/log/request')) {
+                            Mage::log("Request/Update not sent because there is no data", null, 'signifyd_connect.log');
+                        }
                     } else {
                         Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')->__('Order ' . $order->getIncrementId() . ' failed to send. See log for details.'));
                     }
