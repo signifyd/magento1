@@ -110,6 +110,14 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         exit;
     }
 
+    public function conflict()
+    {
+        Mage::app()->getResponse()
+            ->setHeader('HTTP/1.1', '409 Conflict')
+            ->sendResponse();
+        exit;
+    }
+
     private function updateScore($case)
     {
         if (isset($this->_request['score'])) {
@@ -184,6 +192,12 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         if (isset($this->_request['orderId']))
         {
             $case = Mage::getModel('signifyd_connect/case')->load($this->_request['orderId']);
+            if($case->isObjectNew()) {
+                if ($this->logErrors()) {
+                    Mage::log('Case not yet in DB. Likely timing issue. order_increment: ' . $this->_request['orderId'], null, 'signifyd_connect.log');
+                }
+                $this->conflict();
+            }
         }
 
         return $case;

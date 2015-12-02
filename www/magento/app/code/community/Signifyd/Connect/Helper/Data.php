@@ -383,6 +383,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if ($order && $order->getId() && Mage::getStoreConfig('signifyd_connect/advanced/enable_payment_updates')) {
             $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
             $caseId = $case->getCode();
+            if (Mage::getStoreConfig('signifyd_connect/log/request')) {
+                Mage::log("Created new case: $caseId", null, 'signifyd_connect.log');
+            }
 
             $updateData = array();
             $payment = $order->getPayment();
@@ -416,6 +419,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                     $case->setTransactionId($updateData['purchase']['transactionId']);
                     $case->save();
+                    if (Mage::getStoreConfig('signifyd_connect/log/request')) {
+                        Mage::log("Wrote case to database: $caseId", null, 'signifyd_connect.log');
+                    }
                     return "sent";
                 }
             } catch (Exception $e) {
