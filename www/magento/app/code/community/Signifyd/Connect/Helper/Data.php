@@ -3,8 +3,9 @@
 class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 {
     const UNPROCESSED_STATUS        = 0;
-    const CASE_CREATED_STATUS       = 1;
-    const TRANSACTION_SENT_STATUS   = 2;
+    const ENTITY_CREATED_STATUS     = 1;
+    const CASE_CREATED_STATUS       = 2;
+    const TRANSACTION_SENT_STATUS   = 3;
 
     public function getProducts($quote)
     {
@@ -514,8 +515,40 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 }
             } catch (Exception $e) {
                 Mage::log($e->__toString(), null, 'signifyd_connect.log');
-                return "error";
             }
+            return "error";
+        }
+    }
+
+    public function processUpdateQueue($max = 99999)
+    {
+        $failed_orders = Mage::getModel('signifyd_connect/retries')->getCollection();
+        $process_count = 0;
+        Mage::log("Retries", null, 'signifyd_connect.log');
+        try
+        {
+
+        foreach ($failed_orders as $order_id) {
+            Mage::log("New iteration", null, 'signifyd_connect.log');
+            if (++$process_count >= $max) {
+                Mage::log("hit max", null, 'signifyd_connect.log');
+                return;
+            }
+            $order = Mage::getModel('sales/order')->loadByIncrementId($order_id->getOrderIncrement());;
+            if ($order == null || $this->processedStatus($order) >= self::CASE_CREATED_STATUS) {
+                Mage::log("Processed already", null, 'signifyd_connect.log');
+                continue;
+            }
+            $result = $this->buildAndSendOrderToSignifyd($order);
+            if ($result !== "error") {
+                Mage::log("Delete " . $result, null, 'signifyd_connect.log');
+                Mage::register('isSecureArea', true);
+                $order_id->delete();
+                Mage::unregister('isSecureArea');
+            }
+        }
+        }catch (Exception $e) {
+            Mage::log($e->__toString(), null, 'signifyd_connect.log');
         }
     }
 
@@ -581,9 +614,13 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         {
             return self::TRANSACTION_SENT_STATUS;
         }
-        else if ($case->getId())
+        else if ($case->getCode())
         {
             return self::CASE_CREATED_STATUS;
+        }
+        else if ($case->getId())
+        {
+            return self::ENTITY_CREATED_STATUS;
         }
         
         return self::UNPROCESSED_STATUS;
@@ -640,7 +677,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         if ($data) {
-            if($is_update) curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+            if($is_update) curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
             else curl_setopt($curl, CURLOPT_POST, 1);
 
             $headers[] = "Content-Type: $contenttype";

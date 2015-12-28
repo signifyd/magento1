@@ -25,11 +25,22 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 return;
             }
 
-            Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($order);
-
+            $result = Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($order);
+            if($result !== "error") return;
         } catch (Exception $e) {
             Mage::log($e->__toString(), null, 'signifyd_connect.log');
         }
+        // If we get here, then we have failed to create the case.
+        $this->addToRetryQueue($order);
+    }
+
+    private function addToRetryQueue($order)
+    {
+        Mage::log("Add to retries", null, 'signifyd_connect.log');
+        $order_tag = Mage::getModel('signifyd_connect/retries');
+        $order_tag->setOrderIncrement($order->getIncrementId());
+        $order_tag->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
+        $order_tag->save();
     }
     
     public function logData($order, $payment, $quote)

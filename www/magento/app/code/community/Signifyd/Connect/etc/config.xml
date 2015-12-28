@@ -3,7 +3,7 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>3.12.0</version>
+            <version>3.13.0</version>
         </Signifyd_Connect>
     </modules>
     <global>
@@ -23,6 +23,9 @@
                     <case>
                         <table>signifyd_connect_case</table>
                     </case>
+                    <retries>
+                        <table>signifyd_connect_retries</table>
+                    </retries>
                 </entities>
             </signifyd_connect_resource>
         </models>
