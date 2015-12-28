@@ -498,7 +498,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     public function retriesAction()
     {
-        Mage::helper('signifyd_connect')->processUpdateQueue();
+        Mage::helper('signifyd_connect')->processRetryQueue();
     }
 
     public function sendAction()

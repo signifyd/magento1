@@ -520,34 +520,27 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
 
-    public function processUpdateQueue($max = 99999)
+    public function processRetryQueue($max = 99999)
     {
         $failed_orders = Mage::getModel('signifyd_connect/retries')->getCollection();
         $process_count = 0;
-        Mage::log("Retries", null, 'signifyd_connect.log');
-        try
-        {
-
-        foreach ($failed_orders as $order_id) {
-            Mage::log("New iteration", null, 'signifyd_connect.log');
-            if (++$process_count >= $max) {
-                Mage::log("hit max", null, 'signifyd_connect.log');
-                return;
+        try {
+            foreach ($failed_orders as $order_id) {
+                if ($process_count++ >= $max) {
+                    return;
+                }
+                $order = Mage::getModel('sales/order')->loadByIncrementId($order_id->getOrderIncrement());;
+                if ($order == null || $this->processedStatus($order) >= self::CASE_CREATED_STATUS) {
+                    continue;
+                }
+                $result = $this->buildAndSendOrderToSignifyd($order);
+                if ($result !== "error") {
+                    Mage::register('isSecureArea', true);
+                    $order_id->delete();
+                    Mage::unregister('isSecureArea');
+                }
             }
-            $order = Mage::getModel('sales/order')->loadByIncrementId($order_id->getOrderIncrement());;
-            if ($order == null || $this->processedStatus($order) >= self::CASE_CREATED_STATUS) {
-                Mage::log("Processed already", null, 'signifyd_connect.log');
-                continue;
-            }
-            $result = $this->buildAndSendOrderToSignifyd($order);
-            if ($result !== "error") {
-                Mage::log("Delete " . $result, null, 'signifyd_connect.log');
-                Mage::register('isSecureArea', true);
-                $order_id->delete();
-                Mage::unregister('isSecureArea');
-            }
-        }
-        }catch (Exception $e) {
+        } catch (Exception $e) {
             Mage::log($e->__toString(), null, 'signifyd_connect.log');
         }
     }
