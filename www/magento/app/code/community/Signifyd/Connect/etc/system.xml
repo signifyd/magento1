@@ -185,6 +185,7 @@
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
                     <show_in_store>1</show_in_store>
+                    <comment><![CDATA[Note: You must also enable logging for the site. You can find the setting in Configuration->Advanced->Developer->Log Settings]]></comment>
                     <fields>
                         <request>
                             <label>Log requests</label>
