@@ -520,6 +520,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
 
+    /**
+     * Run through up to $max items in the retry queue
+     * @param int $max The maximum numbers of items to process
+     */
     public function processRetryQueue($max = 99999)
     {
         $failed_orders = Mage::getModel('signifyd_connect/retries')->getCollection();
@@ -529,11 +533,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 if ($process_count++ >= $max) {
                     return;
                 }
-                $order = Mage::getModel('sales/order')->loadByIncrementId($order_id->getOrderIncrement());;
-                if ($order == null || $this->processedStatus($order) >= self::CASE_CREATED_STATUS) {
-                    continue;
+                $order = Mage::getModel('sales/order')->loadByIncrementId($order_id->getOrderIncrement());
+                $result = "unset";
+                if ($order != null && $this->processedStatus($order) < self::CASE_CREATED_STATUS) {
+                    $result = $this->buildAndSendOrderToSignifyd($order);
                 }
-                $result = $this->buildAndSendOrderToSignifyd($order);
                 if ($result !== "error") {
                     Mage::register('isSecureArea', true);
                     $order_id->delete();
