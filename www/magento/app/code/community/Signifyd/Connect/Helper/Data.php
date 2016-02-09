@@ -6,6 +6,27 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     const CASE_CREATED_STATUS       = 1;
     const TRANSACTION_SENT_STATUS   = 2;
 
+    public function logRequest($message)
+    {
+        if (Mage::getStoreConfig('signifyd_connect/log/request')) {
+            Mage::log($message, null, 'signifyd_connect.log');
+        }
+    }
+
+    public function logResponse($message)
+    {
+        if (Mage::getStoreConfig('signifyd_connect/log/response')) {
+            Mage::log($message, null, 'signifyd_connect.log');
+        }
+    }
+
+    public function logError($message)
+    {
+        if (Mage::getStoreConfig('signifyd_connect/log/error')) {
+            Mage::log($message, null, 'signifyd_connect.log');
+        }
+    }
+
     public function getProducts($quote)
     {
         $products = array();
@@ -440,8 +461,18 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $orderIds = array_map('intval', explode(',', $orderIds));
             }
             if (!is_array($orderIds)) {
-                Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')->__('Please select order(s)'));
+                Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')
+                    ->__('Please select order(s)'));
             } else {
+                // Reference T2395
+                $user = "Unknown";
+                try {
+                    $user = Mage::getSingleton('admin/session')->getUser()->getUsername();
+                } catch (Exception $ex) {
+                    $this->logError($ex->__toString());
+                }
+                $this->logRequest("Bulk send initiated by: $user");
+
                 $collection = Mage::getModel('sales/order')->getCollection()
                     ->addFieldToSelect('*')
                     ->addFieldToFilter('entity_id', array('in' => $orderIds));
@@ -449,21 +480,26 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 foreach ($collection as $order) {
                     $result = $this->buildAndSendOrderToSignifyd($order, /*forceSend*/ true);
                     if($result == "sent") {
-                        Mage::getSingleton('adminhtml/session')->addSuccess(Mage::helper('adminhtml')->__('Successfully sent order ' . $order->getIncrementId() . '.'));
+                        Mage::getSingleton('adminhtml/session')->addSuccess(Mage::helper('adminhtml')
+                            ->__('Successfully sent order ' . $order->getIncrementId() . '.'));
                     } else if ($result == "exists") {
-                        Mage::getSingleton('adminhtml/session')->addWarning(Mage::helper('adminhtml')->__('Order ' . $order->getIncrementId() . ' has already been sent to Signifyd.'));
+                        Mage::getSingleton('adminhtml/session')->addWarning(Mage::helper('adminhtml')
+                            ->__('Order ' . $order->getIncrementId() . ' has already been sent to Signifyd.'));
                     } else if ($result == "nodata") {
-                        if(Mage::getStoreConfig('signifyd_connect/log/request')) {
-                            Mage::log("Request/Update not sent because there is no data", null, 'signifyd_connect.log');
-                        }
+                        $this->logRequest("Request/Update not sent because there is no data");
                     } else {
-                        Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')->__('Order ' . $order->getIncrementId() . ' failed to send. See log for details.'));
+                        Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')
+                            ->__('Order ' . $order->getIncrementId() . ' failed to send. See log for details.'));
                     }
+                }
+                if (Mage::getStoreConfig('signifyd_connect/log/request')) {
+                    $this->logRequest("Bulk send complete");
                 }
             }
         } catch(Exception $ex) {
-            Mage::log($ex->__toString(), null, 'signifyd_connect.log');
-            Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')->__('Send failed. See log for details'));
+            $this->logError($ex->__toString());
+            Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')
+                ->__('Send failed. See log for details'));
         }
     }
 
