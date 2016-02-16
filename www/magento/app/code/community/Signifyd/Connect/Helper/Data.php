@@ -185,6 +185,15 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return null;
     }
 
+    private function getVersions()
+    {
+        $version = array();
+        $version['platform'] = 'magento';
+        $version['platformVersion'] = Mage::getVersion();
+        $version['pluginVersion'] = Mage::getConfig()->getNode()->modules->Signifyd_Connect->version;
+        return $version;
+    }
+
     private function getTransactionId($payment)
     {
         return $payment->getCcTransId();
@@ -378,6 +387,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $case['recipient'] = $this->getRecipient($order);
         $case['card'] = $this->getCard($order, $payment);
         $case['userAccount'] = $this->getUserAccount($customer, $order);
+        $case['version'] = $this->getVersions();
 
         return $case;
     }
