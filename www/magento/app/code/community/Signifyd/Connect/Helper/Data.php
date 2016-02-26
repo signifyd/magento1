@@ -387,7 +387,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $case['recipient'] = $this->getRecipient($order);
         $case['card'] = $this->getCard($order, $payment);
         $case['userAccount'] = $this->getUserAccount($customer, $order);
-        $case['version'] = $this->getVersions();
+        $case['clientVersion'] = $this->getVersions();
 
         return $case;
     }
