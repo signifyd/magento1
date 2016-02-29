@@ -261,4 +261,22 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             }
         }
     }
+
+    public function salesOrderPaymentCancel($observer)
+    {
+        $helper = Mage::helper('signifyd_connect');
+        try {
+            $order = $observer->getOrder()->getIncrement();
+            $case = Mage::getModel('signifyd_connect/case')->load($order);
+            if($case->isObjectNew()) {
+                $helper->logError("Guarantee cancel: Signifyd case for order $order does not exist in DB");
+                return;
+            }
+            $caseId = $case->getCode();
+            $helper->logRequest("Guarantee cancel for case $caseId");
+            $helper->cancelGuarantee($caseId);
+        } catch(Exception $ex) {
+            $helper->logError("Guarantee cancel: $ex");
+        }
+    }
 }

@@ -654,7 +654,16 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $case->delete();
         }
     }
-    
+
+    public function cancelGuarantee($caseId)
+    {
+        $url = $this->getUrl() . "/$caseId/guarantee";
+        $body = json_encode(array("guaranteeDisposition" => "CANCELED"));
+        $response = $this->request($url, $body, $this->getAuth(), 'application/json', null, true);
+        $code = $response->getHttpCode();
+        $this->logResponse("Received $code from guarantee cancel");
+    }
+
     public function request($url, $data = null, $auth = null, $contenttype = "application/x-www-form-urlencoded",
                             $accept = null, $is_update = false)
     {
@@ -686,7 +695,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         if ($data) {
-            if($is_update) curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+            if($is_update) curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
             else curl_setopt($curl, CURLOPT_POST, 1);
 
             $headers[] = "Content-Type: $contenttype";
