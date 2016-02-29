@@ -227,10 +227,11 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         }
     }
 
-    public function holdOrder($order)
+    public function holdOrder($order, $reason)
     {
         if ($order && $order->getId() && $order->canHold()) {
             $order->hold();
+            $order->addStatusHistoryComment("Signifyd: order held because $reason");
             $order->save();
 
             if ($this->logRequest()) {
@@ -239,10 +240,11 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         }
     }
 
-    public function unholdOrder($order)
+    public function unholdOrder($order, $reason)
     {
         if ($order && $order->getId() && $order->canUnhold()) {
             $order->unhold();
+            $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
             $order->save();
 
             if ($this->logRequest()) {
@@ -251,10 +253,11 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         }
     }
 
-    public function cancelOrder($order)
+    public function cancelOrder($order, $reason)
     {
         if ($order && $order->getId() && $order->canCancel()) {
             $order->cancel();
+            $order->addStatusHistoryComment("Signifyd: order canceled because $reason");
             $order->save();
 
             if ($this->logRequest()) {
@@ -299,17 +302,17 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             if (isset($this->_request ['guaranteeDisposition'])) {
                 if ($this->_request ['guaranteeDisposition'] == 'DECLINED' && $negativeAction != 'nothing') {
                     if ($negativeAction == 'hold') {
-                        $this->holdOrder($order);
+                        $this->holdOrder($order, "guarantee declined");
                         $impeded = true;
                     } else if ($negativeAction == 'cancel') {
-                        $this->cancelOrder($order);
+                        $this->cancelOrder($order, "guarantee declined");
                         $impeded = true;
                     } else {
                         Mage::log("Unknown action $negativeAction", null, 'signifyd_connect.log');
                     }
                 } else if ($this->_request ['guaranteeDisposition'] == 'APPROVED' && $positiveAction != 'nothing') {
                     if ($positiveAction == 'unhold') {
-                        $this->unholdOrder($order);
+                        $this->unholdOrder($order, "guarantee approved");
                     } else {
                         Mage::log("Unknown action $positiveAction", null, 'signifyd_connect.log');
                     }
@@ -318,27 +321,17 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
             if (!$original_status || $original_status == 'PENDING') {
                 if ($threshold && $case->getScore() <= $threshold && $this->canReviewHold()) {
-                    $this->holdOrder($order);
+                    $this->holdOrder($order, "score below threshold");
                     $impeded = true;
                 }
             } else if ($original_status) {
                 if ($this->_request['reviewDisposition'] == 'FRAUDULENT') {
-                    if ($order->canHold() && $this->canReviewHold()) {
-                        $order->hold();
-                        $order->save();
-
-                        if ($this->logRequest()) {
-                            Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
-                        }
+                    if ($this->canReviewHold()) {
+                        $this->holdOrder($order, "case review fraudulent");
                     }
                 } else if ($this->_request['reviewDisposition'] == 'GOOD') {
-                    if ($order->canUnhold() && $this->canReviewHold()) {
-                        $order->unhold();
-                        $order->save();
-
-                        if ($this->logRequest()) {
-                            Mage::log('Order ' . $order->getId() . ' unheld', null, 'signifyd_connect.log');
-                        }
+                    if ($this->canReviewHold()) {
+                        $this->unholdOrder($order, "case review good");
                     }
                 }
             }

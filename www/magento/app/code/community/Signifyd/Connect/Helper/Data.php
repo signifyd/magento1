@@ -551,11 +551,15 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 if (substr($response_code, 0, 1) == '2') {
                     $response_data = json_decode($response->getRawResponse(), true);
 
+                    $caseId = $response_data['investigationId'];
                     $case_object = Mage::getModel('signifyd_connect/case')->load($case_object->getOrderIncrement());
                     $case_object->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
-                    $case_object->setCode($response_data['investigationId']);
+                    $case_object->setCode($caseId);
                     $case_object->setTransactionId($case['purchase']['transactionId']);
                     $case_object->save();
+
+                    $order->addStatusHistoryComment("Signifyd: case $caseId created for order");
+                    $order->save(); // Note: this will trigger recursion
                     return "sent";
                 }
             } catch (Exception $e) {
