@@ -262,19 +262,35 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         }
     }
 
+    public function handleCancel($order)
+    {
+        $helper = Mage::helper('signifyd_connect');
+        $case = Mage::getModel('signifyd_connect/case')->load($order);
+        if($case->isObjectNew()) {
+            $helper->logError("Guarantee cancel: Signifyd case for order $order does not exist in DB");
+            return;
+        }
+        if($case->getGuarantee() == 'N/A') {
+            $helper->logRequest("Guarantee cancel: Skipped. No guarantee active");
+            return;
+        }
+
+        $helper->logRequest("Guarantee cancel for case " . $case->getCode());
+        $helper->cancelGuarantee($case);
+    }
+
     public function salesOrderPaymentCancel($observer)
     {
         $helper = Mage::helper('signifyd_connect');
         try {
-            $order = $observer->getOrder()->getIncrement();
-            $case = Mage::getModel('signifyd_connect/case')->load($order);
-            if($case->isObjectNew()) {
-                $helper->logError("Guarantee cancel: Signifyd case for order $order does not exist in DB");
+            $event = $observer->getEvent();
+            if($event->getPayment()->getOrder()) {
+                $order = $event->getPayment()->getOrder()->getIncrementId();
+            } else {
+                $helper->logError("Event salesOrderPaymentCancel has no order");
                 return;
             }
-            $caseId = $case->getCode();
-            $helper->logRequest("Guarantee cancel for case $caseId");
-            $helper->cancelGuarantee($caseId);
+            $this->handleCancel($order);
         } catch(Exception $ex) {
             $helper->logError("Guarantee cancel: $ex");
         }

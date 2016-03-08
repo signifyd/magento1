@@ -655,12 +655,17 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
 
-    public function cancelGuarantee($caseId)
+    public function cancelGuarantee($case)
     {
+        $caseId = $case->getCode();
         $url = $this->getUrl() . "/$caseId/guarantee";
         $body = json_encode(array("guaranteeDisposition" => "CANCELED"));
         $response = $this->request($url, $body, $this->getAuth(), 'application/json', null, true);
         $code = $response->getHttpCode();
+        if(substr($code, 0, 1) == '2') {
+            $case->setGuarantee('CANCELED');
+            $case->save();
+        }
         $this->logResponse("Received $code from guarantee cancel");
     }
 
