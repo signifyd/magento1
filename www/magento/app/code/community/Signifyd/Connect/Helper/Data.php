@@ -665,6 +665,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if(substr($code, 0, 1) == '2') {
             $case->setGuarantee('CANCELED');
             $case->save();
+        } else {
+            $this->logError("Guarantee cancel failed");
         }
         $this->logResponse("Received $code from guarantee cancel");
     }
