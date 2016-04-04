@@ -197,7 +197,13 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
     private function getTransactionId($payment)
     {
-        return $payment->getCcTransId();
+        $transId = $payment->getCcTransId();
+        if(is_array($transId) && is_string($transId[0])) {
+            $transId = $transId[0];
+        } else if(!is_string($transId)) {
+            $transId = null;
+        }
+        return $transId;
     }
 
     public function getPurchase($order)
