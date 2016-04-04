@@ -105,6 +105,7 @@ class Signifyd_Connect_Block_Adminhtml_Sales_Order_Grid extends Mage_Adminhtml_B
             'type' => 'text',
             'index' => 'guarantee',
             'filter' => false,
+            'renderer' => 'signifyd_connect/renderer',
         ));
         
         $this->addColumn('order_status', array(

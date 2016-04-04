@@ -267,6 +267,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                             'type' => 'text',
                             'index' => 'guarantee',
                             'filter' => false,
+                            'renderer' => 'signifyd_connect/renderer',
                             'width' => '100px',
                         ),
                         'status'
