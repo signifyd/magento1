@@ -638,8 +638,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     
     public function getStoreName()
     {
-        $store = Mage::app()->getStore();
-        
         return Mage::getStoreConfig('trans_email/ident_general/name', 0);
     }
     
