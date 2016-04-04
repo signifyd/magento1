@@ -586,7 +586,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $order = Mage::getModel('sales/order')->loadByIncrementId($order_id->getOrderIncrement());
                 $result = "unset";
                 if ($order != null && $this->processedStatus($order) < self::CASE_CREATED_STATUS) {
-                    $result = $this->buildAndSendOrderToSignifyd($order);
+                    $result = $this->buildAndSendOrderToSignifyd($order, true);
                 }
                 if ($result !== "error") {
                     Mage::register('isSecureArea', true);
