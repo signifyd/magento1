@@ -7,6 +7,27 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     const CASE_CREATED_STATUS       = 2;
     const TRANSACTION_SENT_STATUS   = 3;
 
+    public function logRequest($message)
+    {
+        if (Mage::getStoreConfig('signifyd_connect/log/request')) {
+            Mage::log($message, null, 'signifyd_connect.log');
+        }
+    }
+
+    public function logResponse($message)
+    {
+        if (Mage::getStoreConfig('signifyd_connect/log/response')) {
+            Mage::log($message, null, 'signifyd_connect.log');
+        }
+    }
+
+    public function logError($message)
+    {
+        if (Mage::getStoreConfig('signifyd_connect/log/error')) {
+            Mage::log($message, null, 'signifyd_connect.log');
+        }
+    }
+
     public function getProducts($quote)
     {
         $products = array();
@@ -163,6 +184,15 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         return null;
+    }
+
+    private function getVersions()
+    {
+        $version = array();
+        $version['platform'] = 'magento';
+        $version['platformVersion'] = Mage::getVersion();
+        $version['pluginVersion'] = (string)(Mage::getConfig()->getNode()->modules->Signifyd_Connect->version);
+        return $version;
     }
 
     private function getTransactionId($payment)
@@ -358,6 +388,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $case['recipient'] = $this->getRecipient($order);
         $case['card'] = $this->getCard($order, $payment);
         $case['userAccount'] = $this->getUserAccount($customer, $order);
+        $case['clientVersion'] = $this->getVersions();
 
         return $case;
     }
@@ -441,8 +472,18 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $orderIds = array_map('intval', explode(',', $orderIds));
             }
             if (!is_array($orderIds)) {
-                Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')->__('Please select order(s)'));
+                Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')
+                    ->__('Please select order(s)'));
             } else {
+                // Reference T2395
+                $user = "Unknown";
+                try {
+                    $user = Mage::getSingleton('admin/session')->getUser()->getUsername();
+                } catch (Exception $ex) {
+                    $this->logError($ex->__toString());
+                }
+                $this->logRequest("Bulk send initiated by: $user");
+
                 $collection = Mage::getModel('sales/order')->getCollection()
                     ->addFieldToSelect('*')
                     ->addFieldToFilter('entity_id', array('in' => $orderIds));
@@ -450,21 +491,26 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 foreach ($collection as $order) {
                     $result = $this->buildAndSendOrderToSignifyd($order, /*forceSend*/ true);
                     if($result == "sent") {
-                        Mage::getSingleton('adminhtml/session')->addSuccess(Mage::helper('adminhtml')->__('Successfully sent order ' . $order->getIncrementId() . '.'));
+                        Mage::getSingleton('adminhtml/session')->addSuccess(Mage::helper('adminhtml')
+                            ->__('Successfully sent order ' . $order->getIncrementId() . '.'));
                     } else if ($result == "exists") {
-                        Mage::getSingleton('adminhtml/session')->addWarning(Mage::helper('adminhtml')->__('Order ' . $order->getIncrementId() . ' has already been sent to Signifyd.'));
+                        Mage::getSingleton('adminhtml/session')->addWarning(Mage::helper('adminhtml')
+                            ->__('Order ' . $order->getIncrementId() . ' has already been sent to Signifyd.'));
                     } else if ($result == "nodata") {
-                        if(Mage::getStoreConfig('signifyd_connect/log/request')) {
-                            Mage::log("Request/Update not sent because there is no data", null, 'signifyd_connect.log');
-                        }
+                        $this->logRequest("Request/Update not sent because there is no data");
                     } else {
-                        Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')->__('Order ' . $order->getIncrementId() . ' failed to send. See log for details.'));
+                        Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')
+                            ->__('Order ' . $order->getIncrementId() . ' failed to send. See log for details.'));
                     }
+                }
+                if (Mage::getStoreConfig('signifyd_connect/log/request')) {
+                    $this->logRequest("Bulk send complete");
                 }
             }
         } catch(Exception $ex) {
-            Mage::log($ex->__toString(), null, 'signifyd_connect.log');
-            Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')->__('Send failed. See log for details'));
+            $this->logError($ex->__toString());
+            Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')
+                ->__('Send failed. See log for details'));
         }
     }
 
@@ -506,11 +552,15 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 if (substr($response_code, 0, 1) == '2') {
                     $response_data = json_decode($response->getRawResponse(), true);
 
+                    $caseId = $response_data['investigationId'];
                     $case_object = Mage::getModel('signifyd_connect/case')->load($case_object->getOrderIncrement());
                     $case_object->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
-                    $case_object->setCode($response_data['investigationId']);
+                    $case_object->setCode($caseId);
                     $case_object->setTransactionId($case['purchase']['transactionId']);
                     $case_object->save();
+
+                    $order->addStatusHistoryComment("Signifyd: case $caseId created for order");
+                    $order->save(); // Note: this will trigger recursion
                     return "sent";
                 }
             } catch (Exception $e) {
@@ -642,7 +692,23 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $case->delete();
         }
     }
-    
+
+    public function cancelGuarantee($case)
+    {
+        $caseId = $case->getCode();
+        $url = $this->getUrl() . "/$caseId/guarantee";
+        $body = json_encode(array("guaranteeDisposition" => "CANCELED"));
+        $response = $this->request($url, $body, $this->getAuth(), 'application/json', null, true);
+        $code = $response->getHttpCode();
+        if(substr($code, 0, 1) == '2') {
+            $case->setGuarantee('CANCELED');
+            $case->save();
+        } else {
+            $this->logError("Guarantee cancel failed");
+        }
+        $this->logResponse("Received $code from guarantee cancel");
+    }
+
     public function request($url, $data = null, $auth = null, $contenttype = "application/x-www-form-urlencoded",
                             $accept = null, $is_update = false)
     {
