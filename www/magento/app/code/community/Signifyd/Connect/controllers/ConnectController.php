@@ -7,6 +7,8 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     public $_order = false;
     public $_store_id = null;
     public $_case = false;
+    public $_previousGuarantee = false;
+    public $_previousScore = false;
 
     public function getApiKey()
     {
@@ -215,6 +217,8 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         if ($topic == "cases/test") return;
 
         $this->_case = $this->initCase($this->_request['orderId']);
+        $this->_previousGuarantee = $this->_case->getGuarantee();
+        $this->_previousScore = $this->_case->getScore();
 
         $this->_order = Mage::getModel('sales/order')->loadByIncrementId($this->_request['orderId']);
 
@@ -291,53 +295,51 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     public function processAdditional($case, $original_status = false)
     {
         $order = $this->_order;
-        $impeded = false;
 
         if ($order && $order->getId()) {
             $threshold = $this->holdThreshold();
 
             $negativeAction = $this->negativeGuaranteeAction();
             $positiveAction = $this->positiveGuaranteeAction();
+            $newGuarantee = $this->_request ['guaranteeDisposition'];
+            $newScore = $case->getScore();
 
-            if (isset($this->_request ['guaranteeDisposition'])) {
-                if ($this->_request ['guaranteeDisposition'] == 'DECLINED' && $negativeAction != 'nothing') {
+            // If a guarantee has been set, we no longer care about other actions
+            if (isset($newGuarantee) && $newGuarantee != $this->_previousGuarantee) {
+                if ($newGuarantee == 'DECLINED' && $negativeAction != 'nothing') {
                     if ($negativeAction == 'hold') {
                         $this->holdOrder($order, "guarantee declined");
-                        $impeded = true;
                     } else if ($negativeAction == 'cancel') {
                         $this->cancelOrder($order, "guarantee declined");
-                        $impeded = true;
                     } else {
                         Mage::log("Unknown action $negativeAction", null, 'signifyd_connect.log');
                     }
-                } else if ($this->_request ['guaranteeDisposition'] == 'APPROVED' && $positiveAction != 'nothing') {
+                } else if ($newGuarantee == 'APPROVED' && $positiveAction != 'nothing') {
                     if ($positiveAction == 'unhold') {
                         $this->unholdOrder($order, "guarantee approved");
                     } else {
                         Mage::log("Unknown action $positiveAction", null, 'signifyd_connect.log');
                     }
                 }
-            }
-
-            if (!$original_status || $original_status == 'PENDING') {
-                if ($threshold && $case->getScore() <= $threshold && $this->canReviewHold()) {
-                    $this->holdOrder($order, "score below threshold");
-                    $impeded = true;
-                }
-            } else if ($original_status) {
-                if ($this->_request['reviewDisposition'] == 'FRAUDULENT') {
-                    if ($this->canReviewHold()) {
-                        $this->holdOrder($order, "case review fraudulent");
+            } else if($this->_previousGuarantee == "N/A") {
+                if (!$original_status || $original_status == 'PENDING') {
+                    if ($threshold  && $this->_previousScore != $newScore
+                                    && $newScore <= $threshold
+                                    && $this->canReviewHold())
+                    {
+                        $this->holdOrder($order, "score below threshold");
                     }
-                } else if ($this->_request['reviewDisposition'] == 'GOOD') {
-                    if ($this->canReviewHold()) {
-                        $this->unholdOrder($order, "case review good");
+                } else if ($original_status) {
+                    if ($this->_request['reviewDisposition'] == 'FRAUDULENT') {
+                        if ($this->canReviewHold()) {
+                            $this->holdOrder($order, "case review fraudulent");
+                        }
+                    } else if ($this->_request['reviewDisposition'] == 'GOOD') {
+                        if ($this->canReviewHold()) {
+                            $this->unholdOrder($order, "case review good");
+                        }
                     }
                 }
-            }
-
-            if ($order && $order->getId() && $this->canInvoice() && !$impeded && !$original_status) {
-                $this->invoiceOrder($order);
             }
         }
     }
