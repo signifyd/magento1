@@ -53,7 +53,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         return $enabled && $retrieve_scores;
     }
 
-
     public function getUrl($code)
     {
         return Mage::getStoreConfig('signifyd_connect/settings/url', $this->_store_id) . '/cases/' . $code;

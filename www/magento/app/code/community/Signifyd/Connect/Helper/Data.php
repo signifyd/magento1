@@ -567,11 +567,13 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
                     $order->addStatusHistoryComment("Signifyd: case $caseId created for order");
                     $order->save(); // Note: this will trigger recursion
+
                     return "sent";
                 }
             } catch (Exception $e) {
                 Mage::log($e->__toString(), null, 'signifyd_connect.log');
             }
+            $this->unmarkProcessed($order);
             return "error";
         }
     }
@@ -591,17 +593,21 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 }
                 $order = Mage::getModel('sales/order')->loadByIncrementId($order_id->getOrderIncrement());
                 $result = "unset";
+                $this->logRequest("Retrying " . $order_id->getOrderIncrement());
                 if ($order != null && $this->processedStatus($order) < self::CASE_CREATED_STATUS) {
-                    $result = $this->buildAndSendOrderToSignifyd($order, true);
+                    $result = $this->buildAndSendOrderToSignifyd($order);
                 }
                 if ($result !== "error") {
+                    $this->logRequest("Completed retry " . $order_id->getOrderIncrement());
                     Mage::register('isSecureArea', true);
                     $order_id->delete();
                     Mage::unregister('isSecureArea');
+                } else {
+                    $this->logError("Failed retry " . $order_id->getOrderIncrement());
                 }
             }
         } catch (Exception $e) {
-            Mage::log($e->__toString(), null, 'signifyd_connect.log');
+            $this->logError($e->__toString());
         }
     }
 
@@ -691,9 +697,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function unmarkProcessed($order)
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
-        if($case)
+        if($case && !$case->isObjectNew())
         {
+            Mage::register('isSecureArea', true);
             $case->delete();
+            Mage::unregister('isSecureArea');
         }
     }
 
