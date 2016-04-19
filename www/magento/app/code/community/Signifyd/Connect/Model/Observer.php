@@ -288,7 +288,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $helper->logError("Guarantee cancel: Signifyd case for order $order does not exist in DB");
             return;
         }
-        if($case->getGuarantee() == 'N/A') {
+        if($case->getGuarantee() == 'N/A' || $case->getGuarantee() == 'DECLINED') {
             $helper->logRequest("Guarantee cancel: Skipped. No guarantee active");
             return;
         }
