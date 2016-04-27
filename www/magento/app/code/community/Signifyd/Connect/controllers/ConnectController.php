@@ -238,7 +238,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             $order->save();
 
             if ($this->logRequest()) {
-                Mage::log('Order ' . $order->getId() . ' held', null, 'signifyd_connect.log');
+                Mage::log('Order ' . $order->getId() . ' held because ' . $reason, null, 'signifyd_connect.log');
             }
         }
     }
@@ -251,7 +251,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             $order->save();
 
             if ($this->logRequest()) {
-                Mage::log('Order ' . $order->getId() . ' unheld', null, 'signifyd_connect.log');
+                Mage::log('Order ' . $order->getId() . ' unheld because ' . $reason, null, 'signifyd_connect.log');
             }
         }
     }
@@ -264,7 +264,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             $order->save();
 
             if ($this->logRequest()) {
-                Mage::log('Order ' . $order->getId() . ' cancelled', null, 'signifyd_connect.log');
+                Mage::log('Order ' . $order->getId() . ' cancelled because ' . $reason, null, 'signifyd_connect.log');
             }
         }
     }
@@ -300,7 +300,15 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
             $negativeAction = $this->negativeGuaranteeAction();
             $positiveAction = $this->positiveGuaranteeAction();
-            $newGuarantee = $this->_request ['guaranteeDisposition'];
+
+            $newGuarantee = null;
+            try{
+                $newGuarantee = isset($this->_request ['guaranteeDisposition']) ? $this->_request ['guaranteeDisposition'] : null;
+            } catch(Exception $e){
+                if ($this->logErrors()) {
+                    Mage::log('ERROR ON WEBHOOK: ' . $e->__toString(), null, 'signifyd_connect.log');
+                }
+            }
             $newScore = $case->getScore();
 
             // If a guarantee has been set, we no longer care about other actions
