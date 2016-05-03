@@ -421,6 +421,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if ($order && $order->getId() && Mage::getStoreConfig('signifyd_connect/advanced/enable_payment_updates')) {
             $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
             $caseId = $case->getCode();
+            
             if (Mage::getStoreConfig('signifyd_connect/log/request')) {
                 Mage::log("Created new case: $caseId", null, 'signifyd_connect.log');
             }
@@ -436,13 +437,13 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $purchase['cvvResponseCode'] = $this->getCvvResponse($payment);
 
             // Do not make request if there is no data to send
-            if( $purchase['transactionId'] == null ||
-                $purchase['transactionId'] == null ||
-                $purchase['transactionId'] == null)
+            if( $purchase['transactionId'] == null &&
+                $purchase['avsResponseCode'] == null &&
+                $purchase['cvvResponseCode'] == null)
             {
                 return "nodata";
             }
-
+            Mage::register('signifyd_action', 1); // Work will now take place
 
             $updateData['purchase'] = $purchase;
 
@@ -454,6 +455,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $response_code = $response->getHttpCode();
 
                 if (substr($response_code, 0, 1) == '2') {
+                    // Reload in case a substantial amount of time has passed
+                    $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
                     $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                     $case->setTransactionId($updateData['purchase']['transactionId']);
                     $case->save();
@@ -541,6 +544,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 return "notready"; // Note: would not be in the order grid if this were the case
             }
 
+            Mage::register('signifyd_action', 1); // Work will now take place
             $customer = null;
             if ($order->getCustomer()) {
                 $customer = $order->getCustomer();
@@ -667,7 +671,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
 
-        if ($case->getTransactionId)
+        if ($case->getTransactionId())
         {
             return self::TRANSACTION_SENT_STATUS;
         }

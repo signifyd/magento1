@@ -10,6 +10,10 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             if (!Mage::getStoreConfig('signifyd_connect/settings/enabled') && !$this->getEnabled()) {
                 return;
             }
+            if(Mage::registry('signifyd_action') == 1)
+            {
+                return;
+            }
             
             $event = $observer->getEvent();
             

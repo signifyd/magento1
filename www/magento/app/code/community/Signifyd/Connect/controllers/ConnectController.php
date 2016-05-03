@@ -151,16 +151,22 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     private function updateGuarantee($case)
     {
-        if (isset($this->_request['guaranteeDisposition'])) {
-            $case->setGuarantee($this->_request['guaranteeDisposition']);
+        try {
+            if (isset($this->_request['guaranteeDisposition'])) {
+                $case->setGuarantee($this->_request['guaranteeDisposition']);
 
-            if ($this->logRequest()) {
-                Mage::log('Set guarantee to ' . $this->_request['guaranteeDisposition'], null, 'signifyd_connect.log');
+                if ($this->logRequest()) {
+                    Mage::log('Set guarantee to ' . $this->_request['guaranteeDisposition'], null,
+                        'signifyd_connect.log');
+                }
             }
-        } else {
-            if ($this->logRequest()) {
-                Mage::log('No guarantee available', null, 'signifyd_connect.log');
+        } catch(Exception $e) {
+            if ($this->logErrors()) {
+                Mage::log('ERROR ON WEBHOOK: ' . $e->__toString(), null, 'signifyd_connect.log');
             }
+        }
+        if ($this->logRequest()) {
+            Mage::log('No guarantee available', null, 'signifyd_connect.log');
         }
     }
 
@@ -361,6 +367,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
         $this->updateScore($case);
         $this->updateStatus($case);
+        $this->updateGuarantee($case);
 
         $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
@@ -384,6 +391,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
         $this->updateScore($case);
         $this->updateStatus($case);
+        $this->updateGuarantee($case);
 
         $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
@@ -528,6 +536,9 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
             return;
         }
+
+        // Prevent recursing on save
+        Mage::register('signifyd_action', 1);
 
         $request = $this->getRawPost();
 
