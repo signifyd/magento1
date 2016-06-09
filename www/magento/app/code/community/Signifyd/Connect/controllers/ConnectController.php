@@ -264,6 +264,8 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     public function cancelOrder($order, $reason)
     {
+		if ($order->getState() === $order::STATE_HOLDED)
+            $this->unholdOrder($order, $reason);
         if ($order && $order->getId() && $order->canCancel()) {
             $order->cancel();
             $order->addStatusHistoryComment("Signifyd: order canceled because $reason");
