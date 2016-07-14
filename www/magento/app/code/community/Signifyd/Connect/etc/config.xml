@@ -69,6 +69,14 @@
                     </signifyd_connect>
                 </observers>
             </model_save_after>
+            <sales_order_place_after>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>putOrderOnHold</method>
+                    </signifyd_connect>
+                </observers>
+            </sales_order_place_after>
         </events>
     </global>
     <frontend>
@@ -89,8 +97,6 @@
                 <url>https://api.signifyd.com/v2</url>
             </settings>
             <advanced>
-                <retrieve_score>0</retrieve_score>
-                <show_scores>0</show_scores>
                 <hold_orders>0</hold_orders>
                 <hold_orders_threshold>500</hold_orders_threshold>
                 <invoice_orders>0</invoice_orders>

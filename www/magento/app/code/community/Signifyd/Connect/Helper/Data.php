@@ -796,4 +796,44 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         
         return $response;
     }
+
+    /**
+     * Get the order payment status
+     * @param $order
+     * @return array
+     */
+    public function getOrderPaymentStatus($order)
+    {
+        $status = array('authorize' => false, 'capture' => false, 'credit_memo' => false);
+        $logger = Mage::helper('signifyd_connect/log');
+        $paymentMethod = $order->getPayment();
+        $paymentAuthorized = $paymentMethod->getBaseAmountAuthorized();
+        $baseTotalPaid = $order->getBaseTotalPaid();
+        $baseTotalRefunded = $order->getBaseTotalRefunded();
+        // Maybe used in the future
+//        $canVoid = $paymentMethod->canVoid($order);
+//        $amountPayed = $paymentMethod->getAmountPaid();
+//        $baseTotalCanceled = $order->getBaseTotalCanceled();
+//        $baseTotalInvoiced = $order->getBaseTotalInvoiced();
+
+        // Check authorization
+        if(!empty($paymentAuthorized)){
+            $status['authorize'] = true;
+        }
+
+        // Check capture
+        if(!empty($baseTotalPaid)){
+            $status['capture'] = true;
+        }
+
+        // Check credit memo
+        if(!empty($baseTotalRefunded)){
+            $status['credit_memo'] = true;
+        }
+
+        // log status
+        $logger->addLog("Order: {$order->getIncrementId()} has a status of " . json_encode($status));
+
+        return $status;
+    }
 }

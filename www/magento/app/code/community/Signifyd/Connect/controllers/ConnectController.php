@@ -16,15 +16,15 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         return Mage::getStoreConfig('signifyd_connect/settings/key');
     }
 
-    public function holdThreshold()
-    {
-        return (int)Mage::getStoreConfig('signifyd_connect/advanced/hold_orders_threshold', $this->_store_id);
-    }
+//    public function holdThreshold()
+//    {
+//        return (int)Mage::getStoreConfig('signifyd_connect/advanced/hold_orders_threshold', $this->_store_id);
+//    }
 
-    public function canReviewHold()
-    {
-        return Mage::getStoreConfig('signifyd_connect/advanced/hold_orders', $this->_store_id);
-    }
+//    public function canReviewHold()
+//    {
+//        return Mage::getStoreConfig('signifyd_connect/advanced/hold_orders', $this->_store_id);
+//    }
 
     public function canInvoice()
     {
@@ -48,10 +48,11 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     public function enabled()
     {
-        $retrieve_scores = Mage::getStoreConfig('signifyd_connect/advanced/retrieve_score');
-        $enabled = Mage::getStoreConfig('signifyd_connect/settings/enabled');
+//        $retrieve_scores = true;
+//        $enabled = Mage::getStoreConfig('signifyd_connect/settings/enabled');
 
-        return $enabled && $retrieve_scores;
+//        return $enabled; // && $retrieve_scores;
+        return Mage::getStoreConfig('signifyd_connect/settings/enabled');
     }
 
     public function getUrl($code)
@@ -331,8 +332,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         $order = $this->_order;
 
         if ($order && $order->getId()) {
-            $threshold = $this->holdThreshold();
-
             $negativeAction = $this->negativeGuaranteeAction();
             $positiveAction = $this->positiveGuaranteeAction();
 
@@ -344,7 +343,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                     Mage::log('ERROR ON WEBHOOK: ' . $e->__toString(), null, 'signifyd_connect.log');
                 }
             }
-            $newScore = $case->getScore();
 
             // If a guarantee has been set, we no longer care about other actions
             if (isset($newGuarantee) && $newGuarantee != $this->_previousGuarantee) {
@@ -361,25 +359,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                         $this->unholdOrder($order, "guarantee approved");
                     } else {
                         Mage::log("Unknown action $positiveAction", null, 'signifyd_connect.log');
-                    }
-                }
-            } else if($this->_previousGuarantee == "N/A") {
-                if (!$original_status || $original_status == 'PENDING') {
-                    if ($threshold  && $this->_previousScore != $newScore
-                                    && $newScore <= $threshold
-                                    && $this->canReviewHold())
-                    {
-                        $this->holdOrder($order, "score below threshold");
-                    }
-                } else if ($original_status) {
-                    if ($this->_request['reviewDisposition'] == 'FRAUDULENT') {
-                        if ($this->canReviewHold()) {
-                            $this->holdOrder($order, "case review fraudulent");
-                        }
-                    } else if ($this->_request['reviewDisposition'] == 'GOOD') {
-                        if ($this->canReviewHold()) {
-                            $this->unholdOrder($order, "case review good");
-                        }
                     }
                 }
             }
