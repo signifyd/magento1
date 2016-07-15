@@ -16,21 +16,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         return Mage::getStoreConfig('signifyd_connect/settings/key');
     }
 
-//    public function holdThreshold()
-//    {
-//        return (int)Mage::getStoreConfig('signifyd_connect/advanced/hold_orders_threshold', $this->_store_id);
-//    }
-
-//    public function canReviewHold()
-//    {
-//        return Mage::getStoreConfig('signifyd_connect/advanced/hold_orders', $this->_store_id);
-//    }
-
-    public function canInvoice()
-    {
-        return Mage::getStoreConfig('signifyd_connect/advanced/invoice_orders', $this->_store_id);
-    }
-
     public function notifyCustomer()
     {
         return Mage::getStoreConfig('signifyd_connect/advanced/invoice_orders_notify', $this->_store_id);
@@ -48,10 +33,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     public function enabled()
     {
-//        $retrieve_scores = true;
-//        $enabled = Mage::getStoreConfig('signifyd_connect/settings/enabled');
-
-//        return $enabled; // && $retrieve_scores;
         return Mage::getStoreConfig('signifyd_connect/settings/enabled');
     }
 
@@ -307,7 +288,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     public function invoiceOrder($order)
     {
-        if ($order && $order->getId() && $order->canInvoice() && $this->canInvoice()) {
+        if ($order && $order->getId() && $order->canInvoice()) {
             $items = array();
             foreach ($order->getAllItems() as $item) {
                 $items[$item->getId()] = $item->getQtyOrdered();
