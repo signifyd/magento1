@@ -545,7 +545,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 return "notready"; // Note: would not be in the order grid if this were the case
             }
 
-            Mage::register('signifyd_action', 1); // Work will now take place
+            if(is_null(Mage::registry('signifyd_action'))) {
+                Mage::register('signifyd_action', 1); // Work will now take place
+            }
+
             $customer = null;
             if ($order->getCustomer()) {
                 $customer = $order->getCustomer();
@@ -831,7 +834,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $status['credit_memo'] = true;
         }
 
-        // log status
+        // Log status
         $logger->addLog("Order: {$order->getIncrementId()} has a status of " . json_encode($status));
 
         return $status;

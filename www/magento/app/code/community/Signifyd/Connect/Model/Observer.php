@@ -212,28 +212,28 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         }
     }
 
-    public function coreBlockAbstractPrepareLayoutBefore(Varien_Event_Observer $observer)
-    {
-        if (!Mage::getStoreConfig('signifyd_connect/settings/enabled') && !$this->getEnabled()) {
-            return;
-        }
+//    public function coreBlockAbstractPrepareLayoutBefore(Varien_Event_Observer $observer)
+//    {
+//        if (!Mage::getStoreConfig('signifyd_connect/settings/enabled') && !$this->getEnabled()) {
+//            return;
+//        }
 
-        $block = $observer->getEvent()->getBlock();
-        if((get_class($block) =='Mage_Adminhtml_Block_Widget_Grid_Massaction'
-         || get_class($block) == 'Enterprise_SalesArchive_Block_Adminhtml_Sales_Order_Grid_Massaction')
-            && $block->getRequest()->getControllerName() == 'sales_order')
-        {
-            $url = Mage::helper("adminhtml")->getUrl('signifyd_connect/adminhtml_signifyd/send');
-            if(Mage::getStoreConfig('signifyd_connect/advanced/use_unsecure_requests')){
-                $url = Mage::getUrl('signifyd/connect/send');
-            }
-            $block->setFormFieldName('increment_id');
-            $block->addItem('signifyd_connect', array(
-                'label' => 'Send order(s) to Signifyd',
-                'url' => $url,
-            ));
-        }
-    }
+//        $block = $observer->getEvent()->getBlock();
+//        if((get_class($block) =='Mage_Adminhtml_Block_Widget_Grid_Massaction'
+//         || get_class($block) == 'Enterprise_SalesArchive_Block_Adminhtml_Sales_Order_Grid_Massaction')
+//            && $block->getRequest()->getControllerName() == 'sales_order')
+//        {
+//            $url = Mage::helper("adminhtml")->getUrl('signifyd_connect/adminhtml_signifyd/send');
+//            if(Mage::getStoreConfig('signifyd_connect/advanced/use_unsecure_requests')){
+//                $url = Mage::getUrl('signifyd/connect/send');
+//            }
+//            $block->setFormFieldName('increment_id');
+//            $block->addItem('signifyd_connect', array(
+//                'label' => 'Send order(s) to Signifyd',
+//                'url' => $url,
+//            ));
+//        }
+//    }
     
     public function coreBlockAbstractToHtmlBefore(Varien_Event_Observer $observer)
     {

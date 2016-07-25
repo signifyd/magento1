@@ -4,7 +4,7 @@
  *
  * @category    Signifyd Connect
  * @package     Signifyd_Connect
- * @author      Osf Global Services
+ * @author      Signifyd
  */
 class Signifyd_Connect_Helper_Log extends Mage_Core_Helper_Abstract
 {
