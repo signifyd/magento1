@@ -19,9 +19,4 @@ class Signifyd_Connect_Adminhtml_SignifydController extends Mage_Adminhtml_Contr
         );
     }
 
-//    public function sendAction()
-//    {
-//        Mage::helper('signifyd_connect')->bulkSend($this);
-//        $this->_redirectReferer();
-//    }
 }

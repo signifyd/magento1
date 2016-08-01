@@ -64,54 +64,12 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
     }
 
     /**
-     * Method to capture the payment after an order was invoiced
-     * @param $order
-     * @return bool
-     */
-    /*
-    public function captureOrder($order)
-    {
-        $status = $this->dataHelper->getOrderPaymentStatus($order);
-        if($status['capture']){
-            $this->logger->addLog("Order {$order->getIncrementId()} is already captured");
-            return true;
-        }
-        $payment = $order->getPayment();
-        $method = $payment->getMethodInstance();
-        if(!$method->canCapture()){
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be captured");
-            return false;
-        }
-
-        try{
-            $this->logger->addLog("Testing");
-            $invoiceIds = $order->getInvoiceCollection()->getAllIds();
-            $this->logger->addLog(json_encode($invoiceIds));
-            foreach ($invoiceIds as $invoiceId){
-                $invoice = Mage::getModel('sales/order_invoice')->load($invoiceId);
-                $invoice->capture()->save();
-            }
-
-//            $method->capture($payment, $amount);
-            $this->logger->addLog("Capture order {$order->getIncrementId()} was successful");
-        } catch (Exception $e) {
-            $this->logger->addLog("Capture order {$order->getIncrementId()} was not successful:");
-            $this->logger->addLog($e->__toString());
-            return false;
-        }
-
-        return true;
-    }
-    */
-
-    /**
      * Method to generate the invoice after a order was placed
      * @param $order
      * @return bool
      */
     public function generateInvoice($order)
     {
-        // check if status is authorized
         if(!$order->canInvoice()){
             $this->logger->addLog("Order {$order->getIncrementId()} can not be invoiced");
             return false;
@@ -122,7 +80,6 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
 
             $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::CAPTURE_ONLINE);
-//            $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::NOT_CAPTURE);
             $invoice->register();
             $transactionSave = Mage::getModel('core/resource_transaction')
                 ->addObject($invoice)
@@ -174,16 +131,6 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
 
             // Generate the invoice
             $this->generateInvoice($order);
-
-            // Capture the order
-//            $captureStatus = $this->captureOrder($order);
-//            if($captureStatus == false){
-//                $order->hold();
-//                $order->addStatusHistoryComment("Signifyd: order held because capture failed");
-//                $order->save();
-//                $this->logger->addLog("Order {$order->getIncrementId()} was held because capture failed.");
-//                return false;
-//            }
 
             if ($this->logRequest) {
                 $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
@@ -309,7 +256,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         return true;
     }
 
-    public function voidOrderPayment($order)
+    public function voidOrderPayment($order, $reason)
     {
         if(is_null($order->getId())){
             $this->logger->addLog("Order was not found");
@@ -318,17 +265,26 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         $payment = $order->getPayment();
         $method = $payment->getMethodInstance();
 
+        if(!$method->canVoid($payment)){
+            $this->logger->addLog("Payment for order {$order->getIncrementId()} can not be voided");
+            return false;
+        }
 
-    }
+        try{
+            $method->void($payment);
+            $order->save();
+            $this->cancelOrder($order, $reason);
+            $this->logger->addLog("Void order payment {$order->getIncrementId()} was successful");
+        } catch (Exception $e) {
+            $this->holdOrder($order, 'Signifyd: Failed to void order payment');
+            $this->logger->addLog("Void order payment {$order->getIncrementId()} was not authorized:");
+            $this->logger->addLog($e->__toString());
+            return false;
+        }
 
-    public function generateCreditMemo($order)
-    {
-        $status = $this->dataHelper->getOrderPaymentStatus($order);
-    }
+        return true;
 
-    public function closeOrder($order)
-    {
-        $status = $this->dataHelper->getOrderPaymentStatus($order);
+
     }
 
     public function keepOrderOnHold($order, $reason)
@@ -355,12 +311,69 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             return false;
         }
 
-        if($status['authorize'] === true && $status['capture'] === false) {
-            $this->voidOrderPayment($order);
-        } elseif($status['authorize'] === true && $status['capture'] === true) {
-            $this->generateCreditMemo($order);
-        } else {
+        try {
+            $order->unhold();
+            $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
+            $order->save();
+        } catch (Exception $e){
+            $this->logger->addLog("Order {$order->getIncrementId()} can not be unheld");
+            return false;
+        }
 
+        if($status['authorize'] === true && $status['capture'] === false) {
+            $this->voidOrderPayment($order, $reason);
+        } elseif($status['authorize'] === true && $status['capture'] === true) {
+            $this->canNotCancel($order, $reason);
+        } else {
+            $this->cancelOrder($order, $reason);
+        }
+
+        return true;
+    }
+
+    public function checkStatus($order, $status)
+    {
+        $theOrder = Mage::getModel('sales/order')->load($order->getId());
+        return ($theOrder->getStatus() == $status)? true : false;
+    }
+
+    public function finalStatus($order, $type, $case)
+    {
+        try {
+            $holdStatus = $this->checkStatus($order, Mage_Sales_Model_Order::STATE_HOLDED);
+            if($type == 1){
+                // needs to be true
+                if($holdStatus === true){
+                    Mage::getModel('signifyd_connect/case')->setMagentoStatusTo($case, Signifyd_Connect_Helper_Data::COMPLETED_STATUS);
+                }
+            } elseif($type == 2) {
+                // needs to be false
+                if($holdStatus === false){
+                    Mage::getModel('signifyd_connect/case')->setMagentoStatusTo($case, Signifyd_Connect_Helper_Data::COMPLETED_STATUS);
+                }
+            } else {
+                $this->logger->addLog('Final status unknown type');
+            }
+            $this->logger->addLog("Case no:{$case->getId()}, set status to complete successful.");
+        } catch (Exception $e){
+            $this->logger->addLog("Case no:{$case->getId()}, set status to complete fail: " . $e->__toString());
+            return false;
+        }
+
+        return true;
+    }
+
+    public function canNotCancel($order, $reason)
+    {
+        try {
+            $order->hold();
+            $order->addStatusHistoryComment("Signifyd: order held because $reason");
+            $order->addStatusHistoryComment("Signifyd: order can not be canceled because it has a sum already captured, Please do a manual refund.");
+            $order->save();
+            $this->logger->addLog("Order {$order->getIncrementId()} was held because {$reason}");
+        } catch (Exception $e){
+            $this->logger->addLog("Order {$order->getIncrementId()} could not be held: " . $e->__toString());
+            return false;
         }
 
         return true;

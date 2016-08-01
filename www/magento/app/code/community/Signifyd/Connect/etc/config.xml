@@ -3,7 +3,7 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>3.13.0</version>
+            <version>3.14.0</version>
         </Signifyd_Connect>
     </modules>
     <global>
@@ -79,6 +79,18 @@
             </sales_order_place_after>
         </events>
     </global>
+    <crontab>
+        <jobs>
+            <signifyd_retry>
+                <schedule>
+                    <cron_expr>0,30 * * * *</cron_expr>
+                </schedule>
+                <run>
+                    <model>signifyd/cron::retry</model>
+                </run>
+            </signifyd_retry>
+        </jobs>
+    </crontab>
     <frontend>
         <routers>
             <signifyd_connect>
@@ -192,14 +204,6 @@
                     </signifyd_connect>
                 </observers>
             </core_block_abstract_to_html_before>
-            <!--<core_block_abstract_prepare_layout_before>-->
-                <!--<observers>-->
-                    <!--<signifyd_connect>-->
-                        <!--<model>signifyd_connect/observer</model>-->
-                        <!--<method>coreBlockAbstractPrepareLayoutBefore</method>-->
-                    <!--</signifyd_connect>-->
-                <!--</observers>-->
-            <!--</core_block_abstract_prepare_layout_before>-->
         </events>
     </adminhtml>
 </config>

@@ -17,6 +17,11 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     public $_previousScore = false;
     public $_unholdRetries = 0;
 
+    const WAITING_SUBMISSION_STATUS     = "waiting_submission";
+    const IN_REVIEW_STATUS              = "in_review";
+    const PROCESSING_RESPONSE_STATUS    = "processing_response";
+    const COMPLETED_STATUS              = "completed";
+
     public function getApiKey()
     {
         return Mage::getStoreConfig('signifyd_connect/settings/key');
@@ -136,6 +141,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         try {
             if (isset($this->_request['guaranteeDisposition'])) {
                 $case->setGuarantee($this->_request['guaranteeDisposition']);
+                $case->setMagentoStatus(self::PROCESSING_RESPONSE_STATUS);
 
                 if ($this->logRequest()) {
                     Mage::log('Set guarantee to ' . $this->_request['guaranteeDisposition'], null,
@@ -147,9 +153,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 Mage::log('ERROR ON WEBHOOK: ' . $e->__toString(), null, 'signifyd_connect.log');
             }
         }
-//        if ($this->logRequest()) {
-//            Mage::log('No guarantee available', null, 'signifyd_connect.log');
-//        }
     }
 
     public function validRequest($request, $hash)
@@ -218,16 +221,22 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         }
     }
 
-    public function processAdditional($case, $original_status = false)
+    public function processAdditional($case, $original_status = false,$custom_order = null)
     {
-        $order = $this->_order;
+        if ($custom_order)
+            $order = $custom_order;
+        else
+            $order = $this->_order;
 
         if ($order && $order->getId()) {
             $positiveAction = $this->getAcceptedFromGuaranty();
             $negativeAction = $this->getDeclinedFromGuaranty();
             $newGuarantee = null;
             try{
-                $newGuarantee = isset($this->_request ['guaranteeDisposition']) ? $this->_request ['guaranteeDisposition'] : null;
+                if ($custom_order)
+                    $newGuarantee = $case['guarantee'];
+                else
+                    $newGuarantee = isset($this->_request ['guaranteeDisposition']) ? $this->_request ['guaranteeDisposition'] : null;
             } catch(Exception $e){
                 if ($this->logErrors()) {
                     Mage::log('ERROR ON WEBHOOK: ' . $e->__toString(), null, 'signifyd_connect.log');
@@ -235,23 +244,30 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             }
             // If a guarantee has been set, we no longer care about other actions
             if (isset($newGuarantee) && $newGuarantee != $this->_previousGuarantee) {
+                // Loading the signifyd order model
+                $orderModel = Mage::getModel('signifyd_connect/order');
                 if ($newGuarantee == 'DECLINED' ) {
                     if ($negativeAction == 1) {
-//                        Mage::getModel('signifyd_connect/order')->holdOrder($order, "guarantee declined");
-                        Mage::getModel('signifyd_connect/order')->keepOrderOnHold($order, "guarantee declined");
+                        // this is for when config is set to keep order on hold
+                        $orderModel->keepOrderOnHold($order, "guarantee declined");
+                        $orderModel->finalStatus($order, 1, $case);
                     } else if ($negativeAction == 2) {
-//                        Mage::getModel('signifyd_connect/order')->cancelOrder($order, "guarantee declined");
-                        Mage::getModel('signifyd_connect/order')->cancelCloseOrder($order, "guarantee declined");
+                        // this is for when config is set to cancel close order
+                        $orderModel->cancelCloseOrder($order, "guarantee declined");
+                        $orderModel->finalStatus($order, 2, $case);
                     } else {
+                        // this is when the config is not set or it is set to something unknown
                         Mage::log("Unknown action $negativeAction", null, 'signifyd_connect.log');
                     }
                 } else if ($newGuarantee == 'APPROVED') {
                     if ($positiveAction == 1) {
                         // this is for when config is set to unhold order
-                        Mage::getModel('signifyd_connect/order')->unholdOrder($order, "guarantee approved");
+                        $orderModel->unholdOrder($order, "guarantee approved");
+                        $orderModel->finalStatus($order, 2, $case);
                     } elseif($positiveAction == 2){
                         // this is for when config is set to unhold, invoice and capture
-                        Mage::getModel('signifyd_connect/order')->unholdOrderAndCapture($order, "guarantee approved");
+                        $orderModel->unholdOrderAndCapture($order, "guarantee approved");
+                        $orderModel->finalStatus($order, 2, $case);
                     } else {
                         // this is when the config is not set or it is set to something unknown
                         Mage::log("Unknown action $positiveAction", null, 'signifyd_connect.log');
@@ -411,11 +427,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     }
 
-    public function retriesAction()
-    {
-        Mage::helper('signifyd_connect')->processRetryQueue();
-    }
-
     /**
      * Main entry point for the signifyd callback
      */
@@ -498,6 +509,11 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         }
 
         $this->complete();
+    }
+
+    public function cronAction()
+    {
+        Mage::getModel('signifyd_connect/cron')->retry();
     }
 
 }
