@@ -36,14 +36,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 return;
             }
 
-            $result = Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($order);
-            if($result !== "error") {
-                if($result !== "notready") {
-                    // Handle two of the retry items in queue
-                    Mage::helper('signifyd_connect')->processRetryQueue(2);
-                }
-                return;
-            }
+            Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($order);
         } catch (Exception $e) {
             Mage::log($e->__toString(), null, 'signifyd_connect.log');
         }
