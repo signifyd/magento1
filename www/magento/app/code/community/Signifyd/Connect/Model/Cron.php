@@ -36,7 +36,7 @@ class Signifyd_Connect_Model_Cron
         // Getting all the cases that were not submitted to Signifyd
         $cases_for_resubmit = $this->getRetryCasesByStatus(self::WAITING_SUBMISSION_STATUS);
         foreach ($cases_for_resubmit as $current_case) {
-            $this->logger->addLog("Signifyd: preparing for send case no: {$current_case}");
+            $this->logger->addLog("Signifyd: preparing for send case no: {$current_case['order_increment']}");
             $current_order_id = $current_case['order_increment'];
             $current_order = Mage::getModel('sales/order')->loadByIncrementId($current_order_id);
             Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($current_order,true);
@@ -45,21 +45,18 @@ class Signifyd_Connect_Model_Cron
         // Getting all the cases that are awaiting review from Signifyd
         $cases_for_resubmit = $this->getRetryCasesByStatus(self::IN_REVIEW_STATUS);
         foreach ($cases_for_resubmit as $current_case) {
-            $this->logger->addLog("Signifyd: preparing for review case no: {$current_case}");
+            $this->logger->addLog("Signifyd: preparing for review case no: {$current_case['order_increment']}");
             $this->processInReviewCase($current_case);
         }
 
         // Getting all the cases that need processing after the response was received
         $cases_for_resubmit = $this->getRetryCasesByStatus(self::PROCESSING_RESPONSE_STATUS);
         foreach ($cases_for_resubmit as $current_case) {
-            $this->logger->addLog("Signifyd: preparing for review case no: {$current_case}");
+            $this->logger->addLog("Signifyd: preparing for review case no: {$current_case['order_increment']}");
             $current_order_id = $current_case['order_increment'];
             $current_order = Mage::getModel('sales/order')->loadByIncrementId($current_order_id);
             // need to refactor this
-            if(!class_exists('Signifyd_Connect_ConnectController')) //in case the class already exists
-            {
-                require_once('Signifyd/Connect/ConnectController.php');
-            }
+            $this->loadClass();
             $signifyd_controller = new Signifyd_Connect_ConnectController();
             $signifyd_controller->processAdditional($current_case,false,$current_order);
         }
@@ -103,10 +100,7 @@ class Signifyd_Connect_Model_Cron
             if (substr($response_code, 0, 1) == '2') {
                 $response_data = $response->getRawResponse();
                 // need to refactor this
-                if(!class_exists('Signifyd_Connect_ConnectController')) //in case the class already exists
-                {
-                    require_once('Signifyd/Connect/ConnectController.php');
-                }
+                $this->loadClass();
                 $signifyd_controller = new Signifyd_Connect_ConnectController();
                 $signifyd_controller->processFallback($response_data);
                 return;
@@ -127,6 +121,14 @@ class Signifyd_Connect_Model_Cron
         return (empty($url))? "https://api.signifyd.com/v2/cases/" . $case_code : $url;
     }
 
+    public function loadClass(){
+        if(!@class_exists('Signifyd_Connect_ConnectController')) //in case the class already exists
+        {
+            $dir = Mage::getModuleDir('controllers', 'Signifyd_Connect');
+            require_once($dir . '/ConnectController.php');
+        }
+        return true;
+    }
 }
 
 /* Filename: Cron.php */

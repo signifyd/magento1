@@ -45,7 +45,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         $method = $payment->getMethodInstance();
         if(!$method->canAuthorize()){
             $this->logger->addLog("Order {$order->getIncrementId()} can not be authorize");
-            return false;
+            return true;
         }
 
         $amount = $order->getData('grand_total');
@@ -56,7 +56,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $this->logger->addLog("Authorize order {$order->getIncrementId()} was successful");
         } catch (Exception $e) {
             $this->logger->addLog("Authorize order {$order->getIncrementId()} was not authorized:");
-            $this->logger->addLog($e);
+            $this->logger->addLog($e->__toString());
             return false;
         }
 
@@ -120,20 +120,29 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $this->logger->addLog("Order {$order->getIncrementId()} can not be unheld");
             return false;
         }
+        $status = $this->dataHelper->getOrderPaymentStatus($order);
 
         try {
             $order->unhold();
             $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
             $order->save();
 
-            // Authorize the order
-            $this->authorizeOrder($order);
-
-            // Generate the invoice
-            $this->generateInvoice($order);
-
             if ($this->logRequest) {
                 $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
+            }
+
+            // Authorize the order
+            $result = $this->authorizeOrder($order);
+            if($result === false){
+                $this->holdOrder($order, 'Fail to Authorize Order');
+            }
+
+            // Generate the invoice
+            if($status['capture'] !== true){
+                $result = $this->generateInvoice($order);
+                if($result === false){
+                    $this->holdOrder($order, 'Fail to generate Invoice');
+                }
             }
         } catch (Exception $e) {
             $this->logger->addLog("Order {$order->getIncrementId()} unable to be saved because {$e->getMessage()}");
@@ -169,7 +178,10 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->save();
 
             // Authorize the order
-            $this->authorizeOrder($order);
+            $result = $this->authorizeOrder($order);
+            if($result === false){
+                $this->holdOrder($order, 'Fail to Authorize Order');
+            }
 
             if ($this->logRequest) {
                 $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
@@ -255,7 +267,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
 
         return true;
     }
-
+    /*
     public function voidOrderPayment($order, $reason)
     {
         if(is_null($order->getId())){
@@ -283,9 +295,8 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         }
 
         return true;
-
-
     }
+    */
 
     public function keepOrderOnHold($order, $reason)
     {
@@ -305,29 +316,33 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $this->logger->addLog("Order was not found");
             return false;
         }
-
         if(!$order->canUnhold()){
             $this->logger->addLog("Order {$order->getIncrementId()} can not be unheld");
             return false;
         }
-
         try {
             $order->unhold();
             $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
             $order->save();
+            $this->logger->addLog("Order {$order->getIncrementId()} unheld in order to cancel it");
         } catch (Exception $e){
+
             $this->logger->addLog("Order {$order->getIncrementId()} can not be unheld");
+            $this->logger->addLog($e->__toString());
             return false;
         }
 
-        if($status['authorize'] === true && $status['capture'] === false) {
-            $this->voidOrderPayment($order, $reason);
-        } elseif($status['authorize'] === true && $status['capture'] === true) {
-            $this->canNotCancel($order, $reason);
+//        if($status['authorize'] === true && $status['capture'] === false) {
+//            $this->logger->addLog("cancel close order5");
+//            $this->voidOrderPayment($order, $reason);
+        if($status['authorize'] === true && $status['capture'] === true) {
+            $result = $this->canNotCancel($order, $reason);
         } else {
-            $this->cancelOrder($order, $reason);
+            $result = $this->cancelOrder($order, $reason);
         }
-
+        if($result === false){
+            $this->holdOrder($order, 'Fail to Cancel/Close Order');
+        }
         return true;
     }
 
@@ -339,24 +354,28 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
 
     public function finalStatus($order, $type, $case)
     {
+        $id  = (is_array($case))? $case['order_increment'] : $case->getId();
         try {
             $holdStatus = $this->checkStatus($order, Mage_Sales_Model_Order::STATE_HOLDED);
+            $caseModel = Mage::getModel('signifyd_connect/case');
+            // type refers to the need to by held or not held: 1 needs to be held, 2 needs to be not held
             if($type == 1){
                 // needs to be true
                 if($holdStatus === true){
-                    Mage::getModel('signifyd_connect/case')->setMagentoStatusTo($case, Signifyd_Connect_Helper_Data::COMPLETED_STATUS);
+                    $caseModel->setMagentoStatusTo($case, Signifyd_Connect_Helper_Data::COMPLETED_STATUS);
                 }
             } elseif($type == 2) {
                 // needs to be false
                 if($holdStatus === false){
-                    Mage::getModel('signifyd_connect/case')->setMagentoStatusTo($case, Signifyd_Connect_Helper_Data::COMPLETED_STATUS);
+                    $caseModel->setMagentoStatusTo($case, Signifyd_Connect_Helper_Data::COMPLETED_STATUS);
                 }
             } else {
                 $this->logger->addLog('Final status unknown type');
             }
-            $this->logger->addLog("Case no:{$case->getId()}, set status to complete successful.");
+
+            $this->logger->addLog("Case no:{$id}, set status to complete successful.");
         } catch (Exception $e){
-            $this->logger->addLog("Case no:{$case->getId()}, set status to complete fail: " . $e->__toString());
+            $this->logger->addLog("Case no:{$id}, set status to complete fail: " . $e->__toString());
             return false;
         }
 

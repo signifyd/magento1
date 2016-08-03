@@ -746,6 +746,14 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $status['authorize'] = true;
         }
 
+        // Special case for Paypal payment type "order"
+        if($this->isPaypalOrder($paymentMethod)){
+            $paymentAdditional = $paymentMethod->getData('additional_information');
+            if($paymentAdditional['is_order_action']){
+                $status['authorize'] = true;
+            }
+        }
+
         // Check capture
         if(!empty($baseTotalPaid)){
             $status['capture'] = true;
@@ -760,5 +768,16 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $logger->addLog("Order: {$order->getIncrementId()} has a status of " . json_encode($status));
 
         return $status;
+    }
+
+    /**
+     * Checking if the payment method si paypal_express
+     * @param $paymentMethod
+     * @return bool
+     */
+    public function isPaypalOrder($paymentMethod)
+    {
+        $code = $paymentMethod->getMethodInstance()->getCode();
+        return (stripos($code, 'paypal_express') !== false)? true : false;
     }
 }

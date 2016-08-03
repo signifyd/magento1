@@ -13,12 +13,14 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
 
     public function setMagentoStatusTo($case, $status)
     {
+        $id  = (is_array($case))? $case['order_increment'] : $case->getId();
+        $caseLoaded = Mage::getModel('signifyd_connect/case')->load($id);
         try {
-            $case->setMagentoStatus($status);
-            $case->save();
-            $this->logger->addLog("Signifyd: Case no:{$case->getId()} status set to {$status}");
+            $caseLoaded->setMagentoStatus($status);
+            $caseLoaded->save();
+            $this->logger->addLog("Signifyd: Case no:{$caseLoaded->getId()} status set to {$status}");
         } catch (Exception $e){
-            $this->logger->addLog("Signifyd: Error setting case no:{$case->getId()} status to {$status}");
+            $this->logger->addLog("Signifyd: Error setting case no:{$caseLoaded->getId()} status to {$status}");
             return false;
         }
 

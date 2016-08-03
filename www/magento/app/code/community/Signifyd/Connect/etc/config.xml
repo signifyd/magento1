@@ -83,10 +83,10 @@
         <jobs>
             <signifyd_retry>
                 <schedule>
-                    <cron_expr>0,30 * * * *</cron_expr>
+                    <cron_expr>*/15 * * * *</cron_expr>
                 </schedule>
                 <run>
-                    <model>signifyd/cron::retry</model>
+                    <model>signifyd_connect/cron::retry</model>
                 </run>
             </signifyd_retry>
         </jobs>
