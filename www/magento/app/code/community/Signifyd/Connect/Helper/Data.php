@@ -780,4 +780,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $code = $paymentMethod->getMethodInstance()->getCode();
         return (stripos($code, 'paypal_express') !== false)? true : false;
     }
+
+    public function isGuarantyDeclined($order)
+    {
+        $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
+        return ($case->getGuarantee() == 'DECLINED')? true : false;
+    }
 }

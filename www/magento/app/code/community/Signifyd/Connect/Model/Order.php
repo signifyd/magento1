@@ -178,10 +178,10 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->save();
 
             // Authorize the order
-            $result = $this->authorizeOrder($order);
-            if($result === false){
-                $this->holdOrder($order, 'Fail to Authorize Order');
-            }
+//            $result = $this->authorizeOrder($order);
+//            if($result === false){
+//                $this->holdOrder($order, 'Fail to Authorize Order');
+//            }
 
             if ($this->logRequest) {
                 $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
@@ -303,6 +303,14 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         if(is_null($order->getId())){
             $this->logger->addLog("Order was not found");
             return false;
+        }
+
+        if($order->getStatus() != Mage_Sales_Model_Order::STATE_HOLDED){
+            try{
+                $this->holdOrder($order, $reason);
+            }catch (Exception $e){
+                $this->logger->addLog($e->__toString());
+            }
         }
         $this->logger->addLog("Order {$order->getIncrementId()} was kept on hold because {$reason}");
 

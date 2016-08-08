@@ -57,7 +57,7 @@ class Signifyd_Connect_Model_Cron
             $current_order = Mage::getModel('sales/order')->loadByIncrementId($current_order_id);
             // need to refactor this
             $this->loadClass();
-            $signifyd_controller = new Signifyd_Connect_ConnectController();
+            $signifyd_controller = @new Signifyd_Connect_ConnectController();
             $signifyd_controller->processAdditional($current_case,false,$current_order);
         }
 
@@ -101,7 +101,7 @@ class Signifyd_Connect_Model_Cron
                 $response_data = $response->getRawResponse();
                 // need to refactor this
                 $this->loadClass();
-                $signifyd_controller = new Signifyd_Connect_ConnectController();
+                $signifyd_controller = @new Signifyd_Connect_ConnectController();
                 $signifyd_controller->processFallback($response_data);
                 return;
             }

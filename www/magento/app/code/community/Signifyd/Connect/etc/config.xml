@@ -13,6 +13,11 @@
                     <authorizenet>Signifyd_Connect_Model_Authnet</authorizenet>
                 </rewrite>
             </paygate>
+            <sales>
+                <rewrite>
+                    <order_payment>Signifyd_Connect_Model_Order_Payment</order_payment>
+                </rewrite>
+            </sales>
             <signifyd_connect>
                 <class>Signifyd_Connect_Model</class>
                 <resourceModel>signifyd_connect_resource</resourceModel>
@@ -83,7 +88,7 @@
         <jobs>
             <signifyd_retry>
                 <schedule>
-                    <cron_expr>*/15 * * * *</cron_expr>
+                    <cron_expr>*/30 * * * *</cron_expr>
                 </schedule>
                 <run>
                     <model>signifyd_connect/cron::retry</model>
