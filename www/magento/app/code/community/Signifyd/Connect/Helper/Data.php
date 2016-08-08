@@ -749,7 +749,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         // Special case for Paypal payment type "order"
         if($this->isPaypalOrder($paymentMethod)){
             $paymentAdditional = $paymentMethod->getData('additional_information');
-            if($paymentAdditional['is_order_action']){
+            if(isset($paymentAdditional['is_order_action']) && $paymentAdditional['is_order_action']){
                 $status['authorize'] = true;
             }
         }
