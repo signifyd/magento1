@@ -17,7 +17,7 @@
             <show_in_store>1</show_in_store>
             <groups>
                 <settings translate="label">
-                    <label>General Settings</label>
+                    <label>General</label>
                     <frontend_type>text</frontend_type>
                     <sort_order>2</sort_order>
                     <show_in_default>1</show_in_default>
@@ -32,30 +32,19 @@
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
-                            <comment><![CDATA[This enables or disables the Signifyd extension]]></comment>
                         </enabled>
                         <key translate="label">
-                            <label>Signifyd API Key</label>
+                            <label>API Key</label>
                             <frontend_type>text</frontend_type>
                             <sort_order>20</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
-                            <comment><![CDATA[You will find this in <a href="http://signifyd.com/settings/teams">http://signifyd.com/settings/teams</a> after you create a Signifyd account]]></comment>
                         </key>
-                        <url translate="label">
-                            <label>Signifyd API URL</label>
-                            <frontend_type>text</frontend_type>
-                            <sort_order>30</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>1</show_in_store>
-                            <comment><![CDATA[This is set by default. Don’t change unless asked to do so.]]></comment>
-                        </url>
                     </fields>
                 </settings>
                 <advanced>
-                    <label>Advanced</label>
+                    <label>Order Workflow</label>
                     <frontend_type>text</frontend_type>
                     <sort_order>2</sort_order>
                     <show_in_default>1</show_in_default>
@@ -63,35 +52,51 @@
                     <show_in_store>1</show_in_store>
                     <fields>
                         <accepted_from_guaranty translate="label">
-                            <label>When an order is Accepted from Guaranty</label>
+                            <label>When an order is approved for Guarantee:</label>
                             <frontend_type>select</frontend_type>
                             <source_model>signifyd_connect/system_config_source_options_accepted</source_model>
                             <sort_order>20</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
-                            <comment><![CDATA[Which action to take on orders when the guarantee is accepted]]></comment>
                         </accepted_from_guaranty>
                         <declined_from_guaranty translate="label">
-                            <label>When an order is Declined from Guaranty</label>
+                            <label>When an order is declined for Guarantee:</label>
                             <frontend_type>select</frontend_type>
                             <source_model>signifyd_connect/system_config_source_options_declined</source_model>
                             <sort_order>30</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
-                            <comment><![CDATA[Which action to take on orders when the guarantee is declined]]></comment>
                         </declined_from_guaranty>
                     </fields>
                 </advanced>
-                <log translate="label">
-                    <label>Log Settings</label>
+                <webhook>
+                    <label>Webhook URL</label>
                     <frontend_type>text</frontend_type>
                     <sort_order>3</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
                     <show_in_store>1</show_in_store>
-                    <comment><![CDATA[Note: You must also enable logging for the site. You can find the setting in Configuration->Advanced->Developer->Log Settings]]></comment>
+                    <fields>
+                        <url translate="label">
+                            <label>Webhook URL</label>
+                            <frontend_type>label</frontend_type>
+                            <sort_order>30</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                            <comment><model>signifyd_connect/link</model></comment>
+                        </url>
+                    </fields>
+                </webhook>
+                <log translate="label">
+                    <label>Logging</label>
+                    <frontend_type>text</frontend_type>
+                    <sort_order>4</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
                     <fields>
                         <request>
                             <label>Log requests</label>

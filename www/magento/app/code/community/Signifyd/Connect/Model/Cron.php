@@ -117,8 +117,9 @@ class Signifyd_Connect_Model_Cron
      */
     public function getCaseUrl($case_code)
     {
-        $url = Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases/' . $case_code;
-        return (empty($url))? "https://api.signifyd.com/v2/cases/" . $case_code : $url;
+//        $url = Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases/' . $case_code;
+//        return (empty($url))? "https://api.signifyd.com/v2/cases/" . $case_code : $url;
+        return 'https://api.signifyd.com/v2/cases/' . $case_code;
     }
 
     public function loadClass(){

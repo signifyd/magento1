@@ -414,7 +414,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
     public function getUrl()
     {
-        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases';
+//        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases';
+        return 'https://api.signifyd.com/v2/cases/';
     }
 
     public function getAuth()
