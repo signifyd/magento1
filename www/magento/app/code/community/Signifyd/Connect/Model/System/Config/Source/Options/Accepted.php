@@ -12,7 +12,7 @@ class Signifyd_Connect_Model_System_Config_Source_Options_Accepted
             ),
             array(
                 'value' => 2,
-                'label' => 'Unhold, invoice and capture order'
+                'label' => 'Capture and Invoice'
             )
         );
     }
