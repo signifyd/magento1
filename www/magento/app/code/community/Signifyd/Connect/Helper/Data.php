@@ -7,6 +7,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     const CASE_CREATED_STATUS       = 2;
     const TRANSACTION_SENT_STATUS   = 3;
 
+    const WAITING_SUBMISSION_STATUS     = "waiting_submission";
+    const IN_REVIEW_STATUS              = "in_review";
+    const PROCESSING_RESPONSE_STATUS    = "processing_response";
+    const COMPLETED_STATUS              = "completed";
+
     public function logRequest($message)
     {
         if (Mage::getStoreConfig('signifyd_connect/log/request')) {
@@ -35,7 +40,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         foreach ($quote->getAllItems() as $item) {
             $product_type = $item->getProductType();
 
-            if (!$product_type || $product_type == 'simple' || $product_type == 'downloadable' || $product_type == 'grouped') {
+            if (!$product_type || $product_type == 'simple' || $product_type == 'downloadable'
+                || $product_type == 'grouped' || $product_type == 'virtual' ) {
                 $product_object = $item->getData('product');
 
                 if (!$product_object || !$product_object->getId()) {
@@ -408,7 +414,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
     public function getUrl()
     {
-        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases';
+//        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases';
+        return 'https://api.signifyd.com/v2/cases/';
     }
 
     public function getAuth()
@@ -472,57 +479,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
 
-    public function bulkSend($controller)
-    {
-        try {
-            $orderIds = $controller->getRequest()->getParam('order_ids');
-            if(is_string($orderIds))
-            {
-                $orderIds = array_map('intval', explode(',', $orderIds));
-            }
-            if (!is_array($orderIds)) {
-                Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')
-                    ->__('Please select order(s)'));
-            } else {
-                // Reference T2395
-                $user = "Unknown";
-                try {
-                    $user = Mage::getSingleton('admin/session')->getUser()->getUsername();
-                } catch (Exception $ex) {
-                    $this->logError($ex->__toString());
-                }
-                $this->logRequest("Bulk send initiated by: $user");
-
-                $collection = Mage::getModel('sales/order')->getCollection()
-                    ->addFieldToSelect('*')
-                    ->addFieldToFilter('entity_id', array('in' => $orderIds));
-
-                foreach ($collection as $order) {
-                    $result = $this->buildAndSendOrderToSignifyd($order, /*forceSend*/ true);
-                    if($result == "sent") {
-                        Mage::getSingleton('adminhtml/session')->addSuccess(Mage::helper('adminhtml')
-                            ->__('Successfully sent order ' . $order->getIncrementId() . '.'));
-                    } else if ($result == "exists") {
-                        Mage::getSingleton('adminhtml/session')->addWarning(Mage::helper('adminhtml')
-                            ->__('Order ' . $order->getIncrementId() . ' has already been sent to Signifyd.'));
-                    } else if ($result == "nodata") {
-                        $this->logRequest("Request/Update not sent because there is no data");
-                    } else {
-                        Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')
-                            ->__('Order ' . $order->getIncrementId() . ' failed to send. See log for details.'));
-                    }
-                }
-                if (Mage::getStoreConfig('signifyd_connect/log/request')) {
-                    $this->logRequest("Bulk send complete");
-                }
-            }
-        } catch(Exception $ex) {
-            $this->logError($ex->__toString());
-            Mage::getSingleton('adminhtml/session')->addError(Mage::helper('adminhtml')
-                ->__('Send failed. See log for details'));
-        }
-    }
-
     public function buildAndSendOrderToSignifyd($order, $forceSend = false)
     {
         if ($order && $order->getId()) {
@@ -544,7 +500,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 return "notready"; // Note: would not be in the order grid if this were the case
             }
 
-            Mage::register('signifyd_action', 1); // Work will now take place
+            if(is_null(Mage::registry('signifyd_action'))) {
+                Mage::register('signifyd_action', 1); // Work will now take place
+            }
+
             $customer = null;
             if ($order->getCustomer()) {
                 $customer = $order->getCustomer();
@@ -567,6 +526,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     $case_object->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                     $case_object->setCode($caseId);
                     $case_object->setTransactionId($case['purchase']['transactionId']);
+                    $case_object->setMagentoStatus(self::IN_REVIEW_STATUS);
                     $case_object->save();
 
                     $order->addStatusHistoryComment("Signifyd: case $caseId created for order");
@@ -577,41 +537,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             } catch (Exception $e) {
                 Mage::log($e->__toString(), null, 'signifyd_connect.log');
             }
-            $this->unmarkProcessed($order);
+            //$this->unmarkProcessed($order);
             return "error";
-        }
-    }
-
-    /**
-     * Run through up to $max items in the retry queue
-     * @param int $max The maximum numbers of items to process
-     */
-    public function processRetryQueue($max = 99999)
-    {
-        $failed_orders = Mage::getModel('signifyd_connect/retries')->getCollection();
-        $process_count = 0;
-        try {
-            foreach ($failed_orders as $order_id) {
-                if ($process_count++ >= $max) {
-                    return;
-                }
-                $order = Mage::getModel('sales/order')->loadByIncrementId($order_id->getOrderIncrement());
-                $result = "unset";
-                $this->logRequest("Retrying " . $order_id->getOrderIncrement());
-                if ($order != null && $this->processedStatus($order) < self::CASE_CREATED_STATUS) {
-                    $result = $this->buildAndSendOrderToSignifyd($order);
-                }
-                if ($result !== "error") {
-                    $this->logRequest("Completed retry " . $order_id->getOrderIncrement());
-                    Mage::register('isSecureArea', true);
-                    $order_id->delete();
-                    Mage::unregister('isSecureArea');
-                } else {
-                    $this->logError("Failed retry " . $order_id->getOrderIncrement());
-                }
-            }
-        } catch (Exception $e) {
-            $this->logError($e->__toString());
         }
     }
 
@@ -794,5 +721,70 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         curl_close($curl);
         
         return $response;
+    }
+
+    /**
+     * Get the order payment status
+     * @param $order
+     * @return array
+     */
+    public function getOrderPaymentStatus($order)
+    {
+        $status = array('authorize' => false, 'capture' => false, 'credit_memo' => false);
+        $logger = Mage::helper('signifyd_connect/log');
+        $paymentMethod = $order->getPayment();
+        $paymentAuthorized = $paymentMethod->getBaseAmountAuthorized();
+        $baseTotalPaid = $order->getBaseTotalPaid();
+        $baseTotalRefunded = $order->getBaseTotalRefunded();
+        // Maybe used in the future
+//        $canVoid = $paymentMethod->canVoid($order);
+//        $amountPayed = $paymentMethod->getAmountPaid();
+//        $baseTotalCanceled = $order->getBaseTotalCanceled();
+//        $baseTotalInvoiced = $order->getBaseTotalInvoiced();
+
+        // Check authorization
+        if(!empty($paymentAuthorized)){
+            $status['authorize'] = true;
+        }
+
+        // Special case for Paypal payment type "order"
+        if($this->isPaypalOrder($paymentMethod)){
+            $paymentAdditional = $paymentMethod->getData('additional_information');
+            if(isset($paymentAdditional['is_order_action']) && $paymentAdditional['is_order_action']){
+                $status['authorize'] = true;
+            }
+        }
+
+        // Check capture
+        if(!empty($baseTotalPaid)){
+            $status['capture'] = true;
+        }
+
+        // Check credit memo
+        if(!empty($baseTotalRefunded)){
+            $status['credit_memo'] = true;
+        }
+
+        // Log status
+        $logger->addLog("Order: {$order->getIncrementId()} has a status of " . json_encode($status));
+
+        return $status;
+    }
+
+    /**
+     * Checking if the payment method si paypal_express
+     * @param $paymentMethod
+     * @return bool
+     */
+    public function isPaypalOrder($paymentMethod)
+    {
+        $code = $paymentMethod->getMethodInstance()->getCode();
+        return (stripos($code, 'paypal_express') !== false)? true : false;
+    }
+
+    public function isGuarantyDeclined($order)
+    {
+        $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
+        return ($case->getGuarantee() == 'DECLINED')? true : false;
     }
 }
