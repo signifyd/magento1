@@ -9,6 +9,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     public $_case = false;
     public $_previousGuarantee = false;
     public $_previousScore = false;
+    public $_unholdRetries = 0;
 
     public function getApiKey()
     {
@@ -251,19 +252,47 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     public function unholdOrder($order, $reason)
     {
+        // in case we are in a order save retry, add a delay in order to avoid the current problem
+        switch ($this->_unholdRetries)
+        {
+            case 1: sleep(5); break;
+            case 2: sleep(10); break;
+            case 3: sleep(20); break;
+        }
+        $this->_unholdRetries++;
         if ($order && $order->getId() && $order->canUnhold()) {
-            $order->unhold();
-            $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
-            $order->save();
+            try {
+                $order->unhold();
+                $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
+                $order->save();
 
-            if ($this->logRequest()) {
-                Mage::log('Order ' . $order->getId() . ' unheld because ' . $reason, null, 'signifyd_connect.log');
+                if ($this->logRequest()) {
+                    Mage::log('Order ' . $order->getId() . ' unheld because ' . $reason, null, 'signifyd_connect.log');
+                }
+            }
+            catch (Exception $exception)
+            {
+                Mage::log('Order ' . $order->getId() . ' unable to be saved because ' . $exception->getMessage(), null, 'signifyd_connect.log');
+                Mage::log('Order ' . $order->getId() . ' was not unheld. Retry attempt ' . $this->_unholdRetries, null, 'signifyd_connect.log');
+                // in case there was an error during order save operation, make a new attempt to save the order
+                if ($this->_unholdRetries < 3)
+                    $this->unholdOrder($order, $reason);
+            }
+        }
+        // verify once again if the order have the right status, if the right status is not setup, retry the operation
+        if ($this->_unholdRetries <= 3) {
+            $reloaded_order = Mage::getModel('sales/order')->load($order->getId());
+            if ($reloaded_order->getState() === $order::STATE_HOLDED) {
+                Mage::log('Order ' . $order->getId() . ' was not unheld. Retry attempt ' . $this->_unholdRetries, null, 'signifyd_connect.log');
+                $this->unholdOrder($order, $reason);
             }
         }
     }
 
     public function cancelOrder($order, $reason)
     {
+        if ($order->getState() === $order::STATE_HOLDED)
+            $this->unholdOrder($order, $reason);
         if ($order && $order->getId() && $order->canCancel()) {
             $order->cancel();
             $order->addStatusHistoryComment("Signifyd: order canceled because $reason");
