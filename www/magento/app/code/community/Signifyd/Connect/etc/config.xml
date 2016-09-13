@@ -3,7 +3,7 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>3.15.0</version>
+            <version>3.13.0</version>
         </Signifyd_Connect>
     </modules>
     <global>
@@ -13,11 +13,6 @@
                     <authorizenet>Signifyd_Connect_Model_Authnet</authorizenet>
                 </rewrite>
             </paygate>
-            <sales>
-                <rewrite>
-                    <order_payment>Signifyd_Connect_Model_Order_Payment</order_payment>
-                </rewrite>
-            </sales>
             <signifyd_connect>
                 <class>Signifyd_Connect_Model</class>
                 <resourceModel>signifyd_connect_resource</resourceModel>
@@ -74,28 +69,8 @@
                     </signifyd_connect>
                 </observers>
             </model_save_after>
-            <sales_order_place_after>
-                <observers>
-                    <signifyd_connect>
-                        <class>signifyd_connect/observer</class>
-                        <method>putOrderOnHold</method>
-                    </signifyd_connect>
-                </observers>
-            </sales_order_place_after>
         </events>
     </global>
-    <crontab>
-        <jobs>
-            <signifyd_retry>
-                <schedule>
-                    <cron_expr>*/30 * * * *</cron_expr>
-                </schedule>
-                <run>
-                    <model>signifyd_connect/cron::retry</model>
-                </run>
-            </signifyd_retry>
-        </jobs>
-    </crontab>
     <frontend>
         <routers>
             <signifyd_connect>
@@ -114,6 +89,8 @@
                 <url>https://api.signifyd.com/v2</url>
             </settings>
             <advanced>
+                <retrieve_score>0</retrieve_score>
+                <show_scores>0</show_scores>
                 <hold_orders>0</hold_orders>
                 <hold_orders_threshold>500</hold_orders_threshold>
                 <invoice_orders>0</invoice_orders>
@@ -209,6 +186,14 @@
                     </signifyd_connect>
                 </observers>
             </core_block_abstract_to_html_before>
+            <core_block_abstract_prepare_layout_before>
+                <observers>
+                    <signifyd_connect>
+                        <model>signifyd_connect/observer</model>
+                        <method>coreBlockAbstractPrepareLayoutBefore</method>
+                    </signifyd_connect>
+                </observers>
+            </core_block_abstract_prepare_layout_before>
         </events>
     </adminhtml>
 </config>

@@ -19,7 +19,6 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
     protected $payment_data = null;
     protected $shipping_data = null;
     protected $billing_data = null;
-    protected $helper = null;
     
     public function resetData()
     {
@@ -86,13 +85,13 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
                 }
             }
         }
-
-//        $this->model->order = $this->order;
-//        $this->model->billing_address = $this->billing;
-//        $this->model->shipping_address = $this->shipping;
-//        $this->model->customer = $this->customer;
-//        $this->model->payment = $this->payment;
-//        $this->model->quote = $this->quote;
+        
+        $this->model->order = $this->order;
+        $this->model->billing_address = $this->billing;
+        $this->model->shipping_address = $this->shipping;
+        $this->model->customer = $this->customer;
+        $this->model->payment = $this->payment;
+        $this->model->quote = $this->quote;
     }
     
     public function clearHistory()
@@ -104,8 +103,7 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
     {
         Mage::app();
         $this->model = Mage::getModel('signifyd_connect/observer');
-        $this->helper = Mage::helper('signifyd_connect');
-
+        
         $this->defaultData();
         $this->initData();
     }
@@ -114,10 +112,9 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
     {
         $this->defaultData();
         $this->initData();
-
-//        $case = $this->model->generateCase();
-        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
-
+        
+        $case = $this->model->generateCase();
+        
         $this->assertEquals("Frank Guest", $case['recipient']['fullName']);
         $this->assertEquals("guest@example.com", $case['recipient']['confirmationEmail']);
         $this->assertEquals("1234123", $case['recipient']['confirmationPhone']);
@@ -127,7 +124,6 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         $this->assertEquals("VT", $case['recipient']['deliveryAddress']['provinceCode']);
         $this->assertEquals("123412", $case['recipient']['deliveryAddress']['postalCode']);
         $this->assertEquals("US", $case['recipient']['deliveryAddress']['countryCode']);
-
     }
     
     public function testPurchase()
@@ -137,9 +133,8 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         
-//        $case = $this->model->generateCase();
-        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
-
+        $case = $this->model->generateCase();
+        
         $this->assertEquals("127.0.0.1", $case['purchase']['browserIpAddress']);
         $this->assertEquals("100000033", $case['purchase']['orderId']);
         $this->assertEquals("USD", $case['purchase']['currency']);

@@ -1,11 +1,5 @@
 <?php
-/**
- * Connect Controller
- *
- * @category    Signifyd Connect
- * @package     Signifyd_Connect
- * @author      Signifyd
- */
+
 class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Action
 {
     public $_request = array();
@@ -15,35 +9,53 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     public $_case = false;
     public $_previousGuarantee = false;
     public $_previousScore = false;
-    public $_unholdRetries = 0;
-
-    const WAITING_SUBMISSION_STATUS     = "waiting_submission";
-    const IN_REVIEW_STATUS              = "in_review";
-    const PROCESSING_RESPONSE_STATUS    = "processing_response";
-    const COMPLETED_STATUS              = "completed";
 
     public function getApiKey()
     {
         return Mage::getStoreConfig('signifyd_connect/settings/key');
     }
 
-    public function getAcceptedFromGuaranty(){
-        return Mage::getStoreConfig('signifyd_connect/advanced/accepted_from_guaranty', $this->_store_id);
+    public function holdThreshold()
+    {
+        return (int)Mage::getStoreConfig('signifyd_connect/advanced/hold_orders_threshold', $this->_store_id);
     }
 
-    public function getDeclinedFromGuaranty(){
-        return Mage::getStoreConfig('signifyd_connect/advanced/declined_from_guaranty', $this->_store_id);
+    public function canReviewHold()
+    {
+        return Mage::getStoreConfig('signifyd_connect/advanced/hold_orders', $this->_store_id);
+    }
+
+    public function canInvoice()
+    {
+        return Mage::getStoreConfig('signifyd_connect/advanced/invoice_orders', $this->_store_id);
+    }
+
+    public function notifyCustomer()
+    {
+        return Mage::getStoreConfig('signifyd_connect/advanced/invoice_orders_notify', $this->_store_id);
+    }
+
+    public function negativeGuaranteeAction()
+    {
+        return Mage::getStoreConfig('signifyd_connect/advanced/guarantee_negative_action', $this->_store_id);
+    }
+
+    public function positiveGuaranteeAction()
+    {
+        return Mage::getStoreConfig('signifyd_connect/advanced/guarantee_positive_action', $this->_store_id);
     }
 
     public function enabled()
     {
-        return Mage::getStoreConfig('signifyd_connect/settings/enabled');
+        $retrieve_scores = Mage::getStoreConfig('signifyd_connect/advanced/retrieve_score');
+        $enabled = Mage::getStoreConfig('signifyd_connect/settings/enabled');
+
+        return $enabled && $retrieve_scores;
     }
 
     public function getUrl($code)
     {
-//        return Mage::getStoreConfig('signifyd_connect/settings/url', $this->_store_id) . '/cases/' . $code;
-        return 'https://api.signifyd.com/v2/cases/' . $code;
+        return Mage::getStoreConfig('signifyd_connect/settings/url', $this->_store_id) . '/cases/' . $code;
     }
 
     public function logErrors()
@@ -142,7 +154,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         try {
             if (isset($this->_request['guaranteeDisposition'])) {
                 $case->setGuarantee($this->_request['guaranteeDisposition']);
-                $case->setMagentoStatus(self::PROCESSING_RESPONSE_STATUS);
 
                 if ($this->logRequest()) {
                     Mage::log('Set guarantee to ' . $this->_request['guaranteeDisposition'], null,
@@ -153,6 +164,9 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             if ($this->logErrors()) {
                 Mage::log('ERROR ON WEBHOOK: ' . $e->__toString(), null, 'signifyd_connect.log');
             }
+        }
+        if ($this->logRequest()) {
+            Mage::log('No guarantee available', null, 'signifyd_connect.log');
         }
     }
 
@@ -222,59 +236,123 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         }
     }
 
-    public function processAdditional($case, $original_status = false,$custom_order = null)
+    public function holdOrder($order, $reason)
     {
-        if ($custom_order)
-            $order = $custom_order;
-        else
-            $order = $this->_order;
+        if ($order && $order->getId() && $order->canHold()) {
+            $order->hold();
+            $order->addStatusHistoryComment("Signifyd: order held because $reason");
+            $order->save();
+
+            if ($this->logRequest()) {
+                Mage::log('Order ' . $order->getId() . ' held because ' . $reason, null, 'signifyd_connect.log');
+            }
+        }
+    }
+
+    public function unholdOrder($order, $reason)
+    {
+        if ($order && $order->getId() && $order->canUnhold()) {
+            $order->unhold();
+            $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
+            $order->save();
+
+            if ($this->logRequest()) {
+                Mage::log('Order ' . $order->getId() . ' unheld because ' . $reason, null, 'signifyd_connect.log');
+            }
+        }
+    }
+
+    public function cancelOrder($order, $reason)
+    {
+        if ($order && $order->getId() && $order->canCancel()) {
+            $order->cancel();
+            $order->addStatusHistoryComment("Signifyd: order canceled because $reason");
+            $order->save();
+
+            if ($this->logRequest()) {
+                Mage::log('Order ' . $order->getId() . ' cancelled because ' . $reason, null, 'signifyd_connect.log');
+            }
+        }
+    }
+
+    public function invoiceOrder($order)
+    {
+        if ($order && $order->getId() && $order->canInvoice() && $this->canInvoice()) {
+            $items = array();
+            foreach ($order->getAllItems() as $item) {
+                $items[$item->getId()] = $item->getQtyOrdered();
+            }
+
+            $invoice_api = Mage::getModel('sales/order_invoice_api');
+
+            try {
+                $invoice_id = $invoice_api->create($order->getIncrementId(), $items, null, false, true);
+
+                $invoice_api->capture($invoice_id);
+            } catch (Exception $e) {
+                if ($this->logErrors()) {
+                    Mage::log('Exception while creating invoice: ' . $e->__toString(), null, 'signifyd_connect.log');
+                }
+            }
+        }
+    }
+
+    public function processAdditional($case, $original_status = false)
+    {
+        $order = $this->_order;
 
         if ($order && $order->getId()) {
-            $positiveAction = $this->getAcceptedFromGuaranty();
-            $negativeAction = $this->getDeclinedFromGuaranty();
+            $threshold = $this->holdThreshold();
+
+            $negativeAction = $this->negativeGuaranteeAction();
+            $positiveAction = $this->positiveGuaranteeAction();
+
             $newGuarantee = null;
             try{
-                if ($custom_order)
-                    $newGuarantee = $case['guarantee'];
-                else
-                    $newGuarantee = isset($this->_request ['guaranteeDisposition']) ? $this->_request ['guaranteeDisposition'] : null;
+                $newGuarantee = isset($this->_request ['guaranteeDisposition']) ? $this->_request ['guaranteeDisposition'] : null;
             } catch(Exception $e){
                 if ($this->logErrors()) {
                     Mage::log('ERROR ON WEBHOOK: ' . $e->__toString(), null, 'signifyd_connect.log');
                 }
             }
+            $newScore = $case->getScore();
+
             // If a guarantee has been set, we no longer care about other actions
             if (isset($newGuarantee) && $newGuarantee != $this->_previousGuarantee) {
-                // Loading the signifyd order model
-                $orderModel = Mage::getModel('signifyd_connect/order');
-                if ($newGuarantee == 'DECLINED' ) {
-                    if ($negativeAction == 1) {
-                        // this is for when config is set to keep order on hold
-                        $orderModel->keepOrderOnHold($order, "guarantee declined");
-                        $orderModel->finalStatus($order, 1, $case);
-                    } else if ($negativeAction == 2) {
-                        // this is for when config is set to cancel close order
-                        $orderModel->cancelCloseOrder($order, "guarantee declined");
-                        $orderModel->finalStatus($order, 2, $case);
+                if ($newGuarantee == 'DECLINED' && $negativeAction != 'nothing') {
+                    if ($negativeAction == 'hold') {
+                        $this->holdOrder($order, "guarantee declined");
+                    } else if ($negativeAction == 'cancel') {
+                        $this->cancelOrder($order, "guarantee declined");
                     } else {
-                        // this is when the config is not set or it is set to something unknown
                         Mage::log("Unknown action $negativeAction", null, 'signifyd_connect.log');
                     }
-                } else if ($newGuarantee == 'APPROVED') {
-                    if ($positiveAction == 1) {
-                        // this is for when config is set to unhold order
-                        $orderModel->unholdOrder($order, "guarantee approved");
-                        $orderModel->finalStatus($order, 2, $case);
-                    } elseif($positiveAction == 2){
-                        // this is for when config is set to unhold, invoice and capture
-                        $orderModel->unholdOrderAndCapture($order, "guarantee approved");
-                        $orderModel->finalStatus($order, 2, $case);
+                } else if ($newGuarantee == 'APPROVED' && $positiveAction != 'nothing') {
+                    if ($positiveAction == 'unhold') {
+                        $this->unholdOrder($order, "guarantee approved");
                     } else {
-                        // this is when the config is not set or it is set to something unknown
                         Mage::log("Unknown action $positiveAction", null, 'signifyd_connect.log');
                     }
                 }
-                // add else for unknown guarantee
+            } else if($this->_previousGuarantee == "N/A") {
+                if (!$original_status || $original_status == 'PENDING') {
+                    if ($threshold  && $this->_previousScore != $newScore
+                                    && $newScore <= $threshold
+                                    && $this->canReviewHold())
+                    {
+                        $this->holdOrder($order, "score below threshold");
+                    }
+                } else if ($original_status) {
+                    if ($this->_request['reviewDisposition'] == 'FRAUDULENT') {
+                        if ($this->canReviewHold()) {
+                            $this->holdOrder($order, "case review fraudulent");
+                        }
+                    } else if ($this->_request['reviewDisposition'] == 'GOOD') {
+                        if ($this->canReviewHold()) {
+                            $this->unholdOrder($order, "case review good");
+                        }
+                    }
+                }
             }
         }
     }
@@ -428,20 +506,39 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
     }
 
-    /**
-     * Main entry point for the signifyd callback
-     */
+    public function retriesAction()
+    {
+        Mage::helper('signifyd_connect')->processRetryQueue();
+    }
+
+    public function sendAction()
+    {
+        try {
+            // This request handles the send action only if we are using an unsecured
+            // connection. Otherwise, it does nothing
+            if (!Mage::getStoreConfig('signifyd_connect/settings/enabled') ||
+                !Mage::getStoreConfig('signifyd_connect/advanced/use_unsecure_requests')
+            ) {
+                Mage::log("Attempting to access send endpoint from frontend when it is currently disabled.", null, 'signifyd_connect.log');
+                return;
+            }
+            Mage::helper('signifyd_connect')->bulkSend($this);
+        } catch (Exception $e) {
+            Mage::log('Exception while sending: ' . $e->__toString(), null, 'signifyd_connect.log');
+        }
+        $this->_redirectReferer();
+    }
+
     public function apiAction()
     {
         if (!$this->enabled()) {
             echo $this->getDisabledMessage();
+
             return;
         }
 
-        // Prevent recurring on save
-        if(is_null(Mage::registry('signifyd_action'))){
-            Mage::register('signifyd_action', 1);
-        }
+        // Prevent recursing on save
+        Mage::register('signifyd_action', 1);
 
         $request = $this->getRawPost();
 
@@ -512,12 +609,4 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         $this->complete();
     }
 
-    public function cronAction()
-    {
-        Mage::getModel('signifyd_connect/cron')->retry();
-    }
-
 }
-
-/* Filename: ConnectController.php */
-/* Location: ../app/code/Community/Signifyd/Connect/controllers/ConnectController.php */
