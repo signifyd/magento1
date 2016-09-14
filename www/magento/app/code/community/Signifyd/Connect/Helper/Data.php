@@ -415,7 +415,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function getUrl()
     {
 //        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases';
-        return 'https://api.signifyd.com/v2/cases/';
+        return 'https://api.signifyd.com/v2/cases';
     }
 
     public function getAuth()
@@ -786,5 +786,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
         return ($case->getGuarantee() == 'DECLINED')? true : false;
+    }
+
+    public function isEnabled()
+    {
+        return Mage::getStoreConfig('signifyd_connect/settings/enabled');
     }
 }

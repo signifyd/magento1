@@ -281,6 +281,9 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
      */
     public function putOrderOnHold(Varien_Event_Observer $observer)
     {
+        if(!Mage::helper('signifyd_connect')->isEnabled()){
+            return $this;
+        }
         $order = $observer->getEvent()->getOrder();
         if($order->canHold() === false){
             $this->helper->logError("Order {$order->getIncrementId()} could not be held because Magento returned false for canHold");
