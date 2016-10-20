@@ -19,6 +19,7 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
     protected $payment_data = null;
     protected $shipping_data = null;
     protected $billing_data = null;
+    protected $helper = null;
     
     public function resetData()
     {
@@ -85,13 +86,13 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
                 }
             }
         }
-        
-        $this->model->order = $this->order;
-        $this->model->billing_address = $this->billing;
-        $this->model->shipping_address = $this->shipping;
-        $this->model->customer = $this->customer;
-        $this->model->payment = $this->payment;
-        $this->model->quote = $this->quote;
+
+//        $this->model->order = $this->order;
+//        $this->model->billing_address = $this->billing;
+//        $this->model->shipping_address = $this->shipping;
+//        $this->model->customer = $this->customer;
+//        $this->model->payment = $this->payment;
+//        $this->model->quote = $this->quote;
     }
     
     public function clearHistory()
@@ -103,7 +104,8 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
     {
         Mage::app();
         $this->model = Mage::getModel('signifyd_connect/observer');
-        
+        $this->helper = Mage::helper('signifyd_connect');
+
         $this->defaultData();
         $this->initData();
     }
@@ -112,9 +114,10 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
     {
         $this->defaultData();
         $this->initData();
-        
-        $case = $this->model->generateCase();
-        
+
+//        $case = $this->model->generateCase();
+        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
+
         $this->assertEquals("Frank Guest", $case['recipient']['fullName']);
         $this->assertEquals("guest@example.com", $case['recipient']['confirmationEmail']);
         $this->assertEquals("1234123", $case['recipient']['confirmationPhone']);
@@ -124,6 +127,7 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         $this->assertEquals("VT", $case['recipient']['deliveryAddress']['provinceCode']);
         $this->assertEquals("123412", $case['recipient']['deliveryAddress']['postalCode']);
         $this->assertEquals("US", $case['recipient']['deliveryAddress']['countryCode']);
+
     }
     
     public function testPurchase()
@@ -133,8 +137,9 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         
-        $case = $this->model->generateCase();
-        
+//        $case = $this->model->generateCase();
+        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
+
         $this->assertEquals("127.0.0.1", $case['purchase']['browserIpAddress']);
         $this->assertEquals("100000033", $case['purchase']['orderId']);
         $this->assertEquals("USD", $case['purchase']['currency']);
@@ -150,7 +155,8 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         
-        $case = $this->model->generateCase();
+//        $case = $this->model->generateCase();
+        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
         
         $this->assertEquals(1, count($case['purchase']['products']));
         $this->assertEquals("amuletum-ring-sterling-silver", $case['purchase']['products'][0]['itemId']);
@@ -168,7 +174,8 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         
-        $case = $this->model->generateCase();
+//        $case = $this->model->generateCase();
+        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
         
         $this->assertEquals(1, count($case['purchase']['products']));
         $this->assertEquals("amuletum-ring-sterling-silver", $case['purchase']['products'][0]['itemId']);
@@ -185,7 +192,8 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         
-        $case = $this->model->generateCase();
+//        $case = $this->model->generateCase();
+        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
         
         $this->assertEquals(1, count($case['purchase']['products']));
         $this->assertEquals(1.0, $case['purchase']['products'][0]['itemWeight']);
@@ -217,7 +225,8 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         $this->defaultData();
         $this->initData();
         
-        $case = $this->model->generateCase();
+//        $case = $this->model->generateCase();
+        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
         
         $this->assertEquals("Frank Guest", $case['card']['cardHolderName']);
         $this->assertEquals(null, $case['card']['last4']);
@@ -238,8 +247,9 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         $this->ccData();
         $this->initData();
         
-        $case = $this->model->generateCase();
-        
+//        $case = $this->model->generateCase();
+        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
+
         $this->assertEquals("A", $case['card']['cardHolderName']);
         $this->assertEquals("1111", $case['card']['last4']);
         $this->assertEquals("1", $case['card']['expiryMonth']);
@@ -252,7 +262,8 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         $this->binData();
         $this->initData();
         
-        $case = $this->model->generateCase();
+//        $case = $this->model->generateCase();
+        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
         
         $this->assertEquals("A", $case['card']['cardHolderName']);
         $this->assertEquals("1111", $case['card']['last4']);
@@ -266,7 +277,8 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         $this->defaultData();
         $this->initData();
         
-        $case = $this->model->generateCase();
+//        $case = $this->model->generateCase();
+        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
         
         $this->assertEquals(null, $case['userAccount']['emailAddress']);
         $this->assertEquals(null, $case['userAccount']['username']);
@@ -284,7 +296,8 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         $this->userData();
         $this->initData();
         
-        $case = $this->model->generateCase();
+//        $case = $this->model->generateCase();
+        $case = $this->helper->generateCase($this->order, $this->payment, $this->customer);
         
         $this->assertEquals("guest@example.com", $case['userAccount']['emailAddress']);
         $this->assertEquals(null, $case['userAccount']['username']);
@@ -298,10 +311,10 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         $this->resetData();
         
         $this->order_data = json_decode('{"increment_id":"100000033","store_id":"1","quote_id":"40","quote":{},"customer":{},"remote_ip":"127.0.0.1","x_forwarded_for":null,"customer_id":null,"customer_email":"guest@example.com","customer_prefix":null,"customer_firstname":"Frank","customer_middlename":null,"customer_lastname":"Guest","customer_suffix":null,"customer_group_id":0,"customer_tax_class_id":"3","customer_note":null,"customer_note_notify":"1","customer_is_guest":true,"customer_dob":null,"customer_taxvat":null,"customer_gender":null,"quote_base_grand_total":203,"global_currency_code":"USD","base_currency_code":"USD","store_currency_code":"USD","order_currency_code":"USD","store_to_base_rate":"1.0000","store_to_order_rate":"1.0000","base_to_global_rate":"1.0000","base_to_order_rate":"1.0000","coupon_code":null,"is_virtual":0,"is_multi_payment":null,"applied_rule_ids":"","total_qty_ordered":1,"gift_message_id":null,"weight":0,"shipping_method":"flatrate_flatrate","shipping_description":"Flat Rate - Fixed","shipping_rate":null,"subtotal":198,"tax_amount":0,"tax_string":null,"discount_amount":0,"shipping_amount":5,"shipping_incl_tax":5,"shipping_tax_amount":0,"custbalance_amount":null,"grand_total":203,"base_subtotal":198,"base_tax_amount":0,"base_discount_amount":0,"base_shipping_amount":"5.0000","base_shipping_incl_tax":5,"base_shipping_tax_amount":0,"base_custbalance_amount":null,"base_grand_total":203,"hidden_tax_amount":0,"base_hidden_tax_amount":0,"shipping_hidden_tax_amount":0,"base_shipping_hidden_tax_amount":0,"base_shipping_hidden_tax_amnt":0,"discount_description":"","shipping_discount_amount":0,"base_shipping_discount_amount":0,"subtotal_incl_tax":198,"base_subtotal_incl_tax":198,"applied_taxes":[],"converting_from_quote":true,"store_name":"Main Website\nMain Store\nEnglish","total_item_count":1,"protect_code":"0cd01b","created_at":"2013-07-24 02:51:45","updated_at":"2013-07-24 02:51:45","entity_id":"33","billing_address_id":65,"shipping_address_id":66}', true);
-        $this->shipping_data = json_decode('{"store_id":null,"address_type":"shipping","customer_id":null,"customer_address_id":null,"vat_id":null,"vat_is_valid":null,"vat_request_id":null,"vat_request_date":null,"vat_request_success":null,"prefix":null,"firstname":"Frank","middlename":null,"lastname":"Guest","suffix":null,"company":null,"street":"10 Guest St","city":"Testville","region":"Vermont","region_id":"59","postcode":"123412","country_id":"US","telephone":"1234123","fax":null,"email":"guest@example.com","parent_id":"33","created_at":"2013-07-24 02:51:45","updated_at":"2013-07-24 02:51:45","entity_id":"66"}', true);
-        $this->billing_data = json_decode('{"store_id":null,"address_type":"billing","customer_id":null,"customer_address_id":null,"vat_id":null,"vat_is_valid":null,"vat_request_id":null,"vat_request_date":null,"vat_request_success":null,"prefix":null,"firstname":"Frank","middlename":null,"lastname":"Guest","suffix":null,"company":null,"street":"10 Guest St","city":"Testville","region":"Vermont","region_id":"59","postcode":"123412","country_id":"US","telephone":"1234123","fax":null,"email":"guest@example.com","parent_id":"33","created_at":"2013-07-24 02:51:45","updated_at":"2013-07-24 02:51:45","entity_id":"65"}', true);
+        $this->shipping_data = json_decode('{"store_id":null,"address_type":"shipping","customer_id":null,"customer_address_id":null,"vat_id":null,"vat_is_valid":null,"vat_request_id":null,"vat_request_date":null,"vat_request_success":null,"prefix":null,"firstname":"Frank","middlename":null,"lastname":"Guest","suffix":null,"company":null,"street":"10 Guest St","city":"Testville","region":"Vermont","region_id":"59","postcode":"123412","country_id":"US","telephone":"1234123","fax":null,"email":"guest@example.com","parent_id":"33","created_at":"2013-07-24 02:51:45","updated_at":"2013-07-24 02:51:45"}', true); //,"entity_id":"66"
+        $this->billing_data = json_decode('{"store_id":null,"address_type":"billing","customer_id":null,"customer_address_id":null,"vat_id":null,"vat_is_valid":null,"vat_request_id":null,"vat_request_date":null,"vat_request_success":null,"prefix":null,"firstname":"Frank","middlename":null,"lastname":"Guest","suffix":null,"company":null,"street":"10 Guest St","city":"Testville","region":"Vermont","region_id":"59","postcode":"123412","country_id":"US","telephone":"1234123","fax":null,"email":"guest@example.com","parent_id":"33","created_at":"2013-07-24 02:51:45","updated_at":"2013-07-24 02:51:45"}', true); //,"entity_id":"65"
         $this->customer_data = json_decode('[]', true);
-        $this->payment_data = json_decode(' {"store_id":null,"customer_payment_id":null,"method":"checkmo","additional_data":null,"additional_information":[],"po_number":null,"cc_type":null,"cc_number_enc":null,"cc_last4":null,"cc_owner":null,"cc_exp_month":"0","cc_exp_year":"0","cc_number":null,"cc_cid":null,"cc_ss_issue":null,"cc_ss_start_month":"0","cc_ss_start_year":"0","parent_id":"33","method_instance":{},"created_at":"2013-07-24 02:51:45","updated_at":"2013-07-24 02:51:45","entity_id":"33"}', true);
+        $this->payment_data = json_decode(' {"store_id":null,"customer_payment_id":null,"method":"checkmo","additional_data":null,"additional_information":[],"po_number":null,"cc_type":null,"cc_number_enc":null,"cc_last4":null,"cc_owner":null,"cc_exp_month":"0","cc_exp_year":"0","cc_number":null,"cc_cid":null,"cc_ss_issue":null,"cc_ss_start_month":"0","cc_ss_start_year":"0","parent_id":"33","method_instance":{},"created_at":"2013-07-24 02:51:45","updated_at":"2013-07-24 02:51:45"}', true); //,"entity_id":"33"
         $this->quote_data = json_decode('{"entity_id":"40","store_id":"1","created_at":"2013-07-24 02:47:02","updated_at":"2013-07-24 02:51:45","converted_at":null,"is_active":"1","is_virtual":"0","is_multi_shipping":"0","items_count":1,"items_qty":1,"orig_order_id":"0","store_to_base_rate":1,"store_to_quote_rate":1,"base_to_global_rate":1,"base_to_quote_rate":1,"global_currency_code":"USD","base_currency_code":"USD","store_currency_code":"USD","quote_currency_code":"USD","grand_total":203,"base_grand_total":203,"checkout_method":"guest","customer_id":null,"customer_tax_class_id":"3","customer_group_id":0,"customer_email":"guest@example.com","customer_prefix":null,"customer_firstname":"Frank","customer_middlename":null,"customer_lastname":"Guest","customer_suffix":null,"customer_dob":null,"customer_note":null,"customer_note_notify":"1","customer_is_guest":true,"customer_taxvat":null,"remote_ip":"127.0.0.1","applied_rule_ids":"","reserved_order_id":"100000033","password_hash":null,"coupon_code":null,"subtotal":198,"base_subtotal":198,"subtotal_with_discount":198,"base_subtotal_with_discount":198,"gift_message_id":null,"is_changed":1,"trigger_recollect":0,"ext_shipping_info":null,"customer_gender":null,"is_persistent":"0","x_forwarded_for":null,"virtual_items_qty":0,"taxes_for_items":[],"can_apply_msrp":false,"totals_collected_flag":true,"inventory_processed":true}', true);
         $this->items_data = json_decode('{"63":{"item_id":"63","quote_id":"40","created_at":"2013-07-24 02:47:02","updated_at":"2013-07-24 02:47:02","product_id":"509","store_id":"1","parent_item_id":null,"is_virtual":"0","sku":"amuletum-ring-sterling-silver","name":"Amuletum Ring: Recycled Sterling Silver","description":null,"applied_rule_ids":"","additional_data":null,"free_shipping":false,"is_qty_decimal":"0","no_discount":"0","weight":"0.0000","qty":1,"price":198,"base_price":198,"custom_price":null,"discount_percent":0,"discount_amount":0,"base_discount_amount":0,"tax_percent":0,"tax_amount":0,"base_tax_amount":0,"row_total":198,"base_row_total":198,"row_total_with_discount":"0.0000","row_weight":0,"product_type":"simple","base_tax_before_discount":null,"tax_before_discount":null,"original_custom_price":null,"gift_message_id":null,"weee_tax_applied":"a:0:{}","weee_tax_applied_amount":0,"weee_tax_applied_row_amount":0,"base_weee_tax_applied_amount":0,"base_weee_tax_applied_row_amnt":null,"weee_tax_disposition":0,"weee_tax_row_disposition":0,"base_weee_tax_disposition":0,"base_weee_tax_row_disposition":0,"redirect_url":null,"base_cost":null,"price_incl_tax":198,"base_price_incl_tax":198,"row_total_incl_tax":198,"base_row_total_incl_tax":198,"hidden_tax_amount":null,"base_hidden_tax_amount":null,"qty_options":[],"product":{},"tax_class_id":"2","is_recurring":"0","has_error":false,"is_nominal":false,"base_calculation_price":198,"calculation_price":198,"converted_price":198,"base_original_price":198,"taxable_amount":198,"base_taxable_amount":198,"is_price_incl_tax":false,"base_weee_tax_applied_row_amount":0,"original_price":198}}', true);
         $this->products_data = json_decode('{"63":{"entity_id":"509","entity_type_id":"10","attribute_set_id":"66","type_id":"simple","sku":"amuletum-ring-sterling-silver","created_at":"2012-11-26 19:32:28","updated_at":"2012-11-26 19:32:28","has_options":"0","required_options":"0","name":"Amuletum Ring: Recycled Sterling Silver","small_image":"\/a\/m\/amuletum_ring_18.jpg","url_key":"amuletum-ring-sterling-silver","thumbnail":"\/a\/m\/amuletum_ring_18.jpg","gift_message_available":"0","url_path":"amuletum-ring-sterling-silver.html","msrp_enabled":"2","msrp_display_actual_price_type":"4","status":"1","tax_class_id":"2","visibility":"4","enable_googlecheckout":"1","is_recurring":"0","price":"198.0000","cost":null,"weight":"0.0000","special_price":null,"msrp":null,"special_from_date":null,"special_to_date":null,"is_salable":"1","stock_item":{},"request_path":"amuletum-ring-sterling-silver.html","tier_price":[],"is_in_stock":"1","store_id":"1","customer_group_id":"0","final_price":null,"group_price":[],"group_price_changed":0}}', true);

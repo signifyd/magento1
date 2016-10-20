@@ -3,7 +3,14 @@
 class Signifyd_Connect_Model_Observer extends Varien_Object
 {
     public $joins = 0;
-    
+    protected $helper;
+
+    public function _construct()
+    {
+        $this->helper = Mage::helper('signifyd_connect');
+    }
+
+
     public function openCase($observer)
     {
         try {
@@ -29,28 +36,12 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 return;
             }
 
-            $result = Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($order);
-            if($result !== "error") {
-                if($result !== "notready") {
-                    // Handle two of the retry items in queue
-                    Mage::helper('signifyd_connect')->processRetryQueue(2);
-                }
-                return;
-            }
+            Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($order);
         } catch (Exception $e) {
             Mage::log($e->__toString(), null, 'signifyd_connect.log');
         }
         // If we get here, then we have failed to create the case.
-        $this->addToRetryQueue($order);
-    }
 
-    private function addToRetryQueue($order)
-    {
-        Mage::log("Add to retries", null, 'signifyd_connect.log');
-        $order_tag = Mage::getModel('signifyd_connect/retries');
-        $order_tag->setOrderIncrement($order->getIncrementId());
-        $order_tag->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
-        $order_tag->save();
     }
     
     public function logData($order, $payment, $quote)
@@ -195,92 +186,57 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             return;
         }
 
-        $show_scores = Mage::getStoreConfig('signifyd_connect/advanced/show_scores');
-        $show_guarantee = Mage::getStoreConfig('signifyd_connect/advanced/show_guarantee');
-        if ($show_scores || $show_guarantee) {
-            if ($this->oldSupport()) {
-                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
-                $this->joins++;
-            } else {
-                $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score',
-                    'guarantee' => 'guarantee'));
-                $this->joins++;
-            }
-        }
-    }
-
-    public function coreBlockAbstractPrepareLayoutBefore(Varien_Event_Observer $observer)
-    {
-        if (!Mage::getStoreConfig('signifyd_connect/settings/enabled') && !$this->getEnabled()) {
-            return;
-        }
-
-        $block = $observer->getEvent()->getBlock();
-        if((get_class($block) =='Mage_Adminhtml_Block_Widget_Grid_Massaction'
-         || get_class($block) == 'Enterprise_SalesArchive_Block_Adminhtml_Sales_Order_Grid_Massaction')
-            && $block->getRequest()->getControllerName() == 'sales_order')
-        {
-            $url = Mage::helper("adminhtml")->getUrl('signifyd_connect/adminhtml_signifyd/send');
-            if(Mage::getStoreConfig('signifyd_connect/advanced/use_unsecure_requests')){
-                $url = Mage::getUrl('signifyd/connect/send');
-            }
-            $block->setFormFieldName('increment_id');
-            $block->addItem('signifyd_connect', array(
-                'label' => 'Send order(s) to Signifyd',
-                'url' => $url,
-            ));
+        if ($this->oldSupport()) {
+            $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
+            $this->joins++;
+        } else {
+            $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score',
+                'guarantee' => 'guarantee'));
+            $this->joins++;
         }
     }
     
     public function coreBlockAbstractToHtmlBefore(Varien_Event_Observer $observer)
     {
-        $show_scores = Mage::getStoreConfig('signifyd_connect/advanced/show_scores');
-        $show_guarantee = Mage::getStoreConfig('signifyd_connect/advanced/show_guarantee');
-        if ($show_scores || $show_guarantee) {
-            $request = Mage::app()->getRequest();
-            $module = $request->getModuleName();
-            $controller = $request->getControllerName();
-            
-            if ($module != $this->getAdminRoute() || $controller != 'sales_order') {
-                return;
-            }
-            
-            $helper = Mage::helper('signifyd_connect');
-            $block = $observer->getEvent()->getBlock();
-            
-            if ($block->getId() == 'sales_order_grid') {
-                if($show_scores) {
-                    $block->addColumnAfter(
-                        'score',
-                        array(
-                            'header' => $helper->__('Signifyd Score'),
-                            'align' => 'left',
-                            'type' => 'text',
-                            'index' => 'score',
-                            'filter' => false,
-                            'renderer' => 'signifyd_connect/renderer',
-                            'width' => '100px',
-                        ),
-                        'status'
-                    );
-                }
-                if($show_guarantee) {
-                    $block->addColumnAfter(
-                        'guarantee',
-                        array(
-                            'header' => $helper->__('Guarantee Status'),
-                            'align' => 'left',
-                            'type' => 'text',
-                            'index' => 'guarantee',
-                            'filter' => false,
-                            'renderer' => 'signifyd_connect/renderer',
-                            'width' => '100px',
-                        ),
-                        'status'
-                    );
-                }
-                $block->sortColumnsByOrder();
-            }
+        $request = Mage::app()->getRequest();
+        $module = $request->getModuleName();
+        $controller = $request->getControllerName();
+
+        if ($module != $this->getAdminRoute() || $controller != 'sales_order') {
+            return;
+        }
+
+        $helper = Mage::helper('signifyd_connect');
+        $block = $observer->getEvent()->getBlock();
+
+        if ($block->getId() == 'sales_order_grid') {
+            $block->addColumnAfter(
+                'score',
+                array(
+                    'header' => $helper->__('Signifyd Score'),
+                    'align' => 'left',
+                    'type' => 'text',
+                    'index' => 'score',
+                    'filter' => false,
+                    'renderer' => 'signifyd_connect/renderer',
+                    'width' => '100px',
+                ),
+                'status'
+            );
+            $block->addColumnAfter(
+                'guarantee',
+                array(
+                    'header' => $helper->__('Guarantee Status'),
+                    'align' => 'left',
+                    'type' => 'text',
+                    'index' => 'guarantee',
+                    'filter' => false,
+                    'renderer' => 'signifyd_connect/renderer',
+                    'width' => '100px',
+                ),
+                'status'
+            );
+            $block->sortColumnsByOrder();
         }
     }
 
@@ -316,5 +272,31 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         } catch(Exception $ex) {
             $helper->logError("Guarantee cancel: $ex");
         }
+    }
+
+    /**
+     * Putting an order on hold after the order was placed until the response comes back and an action can be taken.
+     * @param Varien_Event_Observer $observer
+     * @return $this
+     */
+    public function putOrderOnHold(Varien_Event_Observer $observer)
+    {
+        if(!Mage::helper('signifyd_connect')->isEnabled()){
+            return $this;
+        }
+        $order = $observer->getEvent()->getOrder();
+        if($order->canHold() === false){
+            $this->helper->logError("Order {$order->getIncrementId()} could not be held because Magento returned false for canHold");
+        }
+
+        try {
+            $order->hold();
+            $order->addStatusHistoryComment("Signifyd: order held after order place");
+            $order->save();
+        } catch (Exception $e){
+            $this->helper->logError("PutOrderOnHold Error: $e");
+        }
+
+        return $this;
     }
 }
