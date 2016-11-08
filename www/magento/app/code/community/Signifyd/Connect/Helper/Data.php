@@ -195,9 +195,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     private function getVersions()
     {
         $version = array();
-        $version['platform'] = 'magento';
-        $version['platformVersion'] = Mage::getVersion();
-        $version['pluginVersion'] = (string)(Mage::getConfig()->getNode()->modules->Signifyd_Connect->version);
+        $version['storePlatformVersion'] = Mage::getVersion();
+        $version['signifydClientApp'] = 'Magento';
+        $version['storePlatform'] = 'Magento';
+        $version['signifydClientAppVersion'] = (string)(Mage::getConfig()->getNode()->modules->Signifyd_Connect->version);
         return $version;
     }
 
