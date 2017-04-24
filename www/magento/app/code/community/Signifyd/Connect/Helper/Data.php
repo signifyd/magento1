@@ -1,16 +1,17 @@
 <?php
-
+/**
+ * Data Helper
+ *
+ * @category    Signifyd Connect
+ * @package     Signifyd_Connect
+ * @author      Signifyd
+ */
 class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 {
     const UNPROCESSED_STATUS        = 0;
     const ENTITY_CREATED_STATUS     = 1;
     const CASE_CREATED_STATUS       = 2;
     const TRANSACTION_SENT_STATUS   = 3;
-
-    const WAITING_SUBMISSION_STATUS     = "waiting_submission";
-    const IN_REVIEW_STATUS              = "in_review";
-    const PROCESSING_RESPONSE_STATUS    = "processing_response";
-    const COMPLETED_STATUS              = "completed";
 
     public function logRequest($message)
     {
@@ -413,12 +414,29 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $this->request($url, $case, $auth, 'application/json');
     }
 
+    /**
+     * Getting the cases url
+     * @return string
+     */
     public function getUrl()
     {
-//        return Mage::getStoreConfig('signifyd_connect/settings/url') . '/cases';
         return 'https://api.signifyd.com/v2/cases';
     }
 
+    /**
+     * Getting the case url based on the case code
+     * @param $caseCode
+     * @return string
+     */
+    public function getCaseUrl($caseCode)
+    {
+        return 'https://api.signifyd.com/v2/cases/' . $caseCode;
+    }
+
+    /**
+     * Getting the Api Key for authentication with Signifyd
+     * @return mixed
+     */
     public function getAuth()
     {
         return Mage::getStoreConfig('signifyd_connect/settings/key');
@@ -527,7 +545,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     $case_object->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                     $case_object->setCode($caseId);
                     $case_object->setTransactionId($case['purchase']['transactionId']);
-                    $case_object->setMagentoStatus(self::IN_REVIEW_STATUS);
+                    $case_object->setMagentoStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
                     $case_object->save();
 
                     $order->addStatusHistoryComment("Signifyd: case $caseId created for order");
@@ -556,7 +574,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $url;
     }
     
-    public function getCaseUrl($order_id)
+    public function getCaseUrlByOrderId($order_id)
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order_id);
 
@@ -789,8 +807,33 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return ($case->getGuarantee() == 'DECLINED')? true : false;
     }
 
+    /**
+     * Is the extension enabled in the admin
+     * @return mixed
+     */
     public function isEnabled()
     {
         return Mage::getStoreConfig('signifyd_connect/settings/enabled');
     }
+
+    /**
+     * Getting the action for accepted from guaranty
+     * @param $storeId
+     * @return mixed
+     */
+    public function getAcceptedFromGuaranty($storeId){
+        return Mage::getStoreConfig('signifyd_connect/advanced/accepted_from_guaranty', $storeId);
+    }
+
+    /**
+     * Getting the action for declined from guaranty
+     * @param $storeId
+     * @return mixed
+     */
+    public function getDeclinedFromGuaranty($storeId){
+        return Mage::getStoreConfig('signifyd_connect/advanced/declined_from_guaranty', $storeId);
+    }
 }
+
+/* Filename: Data.php */
+/* Location: ../app/code/Community/Signifyd/Connect/Helper/Data.php */

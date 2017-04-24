@@ -363,6 +363,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
     public function finalStatus($order, $type, $case)
     {
         $id  = (is_array($case))? $case['order_increment'] : $case->getId();
+        $this->logger->addLog("Final status for case: {$id}");
         try {
             $holdStatus = $this->checkStatus($order, Mage_Sales_Model_Order::STATE_HOLDED);
             $caseModel = Mage::getModel('signifyd_connect/case');
@@ -370,20 +371,20 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             if($type == 1){
                 // needs to be true
                 if($holdStatus === true){
-                    $caseModel->setMagentoStatusTo($case, Signifyd_Connect_Helper_Data::COMPLETED_STATUS);
+                    $caseModel->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
                 }
             } elseif($type == 2) {
                 // needs to be false
                 if($holdStatus === false){
-                    $caseModel->setMagentoStatusTo($case, Signifyd_Connect_Helper_Data::COMPLETED_STATUS);
+                    $caseModel->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
                 }
             } else {
                 $this->logger->addLog('Final status unknown type');
             }
 
-            $this->logger->addLog("Case no:{$id}, set status to complete successful.");
+            $this->logger->addLog("Case no: {$id}, set status to complete successful.");
         } catch (Exception $e){
-            $this->logger->addLog("Case no:{$id}, set status to complete fail: " . $e->__toString());
+            $this->logger->addLog("Case no: {$id}, set status to complete fail: " . $e->__toString());
             return false;
         }
 

@@ -8,8 +8,8 @@ class Signifyd_Connect_Block_Renderer extends Mage_Adminhtml_Block_Widget_Grid_C
         $column = $this->getColumn()->getId();
         $helper = Mage::helper('signifyd_connect');
         
-        $url = $helper->getCaseUrl($row->getIncrementId());
-        
+        $url = $helper->getCaseUrlByOrderId($row->getIncrementId());
+
         if ($column == "score") {
             if(!is_numeric($value)) {
                 return $helper->__('N/A');
