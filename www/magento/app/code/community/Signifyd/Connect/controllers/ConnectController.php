@@ -8,9 +8,9 @@
  */
 class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Action
 {
-    public $_request = array();
-    public $_topic = false;
-    public $_case = false;
+    public $inRequest = array();
+    public $topic = false;
+    public $case = false;
     public $logger;
 
     /**
@@ -113,10 +113,10 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     {
         $case = false;
         
-        if (isset($this->_request['orderId'])) {
-            $case = Mage::getModel('signifyd_connect/case')->load($this->_request['orderId']);
+        if (isset($this->inRequest['orderId'])) {
+            $case = Mage::getModel('signifyd_connect/case')->load($this->inRequest['orderId']);
             if($case->isObjectNew()) {
-                $this->logger->addLog('Case not yet in DB. Likely timing issue. order_increment: ' . $this->_request['orderId']);
+                $this->logger->addLog('Case not yet in DB. Likely timing issue. order_increment: ' . $this->inRequest['orderId']);
                 $this->conflict();
             }
         }
@@ -130,18 +130,18 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
      */
     public function initRequest($request)
     {
-        $this->_request = json_decode($request, true);
+        $this->inRequest = json_decode($request, true);
 
         $topic = $this->getHeader('X-SIGNIFYD-TOPIC');
 
-        $this->_topic = $topic;
+        $this->topic = $topic;
 
         // For the webhook test, all of the request data will be invalid
         if ($topic == "cases/test") return;
 
-        $this->_case = $this->initCase();
-        if (!$this->_case)
-            $this->logger->addLog('No matching case was found for this request. order_increment: ' . $this->_request['orderId']);
+        $this->case = $this->initCase();
+        if (!$this->case)
+            $this->logger->addLog('No matching case was found for this request. order_increment: ' . $this->inRequest['orderId']);
     }
 
     /**
@@ -195,19 +195,19 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             if ($this->validRequest($request, $hash)) {
                 $this->initRequest($request);
 
-                $topic = $this->_topic;
+                $topic = $this->topic;
                 $this->logger->addLog('API request topic: ' . $topic);
 
                 switch ($topic) {
                     case "cases/creation":
-                        Mage::getModel('signifyd_connect/case')->processCreation($this->_case, $this->_request);
+                        Mage::getModel('signifyd_connect/case')->processCreation($this->case, $this->inRequest);
                         break;
                     case "cases/rescore":
                     case "cases/review":
-                        Mage::getModel('signifyd_connect/case')->processReview($this->_case, $this->_request);
+                        Mage::getModel('signifyd_connect/case')->processReview($this->case, $this->inRequest);
                         break;
                     case "guarantees/completion":
-                        Mage::getModel('signifyd_connect/case')->processGuarantee($this->_case, $this->_request);
+                        Mage::getModel('signifyd_connect/case')->processGuarantee($this->case, $this->inRequest);
                         break;
                     case "cases/test":
                         // Test is only verifying that the endpoint is reachable. So we just complete here
@@ -218,7 +218,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 }
             } else {
                 $this->logger->addLog('API request failed auth');
-                Mage::getModel('signifyd_connect/case')->processFallback($this->_request);
+                Mage::getModel('signifyd_connect/case')->processFallback($request);
             }
         } else {
             echo $this->getDefaultMessage();
