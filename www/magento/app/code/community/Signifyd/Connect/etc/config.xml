@@ -3,7 +3,7 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>4.0.0</version>
+            <version>4.0.2</version>
         </Signifyd_Connect>
     </modules>
     <global>
@@ -211,4 +211,14 @@
             </core_block_abstract_to_html_before>
         </events>
     </adminhtml>
+    <default>
+        <signifyd_connect>
+            <settings>
+                <enabled>0</enabled>
+            </settings>
+            <log>
+                <all>1</all>
+            </log>
+        </signifyd_connect>
+    </default>
 </config>

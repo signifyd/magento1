@@ -17,7 +17,15 @@ class Signifyd_Connect_Helper_Log extends Mage_Core_Helper_Abstract
 
     public function addLog($msg)
     {
-        return Mage::log($msg, null, $this->logFile);
+        if($this->isLogEnabled())
+            Mage::log($msg, null, $this->logFile);
+
+        return true;
+    }
+
+    public function isLogEnabled()
+    {
+        return Mage::getStoreConfig('signifyd_connect/log/all');
     }
 }
 
