@@ -1,0 +1,8 @@
+<?php if(!is_null($this->getQuoteId())): ?>
+<script
+    async
+    type="text/javascript"
+    id="sig-api"
+    data-order-session-id="<?php echo $this->getDeviceFingerPrint(); ?>"
+    src="https://cdn-scripts.signifyd.com/api/script-tag.js"></script>
+<?php endif; ?>

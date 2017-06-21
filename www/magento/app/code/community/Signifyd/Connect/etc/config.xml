@@ -97,6 +97,13 @@
         </jobs>
     </crontab>
     <frontend>
+        <layout>
+            <updates>
+                <signifyd_connect>
+                    <file>signifyd/connect.xml</file>
+                </signifyd_connect>
+            </updates>
+        </layout>
         <routers>
             <signifyd_connect>
                 <use>standard</use>
