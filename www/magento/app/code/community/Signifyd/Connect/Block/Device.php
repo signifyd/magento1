@@ -22,7 +22,16 @@ class Signifyd_Connect_Block_Device extends Mage_Core_Block_Template
         return 'M1' . base64_encode(Mage::getBaseUrl()) . $this->getQuoteId();
     }
 
-    public function getQuoteId(){
+    public function getQuoteId()
+    {
         return $this->quote->getId();
+    }
+
+    public function isActive()
+    {
+        $enabled = Mage::getStoreConfig('signifyd_connect/settings/enable_device_fingerprint');
+        $quoteId = $this->getQuoteId();
+
+        return $enabled && !is_null($quoteId);
     }
 }
