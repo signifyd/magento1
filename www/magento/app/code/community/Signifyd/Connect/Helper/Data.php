@@ -443,6 +443,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return Mage::getStoreConfig('signifyd_connect/settings/key');
     }
 
+    /**
+     * @param Mage_Sales_Model_Order $order
+     * @return string
+     */
     public function sendOrderUpdateToSignifyd($order)
     {
         if ($order && $order->getId() && Mage::getStoreConfig('signifyd_connect/advanced/enable_payment_updates')) {
@@ -470,7 +474,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             {
                 return "nodata";
             }
-            Mage::register('signifyd_action', 1); // Work will now take place
+            Mage::register('signifyd_action_' . $order->getIncrementId(), 1); // Work will now take place
 
             $updateData['purchase'] = $purchase;
 
@@ -499,6 +503,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
 
+    /**
+     * @param Mage_Sales_Model_Order $order
+     * @param bool $forceSend
+     * @return string
+     */
     public function buildAndSendOrderToSignifyd($order, $forceSend = false)
     {
         if ($order && $order->getId()) {
@@ -520,8 +529,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 return "notready"; // Note: would not be in the order grid if this were the case
             }
 
-            if(is_null(Mage::registry('signifyd_action'))) {
-                Mage::register('signifyd_action', 1); // Work will now take place
+            if(is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
+                Mage::register('signifyd_action_' . $order->getIncrementId(), 1); // Work will now take place
             }
 
             $customer = null;

@@ -22,13 +22,10 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             if (!Mage::getStoreConfig('signifyd_connect/settings/enabled') && !$this->getEnabled()) {
                 return;
             }
-            if(Mage::registry('signifyd_action') == 1)
-            {
-                return;
-            }
 
             $event = $observer->getEvent();
 
+            /** @var Mage_Sales_Model_Order $order */
             if ($event->hasOrder()) {
                 $order = $event->getOrder();
             } else if ($event->hasObject()) {
@@ -38,6 +35,11 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $order_model = get_class(Mage::getModel('sales/order'));
 
             if (!($order instanceof $order_model)) {
+                return;
+            }
+
+            if(Mage::registry('signifyd_action_' . $order->getIncrementId()) == 1)
+            {
                 return;
             }
 
