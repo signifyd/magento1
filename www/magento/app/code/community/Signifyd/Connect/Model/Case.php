@@ -232,7 +232,15 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         try {
             if (isset($this->_request['guaranteeDisposition'])) {
                 $case->setGuarantee($this->_request['guaranteeDisposition']);
-                $case->setMagentoStatus(self::PROCESSING_RESPONSE_STATUS);
+
+                if ($this->_request['status'] == 'DISMISSED' &&
+                    $this->_request['guaranteeDisposition'] == 'N/A' &&
+                    $case->getMagentoStatus() == self::IN_REVIEW_STATUS) {
+                    $case->setMagentoStatus(self::COMPLETED_STATUS);
+                } else {
+                    $case->setMagentoStatus(self::PROCESSING_RESPONSE_STATUS);
+                }
+
                 $this->logger->addLog('Set guarantee to ' . $this->_request['guaranteeDisposition']);
             }
         } catch(Exception $e) {
