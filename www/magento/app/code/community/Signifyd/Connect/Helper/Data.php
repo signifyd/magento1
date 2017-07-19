@@ -220,7 +220,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $payment = $order->getPayment();
 
         // T715: Send null rather than false when we can't get the IP Address
-        $purchase['orderSessionId'] = 'M1' . base64_encode(Mage::getBaseUrl()) . $order->getQuoteId();
+        if ($this->isAdmin()) {
+            $purchase['orderSessionId'] = 'M1' . base64_encode(Mage::getBaseUrl()) . $order->getQuoteId();
+        }
         $purchase['browserIpAddress'] = ($this->getIpAddress($order) ? $this->getIpAddress($order) : null);
         $purchase['orderId'] = $order->getIncrementId();
         $purchase['createdAt'] = date('c', strtotime($order->getCreatedAt())); // e.g: 2004-02-12T15:19:21+00:00
@@ -833,6 +835,19 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function getDeclinedFromGuaranty($storeId){
         return Mage::getStoreConfig('signifyd_connect/advanced/declined_from_guaranty', $storeId);
+    }
+
+    public function isAdmin()
+    {
+        if (Mage::app()->getStore()->isAdmin()) {
+            return true;
+        }
+
+        if (Mage::getDesign()->getArea() == 'adminhtml') {
+            return true;
+        }
+
+        return false;
     }
 }
 
