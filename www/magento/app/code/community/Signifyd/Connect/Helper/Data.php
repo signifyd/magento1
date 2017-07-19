@@ -219,10 +219,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase = array();
         $payment = $order->getPayment();
 
-        // T715: Send null rather than false when we can't get the IP Address
-        if ($this->isAdmin()) {
+        if (!$this->isAdmin() && $this->isDeviceFingerprintEnabled()) {
             $purchase['orderSessionId'] = 'M1' . base64_encode(Mage::getBaseUrl()) . $order->getQuoteId();
         }
+        // T715: Send null rather than false when we can't get the IP Address
         $purchase['browserIpAddress'] = ($this->getIpAddress($order) ? $this->getIpAddress($order) : null);
         $purchase['orderId'] = $order->getIncrementId();
         $purchase['createdAt'] = date('c', strtotime($order->getCreatedAt())); // e.g: 2004-02-12T15:19:21+00:00
@@ -817,6 +817,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function isEnabled()
     {
         return Mage::getStoreConfig('signifyd_connect/settings/enabled');
+    }
+
+    public function isDeviceFingerprintEnabled()
+    {
+        return (bool) Mage::getStoreConfig('signifyd_connect/settings/enable_device_fingerprint');
     }
 
     /**
