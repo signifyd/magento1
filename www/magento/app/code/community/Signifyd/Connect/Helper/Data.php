@@ -219,8 +219,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase = array();
         $payment = $order->getPayment();
 
+        if (!$this->isAdmin() && $this->isDeviceFingerprintEnabled()) {
+            $purchase['orderSessionId'] = 'M1' . base64_encode(Mage::getBaseUrl()) . $order->getQuoteId();
+        }
         // T715: Send null rather than false when we can't get the IP Address
-        $purchase['orderSessionId'] = 'M1' . base64_encode(Mage::getBaseUrl()) . $order->getQuoteId();
         $purchase['browserIpAddress'] = ($this->getIpAddress($order) ? $this->getIpAddress($order) : null);
         $purchase['orderId'] = $order->getIncrementId();
         $purchase['createdAt'] = date('c', strtotime($order->getCreatedAt())); // e.g: 2004-02-12T15:19:21+00:00
@@ -826,6 +828,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return Mage::getStoreConfig('signifyd_connect/settings/enabled');
     }
 
+    public function isDeviceFingerprintEnabled()
+    {
+        return (bool) Mage::getStoreConfig('signifyd_connect/settings/enable_device_fingerprint');
+    }
+
     /**
      * Getting the action for accepted from guaranty
      * @param $storeId
@@ -842,6 +849,19 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function getDeclinedFromGuaranty($storeId){
         return Mage::getStoreConfig('signifyd_connect/advanced/declined_from_guaranty', $storeId);
+    }
+
+    public function isAdmin()
+    {
+        if (Mage::app()->getStore()->isAdmin()) {
+            return true;
+        }
+
+        if (Mage::getDesign()->getArea() == 'adminhtml') {
+            return true;
+        }
+
+        return false;
     }
 }
 

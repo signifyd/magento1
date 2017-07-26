@@ -29,7 +29,7 @@ class Signifyd_Connect_Block_Device extends Mage_Core_Block_Template
 
     public function isActive()
     {
-        $enabled = Mage::getStoreConfig('signifyd_connect/settings/enable_device_fingerprint');
+        $enabled = Mage::helper('signifyd_connect')->isDeviceFingerprintEnabled();
         $quoteId = $this->getQuoteId();
 
         return $enabled && !is_null($quoteId);
