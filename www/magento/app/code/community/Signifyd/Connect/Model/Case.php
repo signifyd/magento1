@@ -242,6 +242,9 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
                 }
 
                 $this->logger->addLog('Set guarantee to ' . $this->_request['guaranteeDisposition']);
+            } else if ($this->_request['status'] == 'DISMISSED' &&
+                $case->getMagentoStatus() == self::IN_REVIEW_STATUS) {
+                $case->setMagentoStatus(self::COMPLETED_STATUS);
             }
         } catch(Exception $e) {
             $this->logger->addLog('ERROR ON WEBHOOK: ' . $e->__toString());
