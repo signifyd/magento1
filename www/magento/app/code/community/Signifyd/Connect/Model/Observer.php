@@ -43,9 +43,41 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 return;
             }
 
-            $paymentMethod = $order->getPayment()->getMethodInstance()->getCode();
-            if(in_array($paymentMethod, $this->restrictedMethods)) {
+            /** @var Mage_Payment_Model_Method_Abstract $paymentMethod */
+            $paymentMethod = $order->getPayment()->getMethodInstance();
+            $paymentMethodCode = $paymentMethod->getCode();
+            if(in_array($paymentMethodCode, $this->restrictedMethods)) {
                 return $this;
+            }
+
+            $paymentData = Mage::registry('signifyd_payment_data');
+            if (!empty($paymentData)) {
+                $signifydData = $paymentMethod->getInfoInstance()->getAdditionalInformation('signifyd_data');
+                if (!is_array($signifydData)) {
+                    $signifydData = array();
+                }
+
+                if (isset($paymentData['cc_owner'])) {
+                    $signifydData['cc_owner'] = $paymentData['cc_owner'];
+                }
+                if (isset($paymentData['cc_exp_month'])) {
+                    $signifydData['cc_exp_month'] = $paymentData['cc_exp_month'];
+                }
+                if (isset($paymentData['cc_exp_year'])) {
+                    $signifydData['cc_exp_year'] = $paymentData['cc_exp_year'];
+                }
+                if (isset($paymentData['cc_bin'])) {
+                    $signifydData['cc_bin'] = $paymentData['cc_bin'];
+                }
+                if (isset($paymentData['cc_last4'])) {
+                    $signifydData['cc_last4'] = $paymentData['cc_last4'];
+                }
+
+                if (!empty($signifydData)) {
+                    $paymentMethod->getInfoInstance()->setAdditionalInformation('signifyd_data', $signifydData);
+                }
+
+                Mage::unregister('signifyd_payment_data');
             }
 
             Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($order);
@@ -298,7 +330,6 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         }
 
         $order = $observer->getEvent()->getOrder();
-//        $paymentMethod = $order->getPayment()->getMethod();
         $paymentMethod = $order->getPayment()->getMethodInstance()->getCode();
         if(in_array($paymentMethod, $this->restrictedMethods)) {
             return $this;
@@ -314,6 +345,38 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $order->save();
         } catch (Exception $e){
             $this->helper->logError("PutOrderOnHold Error: $e");
+        }
+
+        return $this;
+    }
+
+    public function capturePaymentData(Varien_Event_Observer $observer)
+    {
+        try {
+            $data = $observer->getEvent()->getData('input');
+            if ($data instanceof Varien_Object) {
+                $paymentData = $data->getData();
+            }
+
+            $signifydData = array();
+
+            if (isset($paymentData['cc_owner'])) {
+                $signifydData['cc_owner'] = $paymentData['cc_owner'];
+            }
+            if (isset($paymentData['cc_exp_month'])) {
+                $signifydData['cc_exp_month'] = $paymentData['cc_exp_month'];
+            }
+            if (isset($paymentData['cc_exp_year'])) {
+                $signifydData['cc_exp_year'] = $paymentData['cc_exp_year'];
+            }
+            if (isset($paymentData['cc_number'])) {
+                $signifydData['cc_bin'] = substr($data['cc_number'], 0, 6);
+                $signifydData['cc_last4'] = substr($data['cc_number'], -4);
+            }
+
+            Mage::register('signifyd_payment_data', $signifydData);
+        } catch (Exception $e) {
+            $this->helper->logError("Failed to save payment data to registry: " . $e->getMessage());
         }
 
         return $this;

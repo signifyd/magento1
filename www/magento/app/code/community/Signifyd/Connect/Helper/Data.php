@@ -13,6 +13,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     const CASE_CREATED_STATUS       = 2;
     const TRANSACTION_SENT_STATUS   = 3;
 
+    /**
+     * @var Signifyd_Connect_Helper_Payment_Interface
+     */
+    protected $paymentHelper;
+
     public function logRequest($message)
     {
         if (Mage::getStoreConfig('signifyd_connect/log/all')) {
@@ -135,64 +140,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return preg_replace('/[^0-9a-zA-Z:\.]/', '', strtok(str_replace($ip, ',', "\n"), "\n"));
     }
 
-    public function formatAvs($value)
-    {
-        // http://www.emsecommerce.net/avs_cvv2_response_codes.htm
-        $codes = array('X', 'Y', 'A', 'W', 'Z', 'N', 'U', 'R', 'E', 'S', 'D', 'M', 'B', 'P', 'C', 'I', 'G');
-
-        if ($value) {
-            $value = strtoupper($value);
-
-            if (strlen($value) > 1) {
-                if (preg_match('/\([A-Z]\)/', $value)) {
-                    $matches = array();
-
-                    preg_match('/\([A-Z]\)/', $value, $matches);
-
-                    foreach ($matches as $match) {
-                        $match = preg_replace('/[^A-Z]/', '', $match);
-
-                        if (in_array($match, $codes)) {
-                            $value = $match;
-                        }
-                    }
-                }
-            }
-
-            if (strlen($value) > 1) {
-                $value = substr($value, 0, 1);
-            }
-
-            if (!in_array($value, $codes)) {
-                $value = null;
-            }
-        }
-
-        return $value;
-    }
-
-    public function getAvsResponse($payment)
-    {
-        $value = null;
-
-        if ($payment->getAdditionalInformation('paypal_avs_code')) {
-            $value = $payment->getAdditionalInformation('paypal_avs_code');
-        } else if ($payment->getAdditionalInformation('cc_avs_status')) {
-            $value = $payment->getAdditionalInformation('cc_avs_status');
-        }
-
-        return $this->formatAvs($value);
-    }
-
-    public function getCvvResponse($payment)
-    {
-        if ($payment->getAdditionalInformation('paypal_cvv2_match')) {
-            return $payment->getAdditionalInformation('paypal_cvv2_match');
-        }
-
-        return null;
-    }
-
     private function getVersions()
     {
         $version = array();
@@ -214,10 +161,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $transId;
     }
 
-    public function getPurchase($order)
+    public function getPurchase($order, $payment)
     {
         $purchase = array();
-        $payment = $order->getPayment();
 
         if (!$this->isAdmin() && $this->isDeviceFingerprintEnabled()) {
             $purchase['orderSessionId'] = 'M1' . base64_encode(Mage::getBaseUrl()) . $order->getQuoteId();
@@ -233,71 +179,21 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase['paymentGateway'] = $payment->getMethod();
         $purchase['transactionId'] = $this->getTransactionId($payment);
 
-        $purchase['avsResponseCode'] = $this->getAvsResponse($payment);
-        $purchase['cvvResponseCode'] = $this->getCvvResponse($payment);
+        $purchase['avsResponseCode'] = $this->getPaymentHelper($order, $payment)->getAvsResponseCode();
+        $purchase['cvvResponseCode'] = $this->getPaymentHelper($order, $payment)->getCvvResponseCode();
 
         return $purchase;
     }
 
-    public function isPaymentCC($payment)
-    {
-        // Although the payment structure only has the entity data for the payment
-        // the original payment method object is stored within the entity data.
-        // It's not a requirement, but every CC handler I've found subclasses
-        // from Mage_Payment_Model_Method_Cc, so we are using that as an
-        // assumption for whether a method is based on CC data
-        $method = $payment->getData('method_instance');
-        if($method)
-        {
-            return is_subclass_of($method, 'Mage_Payment_Model_Method_Cc');
-        }
-        return false;
-    }
-
+    /**
+     * @param $order
+     * @param Mage_Sales_Model_Order_Payment $payment
+     * @return array
+     */
     public function getCard($order, $payment)
     {
-        $billing = $order->getBillingAddress();
-
-        $card = array();
-
-        $card['cardHolderName'] = null;
-        $card['bin'] = null;
-        $card['last4'] = null;
-        $card['expiryMonth'] = null;
-        $card['expiryYear'] = null;
-        $card['hash'] = null;
-
-        $card['billingAddress'] = $this->getSignifydAddress($billing);
-
-        if ($payment->getCcOwner()) {
-            $card['cardHolderName'] = $payment->getCcOwner();
-        } else {
-            $card['cardHolderName'] = $billing->getFirstname() . ' ' . $billing->getLastname();
-        }
-
-        // Card data may be set on payment even if payment was not with card.
-        // If it is, we want to ignore the data
-        if(!$this->isPaymentCC($payment)) return $card;
-
-        if ($payment->getData('cc_last4')) {
-            $card['last4'] = $payment->getData('cc_last4');
-        }
-
-        if ($payment->getData('cc_exp_year')) {
-            $card['expiryYear'] = $payment->getData('cc_exp_year');
-        }
-
-        if ($payment->getData('cc_exp_month')) {
-            $card['expiryMonth'] = $payment->getData('cc_exp_month');
-        }
-
-        if ($payment->getData('cc_number_enc')) {
-            $card['hash'] = $payment->getData('cc_number_enc');
-        }
-
-        if ($payment->getData('cc_number') && is_numeric($payment->getData('cc_number')) && strlen((string)$payment->getData('cc_number')) > 6) {
-            $card['bin'] = substr((string)$payment->getData('cc_number'), 0, 6);
-        }
+        $card = $this->getPaymentHelper($order, $payment)->getCardData();
+        $card['billingAddress'] = $this->getSignifydAddress($order->getBillingAddress());
 
         return $card;
     }
@@ -401,7 +297,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     {
         $case = array();
 
-        $case['purchase'] = $this->getPurchase($order);
+        $case['purchase'] = $this->getPurchase($order, $payment);
         $case['recipient'] = $this->getRecipient($order);
         $case['card'] = $this->getCard($order, $payment);
         $case['userAccount'] = $this->getUserAccount($customer, $order);
@@ -454,7 +350,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if ($order && $order->getId() && Mage::getStoreConfig('signifyd_connect/advanced/enable_payment_updates')) {
             $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
             $caseId = $case->getCode();
-            
+
             if (Mage::getStoreConfig('signifyd_connect/log/all')) {
                 Mage::log("Created new case: $caseId", null, 'signifyd_connect.log');
             }
@@ -466,8 +362,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $purchase = array();
             $purchase['paymentGateway'] = $payment->getMethod();
             $purchase['transactionId'] = $this->getTransactionId($payment);
-            $purchase['avsResponseCode'] = $this->getAvsResponse($payment);
-            $purchase['cvvResponseCode'] = $this->getCvvResponse($payment);
+            $purchase['avsResponseCode'] = $this->getPaymentHelper($order, $payment)->getAvsResponseCode();
+            $purchase['cvvResponseCode'] = $this->getPaymentHelper($order, $payment)->getCvvResponseCode();
 
             // Do not make request if there is no data to send
             if( $purchase['transactionId'] == null &&
@@ -576,16 +472,16 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function getProductUrl($product)
     {
         $url = null;
-        
+
         try {
             $url = $product->getUrlModel()->getProductUrl($product);
         } catch (Exception $e) {
             $url = null;
         }
-        
+
         return $url;
     }
-    
+
     public function getCaseUrlByOrderId($order_id)
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order_id);
@@ -596,35 +492,35 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         Mage::log('Case URL not found: '.$order_id, null, 'signifyd_connect.log');
         return '';
     }
-    
+
     public function getProductImage($product, $size="150")
     {
         $image = null;
-        
+
         try {
             $image = (string)Mage::helper('catalog/image')->init($product, 'image')->resize($size, $size)->keepFrame(true)->keepAspectRatio(true);
         } catch (Exception $e) {
             $image = null;
         }
-        
+
         return $image;
     }
-    
+
     public function getStoreName()
     {
         return Mage::getStoreConfig('trans_email/ident_general/name', 0);
     }
-    
+
     public function getStoreEmail()
     {
         return Mage::getStoreConfig('trans_email/ident_general/email', 0);
     }
-    
+
     public function getStoreUrl()
     {
         return Mage::getBaseUrl();
     }
-    
+
     public function processedStatus($order)
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
@@ -641,10 +537,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         {
             return self::ENTITY_CREATED_STATUS;
         }
-        
+
         return self::UNPROCESSED_STATUS;
     }
-    
+
     public function markProcessed($order)
     {
         $case = Mage::getModel('signifyd_connect/case');
@@ -652,10 +548,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
-        
+
         return $case;
     }
-    
+
     public function unmarkProcessed($order)
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
@@ -690,25 +586,25 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $authMask = preg_replace ( "/\S/", "*", $auth, strlen($auth) - 4 );
             Mage::log("Request:\nURL: $url \nAuth: $authMask\nData: $data", null, 'signifyd_connect.log');
         }
-        
+
         $curl = curl_init();
         $response = new Varien_Object;
         $headers = array();
 
         curl_setopt($curl, CURLOPT_URL, $url);
-        
+
         if (stripos($url, 'https://') === 0) {
             curl_setopt($curl, CURLOPT_PORT, 443);
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
         }
-        
+
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-        
+
         if ($auth) {
             curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
             curl_setopt($curl, CURLOPT_USERPWD, $auth);
         }
-        
+
         if ($accept) {
             $headers[] = 'Accept: ' . $accept;
         }
@@ -721,7 +617,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $headers[] = "Content-length: " . strlen($data);
             curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
         }
-        
+
         if (count($headers)) {
             curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
         }
@@ -731,26 +627,26 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
         $raw_response = curl_exec($curl);
         $response->setRawResponse($raw_response);
-        
+
         $response_data = curl_getinfo($curl);
         $response->addData($response_data);
-        
+
         if (Mage::getStoreConfig('signifyd_connect/log/all')) {
             Mage::log("Response ($url):\n " . print_r($response, true), null, 'signifyd_connect.log');
         }
-        
+
         if ($raw_response === false || curl_errno($curl)) {
             $error = curl_error($curl);
-            
+
             if (Mage::getStoreConfig('signifyd_connect/log/all')) {
                 Mage::log("ERROR ($url):\n$error", null, 'signifyd_connect.log');
             }
-            
+
             $response->setData('error', $error);
         }
-        
+
         curl_close($curl);
-        
+
         return $response;
     }
 
@@ -863,7 +759,37 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
         return false;
     }
-}
 
-/* Filename: Data.php */
-/* Location: ../app/code/Community/Signifyd/Connect/Helper/Data.php */
+    /**
+     * @param Mage_Sales_Model_Order $order
+     * @param Mage_Sales_Model_Order_Payment $payment
+     * @return Signifyd_Connect_Helper_Payment_Interface
+     */
+    public function getPaymentHelper(Mage_Sales_Model_Order $order = null, Mage_Sales_Model_Order_Payment $payment = null)
+    {
+        if (!is_object($this->paymentHelper) ||
+            !in_array('Signifyd_Connect_Helper_Payment_Interface', class_implements($this->paymentHelper))) {
+            $paymentMethod = $payment->getMethod();
+            $helperName = "signifyd_connect/payment_{$paymentMethod}";
+            $helperClass = Mage::getConfig()->getHelperClassName($helperName);
+
+            if (class_exists($helperClass)) {
+                $paymentHelper = Mage::helper("signifyd_connect/payment_{$paymentMethod}");
+            }
+
+            if (!is_object($paymentHelper) ||
+                !in_array('Signifyd_Connect_Helper_Payment_Interface', class_implements($paymentHelper))) {
+                if (substr($paymentMethod, 0, 8) == 'pbridge_') {
+                    $paymentHelper = Mage::helper('signifyd_connect/payment_pbridge');
+                } else {
+                    $paymentHelper = Mage::helper('signifyd_connect/payment_other');
+                }
+            }
+
+            $paymentHelper->init($order, $payment);
+            $this->paymentHelper = $paymentHelper;
+        }
+
+        return $this->paymentHelper;
+    }
+}
