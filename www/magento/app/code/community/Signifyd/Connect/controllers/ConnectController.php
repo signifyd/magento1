@@ -8,9 +8,6 @@
  */
 class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Action
 {
-    public $inRequest = array();
-    public $topic = false;
-    public $case = false;
     public $logger;
 
     /**
@@ -19,12 +16,14 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
      */
     public function getRawPost()
     {
-        if (isset($HTTP_RAW_POST_DATA) && $HTTP_RAW_POST_DATA)
+        if (isset($HTTP_RAW_POST_DATA) && $HTTP_RAW_POST_DATA) {
             return $HTTP_RAW_POST_DATA;
+        }
 
         $post = file_get_contents("php://input");
-        if ($post)
+        if ($post) {
             return $post;
+        }
 
         return '';
     }
@@ -48,41 +47,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     }
 
     /**
-     * Returning response as unsupported
-     */
-    public function unsupported()
-    {
-        Mage::app()->getResponse()
-            ->setHeader('HTTP/1.1', '403 Forbidden')
-            ->sendResponse();
-        echo 'This request type is currently unsupported';
-        exit;
-    }
-
-    /**
-     * Returning response as completed
-     */
-    public function complete()
-    {
-        Mage::app()->getResponse()
-            ->setHeader('HTTP/1.1', '200 Ok')
-            ->sendResponse();
-
-        exit;
-    }
-
-    /**
-     * Returning response as conflict
-     */
-    public function conflict()
-    {
-        Mage::app()->getResponse()
-            ->setHeader('HTTP/1.1', '409 Conflict')
-            ->sendResponse();
-        exit;
-    }
-
-    /**
      * Checking if the received request is valid
      * @param $request
      * @param $hash
@@ -95,53 +59,15 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
         if ($check == $hash) {
             return true;
-        } else if ($this->getHeader('X-SIGNIFYD-TOPIC') == "cases/test"){
+        } elseif ($this->getHeader('X-SIGNIFYD-TOPIC') == "cases/test") {
             // In the case that this is a webhook test, the encoding ABCDE is allowed
             $check = base64_encode(hash_hmac('sha256', $request, 'ABCDE', true));
-            if ($check == $hash)
+            if ($check == $hash) {
                 return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Initializing the Signifyd Case
-     * @return bool|Mage_Core_Model_Abstract
-     */
-    public function initCase()
-    {
-        $case = false;
-        
-        if (isset($this->inRequest['orderId'])) {
-            $case = Mage::getModel('signifyd_connect/case')->load($this->inRequest['orderId']);
-            if($case->isObjectNew()) {
-                $this->logger->addLog('Case not yet in DB. Likely timing issue. order_increment: ' . $this->inRequest['orderId']);
-                $this->conflict();
             }
         }
 
-        return $case;
-    }
-
-    /**
-     * Initializing the class params
-     * @param $request
-     */
-    public function initRequest($request)
-    {
-        $this->inRequest = json_decode($request, true);
-
-        $topic = $this->getHeader('X-SIGNIFYD-TOPIC');
-
-        $this->topic = $topic;
-
-        // For the webhook test, all of the request data will be invalid
-        if ($topic == "cases/test") return;
-
-        $this->case = $this->initCase();
-        if (!$this->case)
-            $this->logger->addLog('No matching case was found for this request. order_increment: ' . $this->inRequest['orderId']);
+        return false;
     }
 
     /**
@@ -165,7 +91,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
         $this->logger->addLog('Valid Header Not Found: ' . $header);
         return '';
-
     }
 
     /**
@@ -174,57 +99,69 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     public function apiAction()
     {
         if (!Mage::helper('signifyd_connect')->isEnabled()) {
-            echo $this->getDisabledMessage();
+            $this->getResponse()->setBody($this->getDisabledMessage());
             return;
         }
 
         $this->logger = Mage::helper('signifyd_connect/log');
 
-        // Prevent recurring on save
-        if(is_null(Mage::registry('signifyd_action_' . $this->inRequest['orderId'])))
-            Mage::register('signifyd_action_' . $this->inRequest['orderId'], 1);
-
         $request = $this->getRawPost();
-
         $hash = $this->getHeader('X-SIGNIFYD-SEC-HMAC-SHA256');
+        $topic = $this->getHeader('X-SIGNIFYD-TOPIC');
+        $topic = $this->getHeader('X-SIGNIFYD-TOPIC');
 
         $this->logger->addLog('API request: ' . $request);
         $this->logger->addLog('API request hash: ' . $hash);
+        $this->logger->addLog('API request topic: ' . $topic);
 
         if ($request) {
             if ($this->validRequest($request, $hash)) {
-                $this->initRequest($request);
+                // Test is only verifying that the endpoint is reachable. So we just complete here
+                if ($topic == 'cases/test') {
+                    return;
+                }
 
-                $topic = $this->topic;
-                $this->logger->addLog('API request topic: ' . $topic);
+                $requestJson = json_decode($request, true);
+                if (empty($requestJson) || !isset($requestJson['orderId'])) {
+                    return;
+                }
+
+                /** @var Signifyd_Connect_Model_Case $case */
+                $case = Mage::getModel('signifyd_connect/case')->load($requestJson['orderId']);
+
+                if ($case->isObjectNew()) {
+                    $this->logger->addLog('Case not yet in DB. Likely timing issue. order_increment: ' . $requestJson['orderId']);
+                    $this->getResponse()->setHttpResponseCode(409);
+                    return;
+                }
+
+                // Prevent recurring on save
+                if (is_null(Mage::registry('signifyd_action_' . $requestJson['orderId']))) {
+                    Mage::register('signifyd_action_' . $requestJson['orderId'], 1);
+                }
 
                 switch ($topic) {
                     case "cases/creation":
-                        Mage::getModel('signifyd_connect/case')->processCreation($this->case, $this->inRequest);
+                        Mage::getModel('signifyd_connect/case')->processCreation($case, $requestJson);
                         break;
                     case "cases/rescore":
                     case "cases/review":
-                        Mage::getModel('signifyd_connect/case')->processReview($this->case, $this->inRequest);
+                        Mage::getModel('signifyd_connect/case')->processReview($case, $requestJson);
                         break;
                     case "guarantees/completion":
-                        Mage::getModel('signifyd_connect/case')->processGuarantee($this->case, $this->inRequest);
+                        Mage::getModel('signifyd_connect/case')->processGuarantee($case, $requestJson);
                         break;
-                    case "cases/test":
-                        // Test is only verifying that the endpoint is reachable. So we just complete here
-                        break;
-
                     default:
-                        $this->unsupported();
+                        $this->getResponse()->setHttpResponseCode(403);
+                        $this->getResponse()->setBody('This request type is currently unsupported');
                 }
             } else {
                 $this->logger->addLog('API request failed auth');
                 Mage::getModel('signifyd_connect/case')->processFallback($request);
             }
         } else {
-            echo $this->getDefaultMessage();
+            $this->getResponse()->setBody($this->getDefaultMessage());
         }
-
-        $this->complete();
     }
 
     /**
@@ -236,6 +173,3 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
     }
 
 }
-
-/* Filename: ConnectController.php */
-/* Location: ../app/code/Community/Signifyd/Connect/controllers/ConnectController.php */
