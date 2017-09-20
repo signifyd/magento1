@@ -8,7 +8,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     /*
      * Restricted Methods Check/Money Order, Cash on Delivery Payment, Bank Transfer Payment, Purchase Order
      */
-    protected $restrictedMethods = ['checkmo', 'cashondelivery', 'banktransfer','purchaseorder'];
+    protected $restrictedMethods = array('checkmo', 'cashondelivery', 'banktransfer','purchaseorder');
 
     public function _construct()
     {

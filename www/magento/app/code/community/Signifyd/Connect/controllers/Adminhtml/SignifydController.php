@@ -19,4 +19,13 @@ class Signifyd_Connect_Adminhtml_SignifydController extends Mage_Adminhtml_Contr
         );
     }
 
+    /**
+     * Acl checking
+     *
+     * @return bool
+     */
+    protected function _isAllowed()
+    {
+        return true;
+    }
 }
