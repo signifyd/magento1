@@ -108,7 +108,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
         $request = $this->getRawPost();
         $hash = $this->getHeader('X-SIGNIFYD-SEC-HMAC-SHA256');
         $topic = $this->getHeader('X-SIGNIFYD-TOPIC');
-        $topic = $this->getHeader('X-SIGNIFYD-TOPIC');
 
         $this->logger->addLog('API request: ' . $request);
         $this->logger->addLog('API request hash: ' . $hash);
