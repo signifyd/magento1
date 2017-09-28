@@ -179,8 +179,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase['paymentGateway'] = $payment->getMethod();
         $purchase['transactionId'] = $this->getTransactionId($payment);
 
-        $purchase['avsResponseCode'] = $this->getPaymentHelper($order, $payment)->getAvsResponseCode();
-        $purchase['cvvResponseCode'] = $this->getPaymentHelper($order, $payment)->getCvvResponseCode();
+        $paymentHelper = $this->getPaymentHelper($order, $payment);
+        $purchase['avsResponseCode'] = $paymentHelper->getAvsResponseCode();
+        $purchase['cvvResponseCode'] = $paymentHelper->getCvvResponseCode();
+        $purchase['avsResponseCode'] = $paymentHelper->filterAvsResponseCode($purchase['avsResponseCode']);
+        $purchase['cvvResponseCode'] = $paymentHelper->filterCvvResponseCode($purchase['cvvResponseCode']);
 
         return $purchase;
     }

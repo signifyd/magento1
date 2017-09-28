@@ -150,7 +150,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
         }
 
         $avsResponseCode = $this->performExactSearch($this->avsResponseCodeKeys, 'filterAvsResponseCode');
-        if (!empty($avsResponseCode)) {
+        if (empty($avsResponseCode)) {
             $avsResponseCode = $this->performExpressionSearch($this->avsResponseCodeExpressions, 'filterAvsResponseCode');
         }
 
@@ -168,7 +168,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
         }
 
         $cvvResponseCode = $this->performExactSearch($this->cvvResponseCodeKeys, 'filterCvvResponseCode');
-        if (!empty($cvvResponseCode)) {
+        if (empty($cvvResponseCode)) {
             $cvvResponseCode = $this->performExpressionSearch($this->cvvResponseCodeExpressions, 'filterCvvResponseCode');
         }
 
@@ -186,7 +186,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
         }
 
         $bin = $this->performExactSearch($this->binKeys, 'filterBin');
-        if (!empty($bin)) {
+        if (empty($bin)) {
             $bin = $this->performExpressionSearch($this->binExpressions, 'filterBin');
         }
 
@@ -204,7 +204,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
         }
 
         $last4 = $this->performExactSearch($this->last4Keys, 'filterLast4');
-        if (!empty($last4)) {
+        if (empty($last4)) {
             $last4 = $this->performExpressionSearch($this->last4Expressions, 'filterLast4');
         }
 
@@ -222,7 +222,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
         }
         
         $expiryMonth = $this->performExactSearch($this->expiryMonthKeys, 'filterExpiryMonth');
-        if (!empty($expiryMonth)) {
+        if (empty($expiryMonth)) {
             $expiryMonth = $this->performExpressionSearch($this->expiryMonthExpressions, 'filterExpiryMonth');
         }
 
@@ -240,7 +240,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
         }
 
         $expiryYear = $this->performExactSearch($this->expiryYearKeys, 'filterExpiryYear');
-        if (!empty($expiryYear)) {
+        if (empty($expiryYear)) {
             $expiryYear = $this->performExpressionSearch($this->expiryYearExpressions, 'filterExpiryYear');
         }
 

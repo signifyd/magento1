@@ -88,14 +88,6 @@
                     </signifyd_connect>
                 </observers>
             </sales_order_place_after>
-            <sales_quote_payment_import_data_before>
-                <observers>
-                    <signifyd_connect>
-                        <class>signifyd_connect/observer</class>
-                        <method>capturePaymentData</method>
-                    </signifyd_connect>
-                </observers>
-            </sales_quote_payment_import_data_before>
         </events>
     </global>
     <crontab>

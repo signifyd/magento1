@@ -56,6 +56,11 @@ class Signifyd_Connect_Helper_Payment_Default
         $card['expiryYear'] = $this->getExpiryYear();
         $card['hash'] = $this->getHash();
 
+        $card['bin'] = $this->filterBin($card['bin']);
+        $card['last4'] = $this->filterLast4($card['last4']);
+        $card['expiryMonth'] = $this->filterExpiryMonth($card['expiryMonth']);
+        $card['expiryYear'] = $this->filterExpiryYear($card['expiryYear']);
+
         return $card;
     }
 
@@ -170,6 +175,52 @@ class Signifyd_Connect_Helper_Payment_Default
     }
 
     /**
+     * @param $avsResponseCode
+     * @return null|string
+     */
+    public function filterAvsResponseCode($avsResponseCode)
+    {
+        if (empty($avsResponseCode)) {
+            return null;
+        }
+
+        // http://www.emsecommerce.net/avs_cvv2_response_codes.htm
+        $validAvsResponseCodes = array('X', 'Y', 'A', 'W', 'Z', 'N', 'U', 'R', 'E', 'S', 'D', 'M', 'B', 'P', 'C', 'I', 'G');
+        $avsResponseCode = trim(strtoupper($avsResponseCode));
+
+        for ($i = 0; $i < strlen($avsResponseCode); $i++) {
+            if (!in_array(substr($avsResponseCode, $i, 1), $validAvsResponseCodes)) {
+                return null;
+            }
+        }
+
+        return $avsResponseCode;
+    }
+
+    /**
+     * @param $cvvResponseCode
+     * @return null|string
+     */
+    public function filterCvvResponseCode($cvvResponseCode)
+    {
+        if (empty($cvvResponseCode)) {
+            return null;
+        }
+
+        // http://www.emsecommerce.net/cvv_cvv2_response_codes.htm
+        $validCvvResponseCodes = array('M', 'N', 'P', 'S', 'U');
+        $cvvResponseCode = trim(strtoupper($cvvResponseCode));
+
+        for ($i = 0; $i < strlen($cvvResponseCode); $i++) {
+            if (!in_array(substr($cvvResponseCode, $i, 1), $validCvvResponseCodes)) {
+                return null;
+            }
+        }
+
+        return $cvvResponseCode;
+    }
+
+    /**
      * @param $bin
      * @return int|null
      */
@@ -194,7 +245,7 @@ class Signifyd_Connect_Helper_Payment_Default
         $last4 = trim($last4);
 
         if (!empty($last4) && strlen($last4) == 4 && is_numeric($last4)) {
-            return $last4;
+            return strval($last4);
         }
 
         return null;
@@ -202,13 +253,13 @@ class Signifyd_Connect_Helper_Payment_Default
 
     /**
      * @param $expiryMonth
-     * @return null|string
+     * @return int|null
      */
     public function filterExpiryMonth($expiryMonth)
     {
         $expiryMonth = intval($expiryMonth);
         if ($expiryMonth >= 1 && $expiryMonth <= 12) {
-            return str_pad($expiryMonth, 2, '0', STR_PAD_LEFT);
+            return intval($expiryMonth);
         }
 
         return null;
@@ -226,43 +277,5 @@ class Signifyd_Connect_Helper_Payment_Default
         }
 
         return null;
-    }
-
-    public function filterAvsResponseCode($avsResponseCode)
-    {
-        if (empty($avsResponseCode)) {
-            return null;
-        }
-
-        // http://www.emsecommerce.net/avs_cvv2_response_codes.htm
-        $validAvsResponseCodes = array('X', 'Y', 'A', 'W', 'Z', 'N', 'U', 'R', 'E', 'S', 'D', 'M', 'B', 'P', 'C', 'I', 'G');
-        $avsResponseCode = trim(strtoupper($avsResponseCode));
-
-        for ($i = 0; $i < strlen($avsResponseCode); $i++) {
-            if (!in_array(substr($avsResponseCode, $i, 1), $validAvsResponseCodes)) {
-                return null;
-            }
-        }
-
-        return $avsResponseCode;
-    }
-
-    public function filterCvvResponseCode($cvvResponseCode)
-    {
-        if (empty($cvvResponseCode)) {
-            return null;
-        }
-
-        // http://www.emsecommerce.net/cvv_cvv2_response_codes.htm
-        $validCvvResponseCodes = array('M', 'N', 'P', 'S', 'U');
-        $cvvResponseCode = trim(strtoupper($cvvResponseCode));
-
-        for ($i = 0; $i < strlen($cvvResponseCode); $i++) {
-            if (!in_array(substr($cvvResponseCode, $i, 1), $validCvvResponseCodes)) {
-                return null;
-            }
-        }
-
-        return $cvvResponseCode;
     }
 }
