@@ -14,9 +14,6 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
     /* Property for instance of the data helper  */
     protected $dataHelper;
 
-    /* Property for configuration */
-    protected $logRequest;
-
     /**
      * Internal magento constructor
      */
@@ -24,7 +21,6 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
     {
         $this->logger = Mage::helper('signifyd_connect/log');
         $this->dataHelper = Mage::helper('signifyd_connect');
-        $this->logRequest = Mage::getStoreConfig('signifyd_connect/log/all');
         parent::_construct();
     }
 
@@ -127,9 +123,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
             $order->save();
 
-            if ($this->logRequest) {
-                $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
-            }
+            $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
 
             // Authorize the order
             $result = $this->authorizeOrder($order);
@@ -183,9 +177,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
 //                $this->holdOrder($order, 'Fail to Authorize Order');
 //            }
 
-            if ($this->logRequest) {
-                $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
-            }
+            $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
         } catch (Exception $e) {
             $this->logger->addLog("Order {$order->getIncrementId()} unable to be saved because {$e->getMessage()}");
             $this->logger->addLog("Order {$order->getIncrementId()} was not unheld.");
@@ -217,9 +209,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: order held because {$reason}");
             $order->save();
 
-            if ($this->logRequest) {
-                $this->logger->addLog("Order {$order->getIncrementId()} held because {$reason}");
-            }
+            $this->logger->addLog("Order {$order->getIncrementId()} held because {$reason}");
         } catch (Exception $e){
             $this->logger->addLog("Order {$order->getIncrementId()} unable to be saved because {$e->getMessage()}");
             $this->logger->addLog("Order {$order->getIncrementId()} was not held.");
@@ -256,9 +246,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: order canceled because $reason");
             $order->save();
 
-            if ($this->logRequest) {
-                $this->logger->addLog("Order {$order->getIncrementId()} cancelled because {$reason}");
-            }
+            $this->logger->addLog("Order {$order->getIncrementId()} cancelled because {$reason}");
         } catch (Exception $e){
             $this->logger->addLog("Order {$order->getIncrementId()} unable to be saved because {$e->getMessage()}");
             $this->logger->addLog("Order {$order->getIncrementId()} was not canceled.");

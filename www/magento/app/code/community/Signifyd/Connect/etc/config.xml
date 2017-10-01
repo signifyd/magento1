@@ -82,6 +82,39 @@
                     </signifyd_connect>
                 </observers>
             </sales_order_place_after>
+            <!-- Payment methods that need to delay order on hold status -->
+            <controller_action_predispatch_paypal_payflow_returnUrl>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>saveLastIncrementId</method>
+                    </signifyd_connect>
+                </observers>
+            </controller_action_predispatch_paypal_payflow_returnUrl>
+            <controller_action_postdispatch_paypal_payflow_returnUrl>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>putOrderOnHoldAsync</method>
+                    </signifyd_connect>
+                </observers>
+            </controller_action_postdispatch_paypal_payflow_returnUrl>
+            <controller_action_predispatch_paypal_payflowadvanced_returnUrl>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>saveLastIncrementId</method>
+                    </signifyd_connect>
+                </observers>
+            </controller_action_predispatch_paypal_payflowadvanced_returnUrl>
+            <controller_action_postdispatch_paypal_payflowadvanced_returnUrl>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>putOrderOnHoldAsync</method>
+                    </signifyd_connect>
+                </observers>
+            </controller_action_postdispatch_paypal_payflowadvanced_returnUrl>
         </events>
     </global>
     <crontab>
