@@ -333,6 +333,28 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $order->loadByIncrementId($incrementId);
 
             if (!$order->isEmpty()) {
+                $acceptedFromGuarantyAction = $this->getHelper()->getAcceptedFromGuaranty();
+                $declinedFromGuaranty = $this->getHelper()->getDeclinedFromGuaranty();
+
+                if ($acceptedFromGuarantyAction == 1 || $declinedFromGuaranty == 2) {
+                    /** @var Signifyd_Connect_Model_Case $case */
+                    $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
+
+                    if (!$case->isEmpty()) {
+                        // If the configuration is set to unhold order on approval
+                        // and the case it is already APPROVED do nothing
+                        if ($acceptedFromGuarantyAction == 1 && $case->getGuarantee() == 'APPROVED') {
+                            return $this;
+                        }
+
+                        // If the configuration is set to unhold order when declined
+                        // and the case it is already DECLINED do nothing
+                        if ($declinedFromGuaranty == 2 && $case->getGuarantee() == 'DECLINED') {
+                            return $this;
+                        }
+                    }
+                }
+
                 $this->getHelper()->putOrderOnHold($order);
             }
         }

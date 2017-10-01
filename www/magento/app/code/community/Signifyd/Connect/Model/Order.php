@@ -162,6 +162,9 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         }
 
         if(!$order->canUnhold()){
+            $this->logger->addLog("Order state: " . $order->getState() . "; status: " . $order->getStatus());
+            $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
+            $this->logger->addLog("Case status: " . $case->getSignifydStatus());
             $this->logger->addLog("Order {$order->getIncrementId()} can not be unheld");
             return false;
         }
