@@ -23,6 +23,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         ),
         Mage_Sales_Model_Order::STATE_PENDING_PAYMENT => array(
             'payflow_link', 'payflow_advanced'
+        ),
+        Mage_Sales_Model_Order::STATE_CANCELED => array(
+            'all'
         )
     );
 
@@ -34,6 +37,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function isRestricted($method, $state = null)
     {
         if (in_array($method, $this->restrictedStatesMethods['all'])) {
+            return true;
+        }
+
+        if (in_array('all', $this->restrictedStatesMethods[$state])) {
             return true;
         }
 
