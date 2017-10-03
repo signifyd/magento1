@@ -772,17 +772,17 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     {
         if (!is_object($this->paymentHelper) ||
             !in_array('Signifyd_Connect_Helper_Payment_Interface', class_implements($this->paymentHelper))) {
-            $paymentMethod = $payment->getMethod();
-            $helperName = "signifyd_connect/payment_{$paymentMethod}";
+            $paymentMethodCode = $payment->getMethod();
+            $helperName = "signifyd_connect/payment_{$paymentMethodCode}";
             $helperClass = Mage::getConfig()->getHelperClassName($helperName);
 
             if (class_exists($helperClass)) {
-                $paymentHelper = Mage::helper("signifyd_connect/payment_{$paymentMethod}");
+                $paymentHelper = Mage::helper("signifyd_connect/payment_{$paymentMethodCode}");
             }
 
             if (!is_object($paymentHelper) ||
                 !in_array('Signifyd_Connect_Helper_Payment_Interface', class_implements($paymentHelper))) {
-                if (substr($paymentMethod, 0, 8) == 'pbridge_') {
+                if (substr($paymentMethodCode, 0, 8) == 'pbridge_') {
                     $paymentHelper = Mage::helper('signifyd_connect/payment_pbridge');
                 } else {
                     $paymentHelper = Mage::helper('signifyd_connect/payment_other');
