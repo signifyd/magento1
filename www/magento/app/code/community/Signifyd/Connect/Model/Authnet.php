@@ -4,8 +4,6 @@ class Signifyd_Connect_Model_Authnet extends Mage_Paygate_Model_Authorizenet
 {
     protected function _registerCard(varien_object $response, mage_sales_model_order_payment $payment)
     {
-        Mage::log(">: ".$response->getTransactionId(), null, 'signifyd_connect.log');
-
         $ccBin = substr($payment->getCcNumber(), 0, 6);
         $card = parent::_registerCard($response,$payment);
         $card->setCcBin($ccBin);
