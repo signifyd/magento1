@@ -443,12 +443,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $lastPayment = $payments->getLastItem()->isEmpty() ? null : $payments->getLastItem();
 
             $state = $order->getState();
-
             if (!$state || $state == Mage_Sales_Model_Order::STATE_PENDING_PAYMENT) {
                 return "notready"; // Note: would not be in the order grid if this were the case
             }
 
-            if(is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
+            if (is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
                 Mage::register('signifyd_action_' . $order->getIncrementId(), 1); // Work will now take place
             }
 
