@@ -39,6 +39,14 @@ class Signifyd_Connect_Helper_Payment_Default
             $this->additionalInformation['signifyd_data'] :
             array();
 
+        $registrySignifydData = Mage::registry('signifyd_data');
+        if (!empty($registrySignifydData) && is_array($registrySignifydData)) {
+            $this->signifydData = array_merge($this->signifydData, $registrySignifydData);
+            Mage::unregister('signifyd_data');
+        }
+
+        Mage::helper('signifyd_connect/log')->addLog('Signifyd data: ' . serialize($this->signifydData));
+
         return $this;
     }
 

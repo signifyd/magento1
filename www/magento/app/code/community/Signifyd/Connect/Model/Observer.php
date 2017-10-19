@@ -345,7 +345,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                         // and the case it is already APPROVED do nothing
                         if ($acceptedFromGuarantyAction == 1 && $case->getGuarantee() == 'APPROVED') {
                             return $this;
-        }
+                        }
 
                         // If the configuration is set to unhold order when declined
                         // and the case it is already DECLINED do nothing

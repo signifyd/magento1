@@ -1,6 +1,6 @@
 <?php
 
-class Signifyd_Connect_Model_Payflowlink extends Mage_Paypal_Model_Payflowlink
+class Signifyd_Connect_Model_Payflowadvanced extends Mage_Paypal_Model_Payflowadvanced
 {
     protected function _postRequest(Varien_Object $request)
     {
