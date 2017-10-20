@@ -23,7 +23,7 @@ class Signifyd_Connect_Helper_Payment_Default
      * Data collected directly by Signifyd extension (e.g.: credit card data form submited to the server)
      * @var
      */
-    protected $signifydData;
+    protected $signifydData = array();
 
     /**
      * @param Mage_Sales_Model_Order $order
@@ -35,17 +35,12 @@ class Signifyd_Connect_Helper_Payment_Default
         $this->order = $order;
         $this->payment = $payment;
         $this->additionalInformation = $payment->getAdditionalInformation();
-        $this->signifydData = isset($this->additionalInformation['signifyd_data']) ?
-            $this->additionalInformation['signifyd_data'] :
-            array();
 
         $registrySignifydData = Mage::registry('signifyd_data');
         if (!empty($registrySignifydData) && is_array($registrySignifydData)) {
-            $this->signifydData = array_merge($this->signifydData, $registrySignifydData);
+            $this->signifydData = $registrySignifydData;
             Mage::unregister('signifyd_data');
         }
-
-        Mage::helper('signifyd_connect/log')->addLog('Signifyd data: ' . serialize($this->signifydData));
 
         return $this;
     }

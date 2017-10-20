@@ -10,11 +10,7 @@ class Signifyd_Connect_Model_Payflowpro extends Mage_Paypal_Model_Payflowpro
         // Using try .. catch to avoid errors on order processing iof anything goes wrong
         try {
             $paymentData = $result->getData();
-
-            $signifydData = $this->getInfoInstance()->getAdditionalInformation('signifyd_data');
-            if (!is_array($signifydData)) {
-                $signifydData = array();
-            }
+            $signifydData = array();
 
             if (isset($paymentData['procavs'])) {
                 $signifydData['cc_avs_status'] = $paymentData['procavs'];
@@ -31,7 +27,7 @@ class Signifyd_Connect_Model_Payflowpro extends Mage_Paypal_Model_Payflowpro
             }
 
             if (!empty($signifydData)) {
-                $this->getInfoInstance()->setAdditionalInformation('signifyd_data', $signifydData);
+                Mage::register('signifyd_data', $signifydData);
             }
         }
         catch (Exception $e) {
