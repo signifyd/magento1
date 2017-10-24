@@ -124,63 +124,82 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
 
     }
 
-    public function processAdditional($case, $original_status = false, $custom_order = null)
+    /**
+     * @param $case
+     * @param bool $original_status
+     * @param null|Mage_Sales_Model_Order $order
+     * @return bool
+     */
+    public function processAdditional($case, $original_status = false, Mage_Sales_Model_Order $order = null)
     {
         $this->logger->addLog('Process additional case: ' . $case['order_increment']);
-        if ($custom_order)
-            $order = $custom_order;
-        else
+        if ($order == null) {
             $order = $this->order;
+            $newGuarantee = isset($this->_request['guaranteeDisposition']) ? $this->_request['guaranteeDisposition'] : null;
+        }
+        else {
+            $newGuarantee = $case['guarantee'];
+        }
 
-        if ($order && $order->getId()) {
+        // If a guarantee has been set, we no longer care about other actions
+        if (!$order->isEmpty() && isset($newGuarantee) && $newGuarantee != $this->_previousGuarantee) {
             $positiveAction = $this->helper->getAcceptedFromGuaranty($order->getStoreId());
             $negativeAction = $this->helper->getDeclinedFromGuaranty($order->getStoreId());
-            $newGuarantee = null;
-            try{
-                if ($custom_order)
-                    $newGuarantee = $case['guarantee'];
-                else
-                    $newGuarantee = isset($this->_request['guaranteeDisposition']) ? $this->_request['guaranteeDisposition'] : null;
-            } catch(Exception $e){
-                $this->logger->addLog('ERROR ON WEBHOOK: ' . $e->__toString());
-            }
 
-            // If a guarantee has been set, we no longer care about other actions
-            if (isset($newGuarantee) && $newGuarantee != $this->_previousGuarantee) {
-                // Loading the signifyd order model
-                $orderModel = Mage::getModel('signifyd_connect/order');
-                if ($newGuarantee == 'DECLINED' ) {
-                    if ($negativeAction == 1) {
-                        // this is for when config is set to keep order on hold
-                        $orderModel->keepOrderOnHold($order, "guarantee declined");
-                        $orderModel->finalStatus($order, 1, $case);
-                    } else if ($negativeAction == 2) {
-                        // this is for when config is set to cancel close order
-                        // $orderModel->cancelCloseOrder($order, "guarantee declined");
-                        $orderModel->finalStatus($order, 2, $case);
-                    } else {
-                        // this is when the config is not set or it is set to something unknown
-                        $this->logger->addLog("Unknown action $negativeAction");
-                    }
-                } else if ($newGuarantee == 'APPROVED') {
-                    if ($positiveAction == 1) {
-                        // this is for when config is set to unhold order
-                        $orderModel->unholdOrder($order, "guarantee approved");
-                        $orderModel->finalStatus($order, 2, $case);
-                    } elseif($positiveAction == 2){
-                        // this is for when config is set to unhold, invoice and capture
-                        // $orderModel->unholdOrderAndCapture($order, "guarantee approved");
-                        $orderModel->finalStatus($order, 2, $case);
-                    } else {
-                        // this is when the config is not set or it is set to something unknown
-                        $this->logger->addLog("Unknown action $positiveAction");
-                    }
+            /** @var Signifyd_Connect_Model_Order $orderModel */
+            $orderModel = Mage::getModel('signifyd_connect/order');
+            if ($newGuarantee == 'APPROVED') {
+                switch ($positiveAction) {
+                    // Update status to processing
+                    case 1:
+                        // this is for when config is set to 'Update status to processing'
+                        if ($orderModel->unholdOrder($order, "guarantee approved")) {
+                            $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
+                        }
+                        break;
+
+                    // Leave on hold
+                    case 2:
+                        if ($orderModel->holdOrder($order, "guarantee approved")) {
+                            $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
+                        }
+                        break;
+
+                    // Do nothing
+                    case 3:
+                        break;
+
+                    default:
+                        $this->logger->addLog("Unknown positive action $negativeAction");
                 }
-                // add else for unknown guarantee
+            } elseif ($newGuarantee == 'DECLINED' ) {
+                switch ($negativeAction) {
+                    // Leave on hold
+                    case 1:
+                        if ($orderModel->holdOrder($order, "guarantee declined")) {
+                            $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
+                        }
+                        break;
+
+                    // Update status to canceled
+                    case 2:
+                        // this is for when config is set to cancel close order
+                        if ($orderModel->cancelOrder($order, "guarantee declined")) {
+                            $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
+                        }
+                        break;
+
+                    // Do nothing
+                    case 3:
+                        break;
+
+                    default:
+                        $this->logger->addLog("Unknown negative action $negativeAction");
+                }
             }
         }
 
-        return true;
+        return $this;
     }
 
     public function caseLookup($case)
@@ -319,6 +338,3 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         return;
     }
 }
-
-/* Filename: Case.php */
-/* Location: ../app/code/Community/Signifyd/Connect/Model/Case.php */

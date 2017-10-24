@@ -593,35 +593,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
 
-    /**
-     * @param Mage_Sales_Model_Order $order
-     * @return $this
-     */
-    public function putOrderOnHold(Mage_Sales_Model_Order $order)
-    {
-        if (!$this->isEnabled()) {
-            return $this;
-        }
-
-        if ($order->isEmpty()) {
-            return $this;
-        }
-
-        if ($this->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
-            return $this;
-        }
-
-        try {
-            $order->hold();
-            $order->addStatusHistoryComment("Signifyd: order held after order place");
-            $order->save();
-        } catch (Exception $e) {
-            $this->log("PutOrderOnHold Error (Increment ID: " . $order->getIncrementId() . ": $e");
-        }
-
-        return $this;
-    }
-
     public function getProductUrl($product)
     {
         $url = null;
@@ -816,11 +787,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $paymentAuthorized = $paymentMethod->getBaseAmountAuthorized();
         $baseTotalPaid = $order->getBaseTotalPaid();
         $baseTotalRefunded = $order->getBaseTotalRefunded();
-        // Maybe used in the future
-//        $canVoid = $paymentMethod->canVoid($order);
-//        $amountPayed = $paymentMethod->getAmountPaid();
-//        $baseTotalCanceled = $order->getBaseTotalCanceled();
-//        $baseTotalInvoiced = $order->getBaseTotalInvoiced();
 
         // Check authorization
         if(!empty($paymentAuthorized)){
@@ -913,6 +879,3 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return false;
     }
 }
-
-/* Filename: Data.php */
-/* Location: ../app/code/Community/Signifyd/Connect/Helper/Data.php */

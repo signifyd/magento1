@@ -10,6 +10,11 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     protected $helper;
 
     /**
+     * @var Signifyd_Connect_Model_Order|null
+     */
+    protected $orderModel;
+
+    /**
      * @return Mage_Core_Helper_Abstract|Signifyd_Connect_Helper_Data
      */
     public function getHelper()
@@ -19,6 +24,18 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         }
 
         return $this->helper;
+    }
+
+    /**
+     * @return false|Mage_Core_Model_Abstract|null|Signifyd_Connect_Model_Order
+     */
+    public function getOrderModel()
+    {
+        if (!$this->orderModel instanceof Signifyd_Connect_Model_Order) {
+            $this->orderModel = Mage::getModel('signifyd_connect/order');
+        }
+
+        return $this->orderModel;
     }
 
     public function openCase($observer)
@@ -291,7 +308,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
      */
     public function putOrderOnHold(Varien_Event_Observer $observer)
     {
-        $this->getHelper()->putOrderOnHold($observer->getEvent()->getOrder());
+        $this->getOrderModel()->holdOrder($observer->getEvent()->getOrder(), 'after order place');
 
         return $this;
     }
@@ -341,21 +358,21 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                     $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
 
                     if (!$case->isEmpty()) {
-                        // If the configuration is set to unhold order on approval
-                        // and the case it is already APPROVED do nothing
+                        // If the configuration is set to 'Update status to processing' on approval
+                        // and the case it is already APPROVED, doesn't need to hold
                         if ($acceptedFromGuarantyAction == 1 && $case->getGuarantee() == 'APPROVED') {
                             return $this;
                         }
 
-                        // If the configuration is set to unhold order when declined
-                        // and the case it is already DECLINED do nothing
+                        // If the configuration is set to 'Update status to canceled' when declined
+                        // and the case it is already DECLINED, doesn't need to hold
                         if ($declinedFromGuaranty == 2 && $case->getGuarantee() == 'DECLINED') {
                             return $this;
                         }
                     }
                 }
 
-                $this->getHelper()->putOrderOnHold($order);
+                $this->getOrderModel()->holdOrder($observer->getEvent()->getOrder(), 'after order place');
             }
         }
 
