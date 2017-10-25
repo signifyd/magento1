@@ -6,10 +6,11 @@ class Signifyd_Connect_Model_System_Config_Source_Options_Declined
     public function toOptionArray()
     {
         $options = array(
-            array(
-                'value' => 2,
-                'label' => 'Update status to canceled'
-            ),
+            // Disabled, Chris Morris request. We'll drop this by now and resume on future
+//            array(
+//                'value' => 2,
+//                'label' => 'Update status to canceled'
+//            ),
             array(
                 'value' => 3,
                 'label' => 'Do nothing'

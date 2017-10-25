@@ -183,11 +183,12 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
                         break;
 
                     // Update status to canceled
+                    // Disabled, Chris Morris request. We'll drop this by now and resume on future
                     case 2:
                         // this is for when config is set to cancel close order
-                        if ($orderModel->cancelOrder($order, "guarantee declined")) {
-                            $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
-                        }
+//                        if ($orderModel->cancelOrder($order, "guarantee declined")) {
+//                            $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
+//                        }
                         break;
 
                     // Do nothing
