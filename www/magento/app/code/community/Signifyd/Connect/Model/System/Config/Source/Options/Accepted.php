@@ -5,11 +5,7 @@ class Signifyd_Connect_Model_System_Config_Source_Options_Accepted
 {
     public function toOptionArray()
     {
-        return array(
-            array(
-                'value' => 2,
-                'label' => 'Leave on hold'
-            ),
+        $options = array(
             array(
                 'value' => 1,
                 'label' => 'Update status to processing'
@@ -19,5 +15,14 @@ class Signifyd_Connect_Model_System_Config_Source_Options_Accepted
                 'label' => 'Do nothing'
             )
         );
+
+        if (Mage::getStoreConfig('signifyd_connect/advanced/accepted_from_guaranty') == 2) {
+            $options[] = array(
+                'value' => 2,
+                'label' => 'Leave on hold'
+            );
+        }
+
+        return $options;
     }
 }

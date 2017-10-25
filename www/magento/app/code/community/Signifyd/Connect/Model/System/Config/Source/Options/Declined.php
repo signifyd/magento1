@@ -5,11 +5,7 @@ class Signifyd_Connect_Model_System_Config_Source_Options_Declined
 {
     public function toOptionArray()
     {
-        return array(
-            array(
-                'value' => 1,
-                'label' => 'Leave on hold'
-            ),
+        $options = array(
             array(
                 'value' => 2,
                 'label' => 'Update status to canceled'
@@ -19,5 +15,14 @@ class Signifyd_Connect_Model_System_Config_Source_Options_Declined
                 'label' => 'Do nothing'
             )
         );
+
+        if (Mage::getStoreConfig('signifyd_connect/advanced/declined_from_guaranty') == 1) {
+            $options[] = array(
+                'value' => 1,
+                'label' => 'Leave on hold'
+            );
+        }
+
+        return $options;
     }
 }
