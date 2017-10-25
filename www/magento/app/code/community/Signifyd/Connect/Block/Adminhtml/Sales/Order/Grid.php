@@ -44,6 +44,7 @@ class Signifyd_Connect_Block_Adminhtml_Sales_Order_Grid extends Mage_Adminhtml_B
                 array(
                     'score' => 'score',
                     'guarantee' => 'guarantee',
+                    'entries' => 'entries'
                 )
             );
         }

@@ -31,7 +31,7 @@ class Signifyd_Connect_Model_Cron
         // Getting all the cases that were not submitted to Signifyd
         $cases_for_resubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS);
         foreach ($cases_for_resubmit as $current_case) {
-            $this->logger->addLog("Signifyd: preparing for send case no: {$current_case['order_increment']}");
+            $this->logger->addLog("Preparing for send case no: {$current_case['order_increment']}");
             $current_order_id = $current_case['order_increment'];
             $current_order = Mage::getModel('sales/order')->loadByIncrementId($current_order_id);
             Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($current_order,true);
@@ -40,14 +40,14 @@ class Signifyd_Connect_Model_Cron
         // Getting all the cases that are awaiting review from Signifyd
         $cases_for_resubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
         foreach ($cases_for_resubmit as $current_case) {
-            $this->logger->addLog("Signifyd: preparing for review case no: {$current_case['order_increment']}");
+            $this->logger->addLog("Preparing for review case no: {$current_case['order_increment']}");
             $this->processInReviewCase($current_case);
         }
 
         // Getting all the cases that need processing after the response was received
         $cases_for_resubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::PROCESSING_RESPONSE_STATUS);
         foreach ($cases_for_resubmit as $current_case) {
-            $this->logger->addLog("Signifyd: preparing for response processing of case no: {$current_case['order_increment']}");
+            $this->logger->addLog("Preparing for response processing of case no: {$current_case['order_increment']}");
             $current_order_id = $current_case['order_increment'];
             $current_order = Mage::getModel('sales/order')->loadByIncrementId($current_order_id);
             Mage::getModel('signifyd_connect/case')->processAdditional($current_case, false, $current_order);
@@ -107,6 +107,3 @@ class Signifyd_Connect_Model_Cron
     }
 
 }
-
-/* Filename: Cron.php */
-/* Location: ../app/code/Community/Signifyd/Connect/Model/Cron.php */

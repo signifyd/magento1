@@ -16,7 +16,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
     /**
      * @var Signifyd_Connect_Helper_Data
      */
-    protected $dataHelper;
+    protected $helper;
 
     /**
      * Internal magento constructor
@@ -24,7 +24,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
     public function _construct()
     {
         $this->logger = Mage::helper('signifyd_connect/log');
-        $this->dataHelper = Mage::helper('signifyd_connect');
+        $this->helper = Mage::helper('signifyd_connect');
         parent::_construct();
     }
 
@@ -36,12 +36,12 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
      */
     public function checkSettings(Mage_Sales_Model_Order $order)
     {
-        if (!$this->dataHelper->isEnabled()) {
+        if (!$this->helper->isEnabled()) {
             return false;
         }
 
-        $acceptedFromGuarantyAction = $this->dataHelper->getAcceptedFromGuaranty();
-        $declinedFromGuaranty = $this->dataHelper->getDeclinedFromGuaranty();
+        $acceptedFromGuarantyAction = $this->helper->getAcceptedFromGuaranty();
+        $declinedFromGuaranty = $this->helper->getDeclinedFromGuaranty();
 
         // If both workflow configurations are set to 'Do nothing', do not hold the order
         if ($acceptedFromGuarantyAction == 3 && $declinedFromGuaranty == 3) {
@@ -53,8 +53,8 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             return false;
         }
 
-        if ($this->dataHelper->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
-            $this->logger->addLog("Order {$order->getIncrementId()} payment method is restricted");
+        if ($this->helper->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
+            $this->logger->addLog("Order {$order->getIncrementId()} payment method or order state is restricted");
             return false;
         }
 
@@ -81,16 +81,15 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         }
 
         if (!$order->canUnhold()) {
-            $this->logger->addLog("Order state: " . $order->getState() . "; status: " . $order->getStatus());
             $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
-            $this->logger->addLog("Case status: " . $case->getSignifydStatus());
-            $this->logger->addLog("Order {$incrementId} can not be unheld");
+            $this->logger->addLog("Order {$incrementId} ({$order->getState()} > {$order->getStatus()}) can not be unheld. " .
+                "Case status: {$case->getSignifydStatus()}");
             return false;
         }
 
         try {
             $order->unhold();
-            $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
+            $order->addStatusHistoryComment("Signifyd: order unheld, $reason");
             $order->save();
 
             $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
@@ -129,10 +128,10 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
 
         try {
             $order->hold();
-            $order->addStatusHistoryComment("Signifyd: order held {$reason}");
+            $order->addStatusHistoryComment("Signifyd: {$reason}");
             $order->save();
 
-            $this->logger->addLog("Order {$incrementId} held {$reason}");
+            $this->logger->addLog("Order {$incrementId} held: {$reason}");
         } catch (Exception $e) {
             $this->logger->addLog("Order {$incrementId} unable to be saved because " . $e->getMessage());
             $this->logger->addLog("Order {$incrementId} was not held.");
@@ -150,7 +149,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
      */
     public function cancelOrder(Mage_Sales_Model_Order $order, $reason)
     {
-        if (!$this->checkSettings($order)) {
+        if (!$this->checkSettings($order) && !$order->isCanceled()) {
             return false;
         }
 
@@ -161,12 +160,13 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             return true;
         }
 
-        $status = $this->dataHelper->getOrderPaymentStatus($order);
+        $status = $this->helper->getOrderPaymentStatus($order);
         if ($status['authorize'] === true && $status['capture'] === true) {
             $this->holdOrder($order, $reason);
-            $this->logger->addLog("Order {$incrementId} can not be canceled because it has a sum already captured");
-            $order->addStatusHistoryComment('Signifyd: order can not be canceled because it has a sum already captured. ' .
-                'Please do a manual refund.');
+            $this->logger->addLog("Order {$incrementId} cannot be canceled because it has a sum already captured");
+            $order->addStatusHistoryComment('Signifyd: order cannot be canceled because it has a sum already captured. ' .
+                'Please do a manual refund/cancelation.');
+            $order->save();
             return false;
         }
 
@@ -175,7 +175,10 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         }
 
         if (!$order->canCancel()) {
-            $this->logger->addLog("Order {$incrementId} can not be canceled");
+            $this->holdOrder($order, $reason);
+            $this->logger->addLog("Order {$incrementId} cannot be canceled");
+            $order->addStatusHistoryComment("Signifyd: order cannot be canceled. Tried to cancel order because {$reason}.");
+            $order->save();
             return false;
         }
 

@@ -214,11 +214,18 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         }
 
         if ($this->oldSupport()) {
-            $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=e.increment_id', array('score'=>'score'));
+            $select->joinLeft(array(
+                'signifyd'=>$collection->getTable('signifyd_connect/case')),
+                'signifyd.order_increment=e.increment_id',
+                array('score' => 'score')
+            );
             $this->joins++;
         } else {
-            $select->joinLeft(array('signifyd'=>$collection->getTable('signifyd_connect/case')), 'signifyd.order_increment=main_table.increment_id', array('score'=>'score',
-                'guarantee' => 'guarantee'));
+            $select->joinLeft(array(
+                'signifyd'=>$collection->getTable('signifyd_connect/case')),
+                'signifyd.order_increment=main_table.increment_id',
+                array('score' => 'score', 'guarantee' => 'guarantee', 'entries' => 'entries')
+            );
             $this->joins++;
         }
     }

@@ -613,7 +613,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if ($case->getCode()) {
             return "https://www.signifyd.com/cases/" . $case->getCode();
         }
-        $this->log('Case URL not found: '.$order_id);
+
         return '';
     }
     

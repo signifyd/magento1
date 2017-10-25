@@ -59,9 +59,9 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         try {
             $caseLoaded->setMagentoStatus($status);
             $caseLoaded->save();
-            $this->logger->addLog("Signifyd: Case no:{$caseLoaded->getId()} status set to {$status}");
+            $this->logger->addLog("Case no:{$caseLoaded->getId()} status set to {$status}");
         } catch (Exception $e){
-            $this->logger->addLog("Signifyd: Error setting case no:{$caseLoaded->getId()} status to {$status}");
+            $this->logger->addLog("Error setting case no:{$caseLoaded->getId()} status to {$status}");
             return false;
         }
 
@@ -167,12 +167,13 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
 
                     // Do nothing
                     case 3:
+                        $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
                         break;
 
                     default:
                         $this->logger->addLog("Unknown positive action $negativeAction");
                 }
-            } elseif ($newGuarantee == 'DECLINED' ) {
+            } elseif ($newGuarantee == 'DECLINED') {
                 switch ($negativeAction) {
                     // Leave on hold
                     case 1:
@@ -191,6 +192,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
 
                     // Do nothing
                     case 3:
+                        $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
                         break;
 
                     default:
@@ -284,6 +286,11 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $case = $this->updateGuarantee($case);
 
         $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
+
+        if (isset($request['testInvestigation'])) {
+            $case->setEntries(serialize(array('testInvestigation' => $request['testInvestigation'])));
+        }
+
         try {
             $case->save();
             $this->processAdditional($case);
