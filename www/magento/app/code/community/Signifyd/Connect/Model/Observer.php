@@ -33,7 +33,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             /** @var Mage_Sales_Model_Order $order */
             if ($event->hasOrder()) {
                 $order = $event->getOrder();
-            } elseif ($event->hasObject()) {
+            } else if ($event->hasObject()) {
                 $order = $event->getObject();
             }
 
@@ -42,7 +42,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 return $this;
             }
 
-            if (Mage::registry('signifyd_action_' . $order->getIncrementId()) == 1) {
+            if(Mage::registry('signifyd_action_' . $order->getIncrementId()) == 1) {
                 return $this;
             }
 
@@ -293,8 +293,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     {
         $this->getHelper()->putOrderOnHold($observer->getEvent()->getOrder());
 
-        return $this;
-    }
+            return $this;
+        }
 
     /**
      * For some payment methods it is not possible to put the order on hold at order create moment
@@ -312,8 +312,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             Mage::register('signifyd_last_increment_id', $incrementId);
         }
 
-        return $this;
-    }
+            return $this;
+        }
 
     /**
      * Put the order on hold asynchronously. Used for payment geteways that can't have the order on hold
