@@ -8,7 +8,9 @@
  */
 class Signifyd_Connect_Model_Cron
 {
+    /** @var Signifyd_Connect_Helper_Log */
     protected $logger;
+    /** @var Signifyd_Connect_Helper_Data */
     protected $helper;
 
     /**
@@ -97,7 +99,7 @@ class Signifyd_Connect_Model_Cron
                 return true;
             }
         } catch (Exception $e) {
-            Mage::log($e->__toString(), null, 'signifyd_connect.log');
+            $this->logger->addLog($e->__toString());
             return false;
         }
 

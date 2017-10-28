@@ -13,25 +13,49 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     const CASE_CREATED_STATUS       = 2;
     const TRANSACTION_SENT_STATUS   = 3;
 
-    public function logRequest($message)
+    /**
+     * Restricted status on specific states only
+     * @var array
+     */
+    protected $restrictedStatesMethods = array(
+        'all' => array(
+            'checkmo', 'cashondelivery', 'banktransfer','purchaseorder'
+        ),
+        Mage_Sales_Model_Order::STATE_PENDING_PAYMENT => array(
+            'payflow_link', 'payflow_advanced'
+        ),
+        Mage_Sales_Model_Order::STATE_CANCELED => array(
+            'all'
+        )
+    );
+
+    /**
+     * @param $method
+     * @param null $state
+     * @return bool
+     */
+    public function isRestricted($method, $state = null)
     {
-        if (Mage::getStoreConfig('signifyd_connect/log/all')) {
-            Mage::log($message, null, 'signifyd_connect.log');
+        if (in_array($method, $this->restrictedStatesMethods['all'])) {
+            return true;
         }
+
+        if (in_array('all', $this->restrictedStatesMethods[$state])) {
+            return true;
+        }
+
+        if (!empty($state) && isset($this->restrictedStatesMethods[$state]) &&
+            is_array($this->restrictedStatesMethods[$state]) &&
+            in_array($method, $this->restrictedStatesMethods[$state])) {
+            return true;
+        }
+
+        return false;
     }
 
-    public function logResponse($message)
+    public function log($message)
     {
-        if (Mage::getStoreConfig('signifyd_connect/log/all')) {
-            Mage::log($message, null, 'signifyd_connect.log');
-        }
-    }
-
-    public function logError($message)
-    {
-        if (Mage::getStoreConfig('signifyd_connect/log/all')) {
-            Mage::log($message, null, 'signifyd_connect.log');
-        }
+        Mage::helper('signifyd_connect/log')->addLog($message);
     }
 
     public function getProducts($quote)
@@ -454,10 +478,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if ($order && $order->getId() && Mage::getStoreConfig('signifyd_connect/advanced/enable_payment_updates')) {
             $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
             $caseId = $case->getCode();
-            
-            if (Mage::getStoreConfig('signifyd_connect/log/all')) {
-                Mage::log("Created new case: $caseId", null, 'signifyd_connect.log');
-            }
+
+            $this->log("Created new case: $caseId");
 
             $updateData = array();
             $payment = $order->getPayment();
@@ -493,13 +515,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                     $case->setTransactionId($updateData['purchase']['transactionId']);
                     $case->save();
-                    if (Mage::getStoreConfig('signifyd_connect/log/all')) {
-                        Mage::log("Wrote case to database: $caseId", null, 'signifyd_connect.log');
-                    }
+                    $this->log("Wrote case to database: $caseId");
                     return "sent";
                 }
             } catch (Exception $e) {
-                Mage::log($e->__toString(), null, 'signifyd_connect.log');
+                $this->log($e->__toString());
                 return "error";
             }
         }
@@ -512,26 +532,28 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function buildAndSendOrderToSignifyd($order, $forceSend = false)
     {
-        if ($order && $order->getId()) {
+        if ($order instanceof Mage_Sales_Model_Order && !$order->isEmpty()) {
+            if ($this->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
+                return 'restricted';
+            }
+
             $processStatus = $this->processedStatus($order);
             if ($processStatus > 0 && !$forceSend) {
                 if($processStatus == self::TRANSACTION_SENT_STATUS) return "exists";
                 else return $this->sendOrderUpdateToSignifyd($order);
             }
 
+            /** @var Mage_Sales_Model_Resource_Order_Payment_Collection $payments */
             $payments = $order->getPaymentsCollection();
-            $last_payment = null;
-            foreach ($payments as $payment) {
-                $last_payment = $payment;
-            }
+            /** @var Mage_Sales_Model_Order_Payment $lastPayment */
+            $lastPayment = $payments->getLastItem()->isEmpty() ? null : $payments->getLastItem();
 
             $state = $order->getState();
-
             if (!$state || $state == Mage_Sales_Model_Order::STATE_PENDING_PAYMENT) {
                 return "notready"; // Note: would not be in the order grid if this were the case
             }
 
-            if(is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
+            if (is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
                 Mage::register('signifyd_action_' . $order->getIncrementId(), 1); // Work will now take place
             }
 
@@ -540,25 +562,23 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $customer = $order->getCustomer();
             }
 
-            $case = $this->generateCase($order, $last_payment, $customer);
-
-            $case_object = $this->markProcessed($order);
-
+            $case = $this->generateCase($order, $lastPayment, $customer);
+            $caseObject = $this->markProcessed($order);
             $response = $this->submitCase($case, $this->getUrl(), $this->getAuth());
 
             try {
-                $response_code = $response->getHttpCode();
+                $responseCode = $response->getHttpCode();
 
-                if (substr($response_code, 0, 1) == '2') {
-                    $response_data = json_decode($response->getRawResponse(), true);
+                if (substr($responseCode, 0, 1) == '2') {
+                    $responseData = json_decode($response->getRawResponse(), true);
 
-                    $caseId = $response_data['investigationId'];
-                    $case_object = Mage::getModel('signifyd_connect/case')->load($case_object->getOrderIncrement());
-                    $case_object->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
-                    $case_object->setCode($caseId);
-                    $case_object->setTransactionId($case['purchase']['transactionId']);
-                    $case_object->setMagentoStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
-                    $case_object->save();
+                    $caseId = $responseData['investigationId'];
+                    $caseObject = Mage::getModel('signifyd_connect/case')->load($caseObject->getOrderIncrement());
+                    $caseObject->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
+                    $caseObject->setCode($caseId);
+                    $caseObject->setTransactionId($case['purchase']['transactionId']);
+                    $caseObject->setMagentoStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
+                    $caseObject->save();
 
                     $order->addStatusHistoryComment("Signifyd: case $caseId created for order");
                     $order->save(); // Note: this will trigger recursion
@@ -566,11 +586,40 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     return "sent";
                 }
             } catch (Exception $e) {
-                Mage::log($e->__toString(), null, 'signifyd_connect.log');
+                $this->log($e->__toString());
             }
-            //$this->unmarkProcessed($order);
+
             return "error";
         }
+    }
+
+    /**
+     * @param Mage_Sales_Model_Order $order
+     * @return $this
+     */
+    public function putOrderOnHold(Mage_Sales_Model_Order $order)
+    {
+        if (!$this->isEnabled()) {
+            return $this;
+        }
+
+        if ($order->isEmpty()) {
+            return $this;
+        }
+
+        if ($this->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
+            return $this;
+        }
+
+        try {
+            $order->hold();
+            $order->addStatusHistoryComment("Signifyd: order held after order place");
+            $order->save();
+        } catch (Exception $e) {
+            $this->log("PutOrderOnHold Error (Increment ID: " . $order->getIncrementId() . ": $e");
+        }
+
+        return $this;
     }
 
     public function getProductUrl($product)
@@ -593,7 +642,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if ($case->getCode()) {
             return "https://www.signifyd.com/cases/" . $case->getCode();
         }
-        Mage::log('Case URL not found: '.$order_id, null, 'signifyd_connect.log');
+        $this->log('Case URL not found: '.$order_id);
         return '';
     }
     
@@ -678,9 +727,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $case->setGuarantee('CANCELED');
             $case->save();
         } else {
-            $this->logError("Guarantee cancel failed");
+            $this->log("Guarantee cancel failed");
         }
-        $this->logResponse("Received $code from guarantee cancel");
+        $this->log("Received $code from guarantee cancel");
     }
 
     public function request($url, $data = null, $auth = null, $contenttype = "application/x-www-form-urlencoded",
@@ -688,7 +737,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     {
         if (Mage::getStoreConfig('signifyd_connect/log/all')) {
             $authMask = preg_replace ( "/\S/", "*", $auth, strlen($auth) - 4 );
-            Mage::log("Request:\nURL: $url \nAuth: $authMask\nData: $data", null, 'signifyd_connect.log');
+            $this->log("Request:\nURL: $url \nAuth: $authMask\nData: $data");
         }
         
         $curl = curl_init();
@@ -736,14 +785,14 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $response->addData($response_data);
         
         if (Mage::getStoreConfig('signifyd_connect/log/all')) {
-            Mage::log("Response ($url):\n " . print_r($response, true), null, 'signifyd_connect.log');
+            $this->log("Response ($url):\n " . print_r($response, true));
         }
         
         if ($raw_response === false || curl_errno($curl)) {
             $error = curl_error($curl);
             
             if (Mage::getStoreConfig('signifyd_connect/log/all')) {
-                Mage::log("ERROR ($url):\n$error", null, 'signifyd_connect.log');
+                $this->log("ERROR ($url):\n$error");
             }
             
             $response->setData('error', $error);

@@ -3,7 +3,7 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>3.16.6</version>
+            <version>3.17.2</version>
         </Signifyd_Connect>
     </modules>
     <global>
@@ -82,6 +82,39 @@
                     </signifyd_connect>
                 </observers>
             </sales_order_place_after>
+            <!-- Payment methods that need to delay order on hold status -->
+            <controller_action_predispatch_paypal_payflow_returnUrl>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>saveLastIncrementId</method>
+                    </signifyd_connect>
+                </observers>
+            </controller_action_predispatch_paypal_payflow_returnUrl>
+            <controller_action_postdispatch_paypal_payflow_returnUrl>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>putOrderOnHoldAsync</method>
+                    </signifyd_connect>
+                </observers>
+            </controller_action_postdispatch_paypal_payflow_returnUrl>
+            <controller_action_predispatch_paypal_payflowadvanced_returnUrl>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>saveLastIncrementId</method>
+                    </signifyd_connect>
+                </observers>
+            </controller_action_predispatch_paypal_payflowadvanced_returnUrl>
+            <controller_action_postdispatch_paypal_payflowadvanced_returnUrl>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>putOrderOnHoldAsync</method>
+                    </signifyd_connect>
+                </observers>
+            </controller_action_postdispatch_paypal_payflowadvanced_returnUrl>
         </events>
     </global>
     <crontab>
@@ -125,11 +158,6 @@
                 <hold_orders_threshold>500</hold_orders_threshold>
                 <invoice_orders>0</invoice_orders>
             </advanced>
-            <log>
-                <request>1</request>
-                <response>1</response>
-                <error>1</error>
-            </log>
         </signifyd_connect>
     </default>
     <admin>

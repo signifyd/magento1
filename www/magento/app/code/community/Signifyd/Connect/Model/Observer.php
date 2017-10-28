@@ -3,24 +3,29 @@
 class Signifyd_Connect_Model_Observer extends Varien_Object
 {
     public $joins = 0;
+
+    /**
+     * @var Signifyd_Connect_Helper_Data|null
+     */
     protected $helper;
 
-    /*
-     * Restricted Methods Check/Money Order, Cash on Delivery Payment, Bank Transfer Payment, Purchase Order
+    /**
+     * @return Mage_Core_Helper_Abstract|Signifyd_Connect_Helper_Data
      */
-    protected $restrictedMethods = ['checkmo', 'cashondelivery', 'banktransfer','purchaseorder'];
-
-    public function _construct()
+    public function getHelper()
     {
-        $this->helper = Mage::helper('signifyd_connect');
-    }
+        if (!$this->helper instanceof Signifyd_Connect_Helper_Data) {
+            $this->helper = Mage::helper('signifyd_connect');
+        }
 
+        return $this->helper;
+    }
 
     public function openCase($observer)
     {
         try {
             if (!Mage::getStoreConfig('signifyd_connect/settings/enabled') && !$this->getEnabled()) {
-                return;
+                return $this;
             }
 
             $event = $observer->getEvent();
@@ -28,32 +33,25 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             /** @var Mage_Sales_Model_Order $order */
             if ($event->hasOrder()) {
                 $order = $event->getOrder();
-            } else if ($event->hasObject()) {
+            } elseif ($event->hasObject()) {
                 $order = $event->getObject();
             }
 
-            $order_model = get_class(Mage::getModel('sales/order'));
-
-            if (!($order instanceof $order_model)) {
-                return;
-            }
-
-            if(Mage::registry('signifyd_action_' . $order->getIncrementId()) == 1)
-            {
-                return;
-            }
-
-            $paymentMethod = $order->getPayment()->getMethodInstance()->getCode();
-            if(in_array($paymentMethod, $this->restrictedMethods)) {
+            $orderClass = Mage::getConfig()->getModelClassName('sales/order');
+            if (!($order instanceof $orderClass) || $order->isEmpty()) {
                 return $this;
             }
 
-            Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($order);
+            if (Mage::registry('signifyd_action_' . $order->getIncrementId()) == 1) {
+                return $this;
+            }
+
+            $this->getHelper()->buildAndSendOrderToSignifyd($order);
         } catch (Exception $e) {
-            Mage::log($e->__toString(), null, 'signifyd_connect.log');
+            $this->getHelper()->log($e->__toString());
         }
         // If we get here, then we have failed to create the case.
-
+        return $this;
     }
 
     public function logData($order, $payment, $quote)
@@ -218,7 +216,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             return;
         }
 
-        $helper = Mage::helper('signifyd_connect');
+        $helper = $this->getHelper();
         $block = $observer->getEvent()->getBlock();
 
         if ($block->getId() == 'sales_order_grid') {
@@ -254,35 +252,35 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
 
     public function handleCancel($order)
     {
-        $helper = Mage::helper('signifyd_connect');
+        $helper = $this->getHelper();
         $case = Mage::getModel('signifyd_connect/case')->load($order);
         if($case->isObjectNew()) {
-            $helper->logError("Guarantee cancel: Signifyd case for order $order does not exist in DB");
+            $helper->log("Guarantee cancel: Signifyd case for order $order does not exist in DB");
             return;
         }
         if($case->getGuarantee() == 'N/A' || $case->getGuarantee() == 'DECLINED') {
-            $helper->logRequest("Guarantee cancel: Skipped. No guarantee active");
+            $helper->log("Guarantee cancel: Skipped. No guarantee active");
             return;
         }
 
-        $helper->logRequest("Guarantee cancel for case " . $case->getCode());
+        $helper->log("Guarantee cancel for case " . $case->getCode());
         $helper->cancelGuarantee($case);
     }
 
     public function salesOrderPaymentCancel($observer)
     {
-        $helper = Mage::helper('signifyd_connect');
+        $helper = $this->getHelper();
         try {
             $event = $observer->getEvent();
             if($event->getPayment()->getOrder()) {
                 $order = $event->getPayment()->getOrder()->getIncrementId();
             } else {
-                $helper->logError("Event salesOrderPaymentCancel has no order");
+                $helper->log("Event salesOrderPaymentCancel has no order");
                 return;
             }
             $this->handleCancel($order);
         } catch(Exception $ex) {
-            $helper->logError("Guarantee cancel: $ex");
+            $helper->log("Guarantee cancel: $ex");
         }
     }
 
@@ -293,27 +291,72 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
      */
     public function putOrderOnHold(Varien_Event_Observer $observer)
     {
-        if(!Mage::helper('signifyd_connect')->isEnabled()){
-            return $this;
+        $this->getHelper()->putOrderOnHold($observer->getEvent()->getOrder());
+
+        return $this;
+    }
+
+    /**
+     * For some payment methods it is not possible to put the order on hold at order create moment
+     * To be able to put the order on hold after the payment is processed it is needed to save the increment_id
+     * field from checkout/session, to keep it on the same workflow as the original payment method extension
+     *
+     * @param Varien_Event_Observer $observer
+     * @return $this
+     */
+    public function saveLastIncrementId(Varien_Event_Observer $observer)
+    {
+        $incrementId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
+
+        if (!empty($incrementId)) {
+            Mage::register('signifyd_last_increment_id', $incrementId);
         }
 
-        $order = $observer->getEvent()->getOrder();
-//        $paymentMethod = $order->getPayment()->getMethod();
-        $paymentMethod = $order->getPayment()->getMethodInstance()->getCode();
-        if(in_array($paymentMethod, $this->restrictedMethods)) {
-            return $this;
-        }
+        return $this;
+    }
 
-        if($order->canHold() === false){
-            $this->helper->logError("Order {$order->getIncrementId()} could not be held because Magento returned false for canHold");
-        }
+    /**
+     * Put the order on hold asynchronously. Used for payment geteways that can't have the order on hold
+     * at the order creation
+     * @param Varien_Event_Observer $observer
+     * @return $this
+     */
+    public function putOrderOnHoldAsync(Varien_Event_Observer $observer)
+    {
+        $incrementId = Mage::registry('signifyd_last_increment_id');
 
-        try {
-            $order->hold();
-            $order->addStatusHistoryComment("Signifyd: order held after order place");
-            $order->save();
-        } catch (Exception $e){
-            $this->helper->logError("PutOrderOnHold Error: $e");
+        if (!empty($incrementId)) {
+            Mage::unregister('signifyd_last_increment_id');
+
+            /** @var Mage_Sales_Model_Order $order */
+            $order = Mage::getModel('sales/order');
+            $order->loadByIncrementId($incrementId);
+
+            if (!$order->isEmpty()) {
+                $acceptedFromGuarantyAction = $this->getHelper()->getAcceptedFromGuaranty();
+                $declinedFromGuaranty = $this->getHelper()->getDeclinedFromGuaranty();
+
+                if ($acceptedFromGuarantyAction == 1 || $declinedFromGuaranty == 2) {
+                    /** @var Signifyd_Connect_Model_Case $case */
+                    $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
+
+                    if (!$case->isEmpty()) {
+                        // If the configuration is set to unhold order on approval
+                        // and the case it is already APPROVED do nothing
+                        if ($acceptedFromGuarantyAction == 1 && $case->getGuarantee() == 'APPROVED') {
+                            return $this;
+                        }
+
+                        // If the configuration is set to unhold order when declined
+                        // and the case it is already DECLINED do nothing
+                        if ($declinedFromGuaranty == 2 && $case->getGuarantee() == 'DECLINED') {
+                            return $this;
+                        }
+                    }
+                }
+
+                $this->getHelper()->putOrderOnHold($order);
+            }
         }
 
         return $this;
