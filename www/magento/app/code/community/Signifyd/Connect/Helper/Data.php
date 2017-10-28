@@ -487,35 +487,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
 
-    /**
-     * @param Mage_Sales_Model_Order $order
-     * @return $this
-     */
-    public function putOrderOnHold(Mage_Sales_Model_Order $order)
-    {
-        if (!$this->isEnabled()) {
-            return $this;
-        }
-
-        if ($order->isEmpty()) {
-            return $this;
-        }
-
-        if ($this->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
-            return $this;
-        }
-
-        try {
-            $order->hold();
-            $order->addStatusHistoryComment("Signifyd: order held after order place");
-            $order->save();
-        } catch (Exception $e) {
-            $this->log("PutOrderOnHold Error (Increment ID: " . $order->getIncrementId() . ": $e");
-        }
-
-        return $this;
-    }
-
     public function getProductUrl($product)
     {
         $url = null;
@@ -539,35 +510,35 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $this->log('Case URL not found: '.$order_id);
         return '';
     }
-
+    
     public function getProductImage($product, $size="150")
     {
         $image = null;
-
+        
         try {
             $image = (string)Mage::helper('catalog/image')->init($product, 'image')->resize($size, $size)->keepFrame(true)->keepAspectRatio(true);
         } catch (Exception $e) {
             $image = null;
         }
-
+        
         return $image;
     }
-
+    
     public function getStoreName()
     {
         return Mage::getStoreConfig('trans_email/ident_general/name', 0);
     }
-
+    
     public function getStoreEmail()
     {
         return Mage::getStoreConfig('trans_email/ident_general/email', 0);
     }
-
+    
     public function getStoreUrl()
     {
         return Mage::getBaseUrl();
     }
-
+    
     public function processedStatus($order)
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
@@ -584,10 +555,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         {
             return self::ENTITY_CREATED_STATUS;
         }
-
+        
         return self::UNPROCESSED_STATUS;
     }
-
+    
     public function markProcessed($order)
     {
         $case = Mage::getModel('signifyd_connect/case');
@@ -595,10 +566,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         $case->save();
-
+        
         return $case;
     }
-
+    
     public function unmarkProcessed($order)
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
@@ -633,25 +604,25 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $authMask = preg_replace ( "/\S/", "*", $auth, strlen($auth) - 4 );
             $this->log("Request:\nURL: $url \nAuth: $authMask\nData: $data");
         }
-
+        
         $curl = curl_init();
         $response = new Varien_Object;
         $headers = array();
 
         curl_setopt($curl, CURLOPT_URL, $url);
-
+        
         if (stripos($url, 'https://') === 0) {
             curl_setopt($curl, CURLOPT_PORT, 443);
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
         }
-
+        
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-
+        
         if ($auth) {
             curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
             curl_setopt($curl, CURLOPT_USERPWD, $auth);
         }
-
+        
         if ($accept) {
             $headers[] = 'Accept: ' . $accept;
         }
@@ -664,7 +635,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $headers[] = "Content-length: " . strlen($data);
             curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
         }
-
+        
         if (count($headers)) {
             curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
         }
@@ -674,26 +645,26 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
         $raw_response = curl_exec($curl);
         $response->setRawResponse($raw_response);
-
+        
         $response_data = curl_getinfo($curl);
         $response->addData($response_data);
-
+        
         if (Mage::getStoreConfig('signifyd_connect/log/all')) {
             $this->log("Response ($url):\n " . print_r($response, true));
         }
-
+        
         if ($raw_response === false || curl_errno($curl)) {
             $error = curl_error($curl);
-
+            
             if (Mage::getStoreConfig('signifyd_connect/log/all')) {
                 $this->log("ERROR ($url):\n$error");
             }
-
+            
             $response->setData('error', $error);
         }
-
+        
         curl_close($curl);
-
+        
         return $response;
     }
 
@@ -710,11 +681,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $paymentAuthorized = $paymentMethod->getBaseAmountAuthorized();
         $baseTotalPaid = $order->getBaseTotalPaid();
         $baseTotalRefunded = $order->getBaseTotalRefunded();
-        // Maybe used in the future
-//        $canVoid = $paymentMethod->canVoid($order);
-//        $amountPayed = $paymentMethod->getAmountPaid();
-//        $baseTotalCanceled = $order->getBaseTotalCanceled();
-//        $baseTotalInvoiced = $order->getBaseTotalInvoiced();
 
         // Check authorization
         if(!empty($paymentAuthorized)){

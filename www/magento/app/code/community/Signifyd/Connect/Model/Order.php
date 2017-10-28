@@ -8,11 +8,15 @@
  */
 class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
 {
-    /* Property for instance of the log helper  */
+    /**
+     * @var Signifyd_Connect_Helper_Log
+     */
     protected $logger;
 
-    /* Property for instance of the data helper  */
-    protected $dataHelper;
+    /**
+     * @var Signifyd_Connect_Helper_Data
+     */
+    protected $helper;
 
     /**
      * Internal magento constructor
@@ -20,127 +24,37 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
     public function _construct()
     {
         $this->logger = Mage::helper('signifyd_connect/log');
-        $this->dataHelper = Mage::helper('signifyd_connect');
+        $this->helper = Mage::helper('signifyd_connect');
         parent::_construct();
     }
 
     /**
-     * Method to authorize an order after order place
-     * @param $order
+     * Returns false when the extension shouldn't interfere on workflow
+     *
+     * @param Mage_Sales_Model_Order $order
      * @return bool
      */
-    public function authorizeOrder($order)
+    public function checkSettings(Mage_Sales_Model_Order $order)
     {
-        // Get the payment status for this order
-        $status = $this->dataHelper->getOrderPaymentStatus($order);
-        if($status['authorize']){
-            $this->logger->addLog("Order {$order->getIncrementId()} is already authorize");
-            return true;
-        }
-        $payment = $order->getPayment();
-        $method = $payment->getMethodInstance();
-        if(!$method->canAuthorize()){
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be authorize");
-            return true;
-        }
-
-        $amount = $order->getData('grand_total');
-
-        try{
-            // check if method authorize returns anything usefully
-            $method->authorize($payment, $amount);
-            $this->logger->addLog("Authorize order {$order->getIncrementId()} was successful");
-        } catch (Exception $e) {
-            $this->logger->addLog("Authorize order {$order->getIncrementId()} was not authorized:");
-            $this->logger->addLog($e->__toString());
+        if (!$this->helper->isEnabled()) {
             return false;
         }
 
-        return true;
-    }
+        $acceptedFromGuarantyAction = $this->helper->getAcceptedFromGuaranty();
+        $declinedFromGuaranty = $this->helper->getDeclinedFromGuaranty();
 
-    /**
-     * Method to generate the invoice after a order was placed
-     * @param $order
-     * @return bool
-     */
-    public function generateInvoice($order)
-    {
-        if(!$order->canInvoice()){
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be invoiced");
+        // If both workflow configurations are set to 'Do nothing', do not hold the order
+        if ($acceptedFromGuarantyAction == 3 && $declinedFromGuaranty == 3) {
             return false;
         }
 
-        try {
-
-            $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
-
-            $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::CAPTURE_ONLINE);
-            $invoice->register();
-            $transactionSave = Mage::getModel('core/resource_transaction')
-                ->addObject($invoice)
-                ->addObject($invoice->getOrder());
-            $transactionSave->save();
-            $this->logger->addLog("Invoice was created for order: {$order->getIncrementId()}");
-
-            $invoice->addComment('Automatic Invoice', false);
-            $invoice->sendEmail();
-            $invoice->setEmailSent(true);
-            $invoice->save();
-
-            $order->addStatusHistoryComment('Automatic Invoice: '.$invoice->getIncrementId());
-            $order->save();
-        } catch (Exception $e) {
-            $this->logger->addLog('Exception while creating invoice: ' . $e->__toString());
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Method to walk the flow for an order when the config is set to unhold, invoice and capture.
-     * When guaranty is approved
-     * @param $order
-     * @param $reason
-     * @return bool
-     */
-    public function unholdOrderAndCapture($order, $reason)
-    {
-        if(is_null($order->getId())){
+        if ($order->isEmpty()) {
             $this->logger->addLog("Order was not found");
             return false;
         }
 
-        if(!$order->canUnhold()){
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be unheld");
-            return false;
-        }
-        $status = $this->dataHelper->getOrderPaymentStatus($order);
-
-        try {
-            $order->unhold();
-            $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
-            $order->save();
-
-            $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
-
-            // Authorize the order
-            $result = $this->authorizeOrder($order);
-            if($result === false){
-                $this->holdOrder($order, 'Fail to Authorize Order');
-            }
-
-            // Generate the invoice
-            if($status['capture'] !== true){
-                $result = $this->generateInvoice($order);
-                if($result === false){
-                    $this->holdOrder($order, 'Fail to generate Invoice');
-                }
-            }
-        } catch (Exception $e) {
-            $this->logger->addLog("Order {$order->getIncrementId()} unable to be saved because {$e->getMessage()}");
-            $this->logger->addLog("Order {$order->getIncrementId()} was not unheld.");
+        if ($this->helper->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
+            $this->logger->addLog("Order {$order->getIncrementId()} payment method or order state is restricted");
             return false;
         }
 
@@ -148,37 +62,35 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
     }
 
     /**
-     * Method to walk the flow for an order when the config is set to unhold only.
-     * When guaranty is approved
-     * @param $order
-     * @param $reason
+     * @param Mage_Sales_Model_Order $order
+     * @param string $reason
+     *
      * @return bool
      */
-    public function unholdOrder($order, $reason)
+    public function unholdOrder(Mage_Sales_Model_Order $order, $reason = '')
     {
-        if(is_null($order->getId())){
-            $this->logger->addLog("Order was not found");
+        if (!$this->checkSettings($order)) {
             return false;
         }
 
-        if(!$order->canUnhold()){
-            $this->logger->addLog("Order state: " . $order->getState() . "; status: " . $order->getStatus());
-            $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
-            $this->logger->addLog("Case status: " . $case->getSignifydStatus());
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be unheld");
+        $incrementId = $order->getIncrementId();
+
+        if ($order->getStatus() != Mage_Sales_Model_Order::STATE_HOLDED) {
+            $this->logger->addLog("Order {$incrementId} already released from hold");
+            return true;
+        }
+
+        if (!$order->canUnhold()) {
+            $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
+            $this->logger->addLog("Order {$incrementId} ({$order->getState()} > {$order->getStatus()}) can not be unheld. " .
+                "Case status: {$case->getSignifydStatus()}");
             return false;
         }
 
         try {
             $order->unhold();
-            $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
+            $order->addStatusHistoryComment("Signifyd: order unheld, $reason");
             $order->save();
-
-            // Authorize the order
-//            $result = $this->authorizeOrder($order);
-//            if($result === false){
-//                $this->holdOrder($order, 'Fail to Authorize Order');
-//            }
 
             $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
         } catch (Exception $e) {
@@ -186,61 +98,87 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $this->logger->addLog("Order {$order->getIncrementId()} was not unheld.");
             return false;
         }
-        return true;
+
+        return $order->getStatus() == Mage_Sales_Model_Order::STATE_HOLDED ? false : true;
     }
 
     /**
-     * Method to hold the order whe the guaranty is declined
-     * @param $order
-     * @param $reason
+     * @param Mage_Sales_Model_Order $order
+     * @param string $reason
+     *
      * @return bool
      */
-    public function holdOrder($order, $reason)
+    public function holdOrder(Mage_Sales_Model_Order $order, $reason = '')
     {
-        if(is_null($order->getId())){
-            $this->logger->addLog("Order was not found");
+        if (!$this->checkSettings($order)) {
             return false;
         }
 
-        if(!$order->canHold()){
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be held");
+        $incrementId = $order->getIncrementId();
+
+        if ($order->getStatus() == Mage_Sales_Model_Order::STATE_HOLDED) {
+            $this->logger->addLog("Order {$incrementId} already on hold status");
+            return true;
+        }
+
+        if (!$order->canHold()) {
+            $this->logger->addLog("Order {$incrementId} can not be held");
             return false;
         }
 
         try {
             $order->hold();
-            $order->addStatusHistoryComment("Signifyd: order held because {$reason}");
+            $order->addStatusHistoryComment("Signifyd: {$reason}");
             $order->save();
 
-            $this->logger->addLog("Order {$order->getIncrementId()} held because {$reason}");
-        } catch (Exception $e){
-            $this->logger->addLog("Order {$order->getIncrementId()} unable to be saved because {$e->getMessage()}");
-            $this->logger->addLog("Order {$order->getIncrementId()} was not held.");
+            $this->logger->addLog("Order {$incrementId} held: {$reason}");
+        } catch (Exception $e) {
+            $this->logger->addLog("Order {$incrementId} unable to be saved because " . $e->getMessage());
+            $this->logger->addLog("Order {$incrementId} was not held.");
             return false;
         }
 
-        return true;
+        return $order->getStatus() == Mage_Sales_Model_Order::STATE_HOLDED ? true : false;
     }
 
     /**
      * Method to hold the order whe the guaranty is declined and magento config is set to cancel the order
-     * @param $order
+     * @param Mage_Sales_Model_Order $order
      * @param $reason
      * @return bool
      */
-    public function cancelOrder($order, $reason)
+    public function cancelOrder(Mage_Sales_Model_Order $order, $reason)
     {
-        if(is_null($order->getId())){
-            $this->logger->addLog("Order was not found");
+        if (!$this->checkSettings($order) && !$order->isCanceled()) {
             return false;
         }
 
-        if ($order->getState() === $order::STATE_HOLDED) {
-            $this->unholdOrder($order, $reason);
+        $incrementId = $order->getIncrementId();
+
+        if ($order->isCanceled()) {
+            $this->logger->addLog("Order {$incrementId} already canceled");
+            return true;
         }
 
-        if(!$order->canCancel()){
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be canceled");
+        $status = $this->helper->getOrderPaymentStatus($order);
+        if ($status['authorize'] === true && $status['capture'] === true) {
+            $this->holdOrder($order, $reason);
+            $this->logger->addLog("Order {$incrementId} cannot be canceled because it has a sum already captured");
+            $order->addStatusHistoryComment('Signifyd: order cannot be canceled because it has a sum already captured. ' .
+                'Please do a manual refund/cancelation.');
+            $order->save();
+            return false;
+        }
+
+        if (!$this->unholdOrder($order, $reason)) {
+            return false;
+        }
+
+        if (!$order->canCancel()) {
+            $this->holdOrder($order, $reason);
+            $this->logger->addLog("Order {$incrementId} cannot be canceled");
+            $order->addStatusHistoryComment("Signifyd: order cannot be canceled. Tried to cancel order because {$reason}.");
+            $order->save();
             return false;
         }
 
@@ -249,156 +187,17 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: order canceled because $reason");
             $order->save();
 
-            $this->logger->addLog("Order {$order->getIncrementId()} cancelled because {$reason}");
+            $this->logger->addLog("Order {$incrementId} cancelled because {$reason}");
         } catch (Exception $e){
-            $this->logger->addLog("Order {$order->getIncrementId()} unable to be saved because {$e->getMessage()}");
-            $this->logger->addLog("Order {$order->getIncrementId()} was not canceled.");
+            $this->logger->addLog("Order {$incrementId} unable to be saved because {$e->getMessage()}");
+            $this->logger->addLog("Order {$incrementId} was not canceled.");
             return false;
         }
 
-        return true;
+        if (!$order->isCanceled()) {
+            $this->holdOrder($order, $reason);
+        }
+        
+        return $order->isCanceled();
     }
-    /*
-    public function voidOrderPayment($order, $reason)
-    {
-        if(is_null($order->getId())){
-            $this->logger->addLog("Order was not found");
-            return false;
-        }
-        $payment = $order->getPayment();
-        $method = $payment->getMethodInstance();
-
-        if(!$method->canVoid($payment)){
-            $this->logger->addLog("Payment for order {$order->getIncrementId()} can not be voided");
-            return false;
-        }
-
-        try{
-            $method->void($payment);
-            $order->save();
-            $this->cancelOrder($order, $reason);
-            $this->logger->addLog("Void order payment {$order->getIncrementId()} was successful");
-        } catch (Exception $e) {
-            $this->holdOrder($order, 'Signifyd: Failed to void order payment');
-            $this->logger->addLog("Void order payment {$order->getIncrementId()} was not authorized:");
-            $this->logger->addLog($e->__toString());
-            return false;
-        }
-
-        return true;
-    }
-    */
-
-    public function keepOrderOnHold($order, $reason)
-    {
-        if(is_null($order->getId())){
-            $this->logger->addLog("Order was not found");
-            return false;
-        }
-
-        if($order->getStatus() != Mage_Sales_Model_Order::STATE_HOLDED){
-            try{
-                $this->holdOrder($order, $reason);
-            }catch (Exception $e){
-                $this->logger->addLog($e->__toString());
-            }
-        }
-        $this->logger->addLog("Order {$order->getIncrementId()} was kept on hold because {$reason}");
-
-        return true;
-    }
-
-    public function cancelCloseOrder($order, $reason)
-    {
-        $status = $this->dataHelper->getOrderPaymentStatus($order);
-        if(is_null($order->getId())){
-            $this->logger->addLog("Order was not found");
-            return false;
-        }
-        if(!$order->canUnhold()){
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be unheld");
-            return false;
-        }
-        try {
-            $order->unhold();
-            $order->addStatusHistoryComment("Signifyd: order unheld because $reason");
-            $order->save();
-            $this->logger->addLog("Order {$order->getIncrementId()} unheld in order to cancel it");
-        } catch (Exception $e){
-
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be unheld");
-            $this->logger->addLog($e->__toString());
-            return false;
-        }
-
-//        if($status['authorize'] === true && $status['capture'] === false) {
-//            $this->logger->addLog("cancel close order5");
-//            $this->voidOrderPayment($order, $reason);
-        if($status['authorize'] === true && $status['capture'] === true) {
-            $result = $this->canNotCancel($order, $reason);
-        } else {
-            $result = $this->cancelOrder($order, $reason);
-        }
-        if($result === false){
-            $this->holdOrder($order, 'Fail to Cancel/Close Order');
-        }
-        return true;
-    }
-
-    public function checkStatus($order, $status)
-    {
-        $theOrder = Mage::getModel('sales/order')->load($order->getId());
-        return ($theOrder->getStatus() == $status)? true : false;
-    }
-
-    public function finalStatus($order, $type, $case)
-    {
-        $id  = (is_array($case))? $case['order_increment'] : $case->getId();
-        $this->logger->addLog("Final status for case: {$id}");
-        try {
-            $holdStatus = $this->checkStatus($order, Mage_Sales_Model_Order::STATE_HOLDED);
-            $caseModel = Mage::getModel('signifyd_connect/case');
-            // type refers to the need to by held or not held: 1 needs to be held, 2 needs to be not held
-            if($type == 1){
-                // needs to be true
-                if($holdStatus === true){
-                    $caseModel->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
-                }
-            } elseif($type == 2) {
-                // needs to be false
-                if($holdStatus === false){
-                    $caseModel->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
-                }
-            } else {
-                $this->logger->addLog('Final status unknown type');
-            }
-
-            $this->logger->addLog("Case no: {$id}, set status to complete successful.");
-        } catch (Exception $e){
-            $this->logger->addLog("Case no: {$id}, set status to complete fail: " . $e->__toString());
-            return false;
-        }
-
-        return true;
-    }
-
-    public function canNotCancel($order, $reason)
-    {
-        try {
-            $order->hold();
-            $order->addStatusHistoryComment("Signifyd: order held because $reason");
-            $order->addStatusHistoryComment("Signifyd: order can not be canceled because it has a sum already captured, Please do a manual refund.");
-            $order->save();
-            $this->logger->addLog("Order {$order->getIncrementId()} was held because {$reason}");
-        } catch (Exception $e){
-            $this->logger->addLog("Order {$order->getIncrementId()} could not be held: " . $e->__toString());
-            return false;
-        }
-
-        return true;
-    }
-
 }
-
-/* Filename: Order.php */
-/* Location: ../app/code/Community/Signifyd/Connect/Model/Order.php */
