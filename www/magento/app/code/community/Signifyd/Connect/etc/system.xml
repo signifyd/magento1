@@ -61,7 +61,7 @@
                     <show_in_store>1</show_in_store>
                     <fields>
                         <instructions translate="label">
-                            <label>Enabling any of the order workflows bellow will place all newly created orders "on-hold" until Signifyd has reviewed the order.</label>
+                            <label>Enabling any of the order workflows below will place all newly created orders "on-hold" until Signifyd has reviewed the order.</label>
                             <frontend_model>adminhtml/system_config_form_field_heading</frontend_model>
                             <sort_order>10</sort_order>
                             <show_in_default>1</show_in_default>
