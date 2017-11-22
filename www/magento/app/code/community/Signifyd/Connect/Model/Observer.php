@@ -382,7 +382,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                     }
                 }
 
-                $this->getOrderModel()->holdOrder($observer->getEvent()->getOrder(), 'after order place');
+                $this->getOrderModel()->holdOrder($order, 'after order place');
             }
         }
 
