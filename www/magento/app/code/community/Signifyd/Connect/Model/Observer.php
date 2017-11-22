@@ -315,10 +315,16 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
      */
     public function putOrderOnHold(Varien_Event_Observer $observer)
     {
-        $this->getOrderModel()->holdOrder($observer->getEvent()->getOrder(), 'after order place');
+        $order = $observer->getEvent()->getOrder();
 
-            return $this;
+        //PayPal express can't be held before everything is processed or it won't send confirmation e-mail to customer
+        //Also there is no different status before the process is complete as is with PayFlow Link
+        if (!in_array($order->getPayment()->getMethod(), array('paypal_express'))) {
+            $this->getOrderModel()->holdOrder($order, 'after order place');
         }
+
+        return $this;
+    }
 
     /**
      * For some payment methods it is not possible to put the order on hold at order create moment
