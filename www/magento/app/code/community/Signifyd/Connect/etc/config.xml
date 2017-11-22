@@ -122,6 +122,14 @@
                     </signifyd_connect>
                 </observers>
             </controller_action_postdispatch_paypal_payflowadvanced_returnUrl>
+            <controller_action_postdispatch_paypal_express_placeorder>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>putOrderOnHoldAsync</method>
+                    </signifyd_connect>
+                </observers>
+            </controller_action_postdispatch_paypal_express_placeorder>
         </events>
     </global>
     <crontab>

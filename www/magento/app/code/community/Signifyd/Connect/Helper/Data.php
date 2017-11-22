@@ -22,7 +22,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             'checkmo', 'cashondelivery', 'banktransfer','purchaseorder'
         ),
         Mage_Sales_Model_Order::STATE_PENDING_PAYMENT => array(
-            'payflow_link', 'payflow_advanced'
+            'payflow_link', 'payflow_advanced', 'paypal_express'
         ),
         Mage_Sales_Model_Order::STATE_CANCELED => array(
             'all'

@@ -348,6 +348,9 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     public function putOrderOnHoldAsync(Varien_Event_Observer $observer)
     {
         $incrementId = Mage::registry('signifyd_last_increment_id');
+        if (empty($incrementId)) {
+            $incrementId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
+        }
 
         if (!empty($incrementId)) {
             Mage::unregister('signifyd_last_increment_id');
