@@ -366,7 +366,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $order->loadByIncrementId($incrementId);
 
             if (!$order->isEmpty()) {
-                $acceptedFromGuarantyAction = $this->getHelper()->getAcceptedFromGuaranty();
+                $acceptedFromGuarantyAction = $this->getHelper()->getAcceptedFromGuaranty($order->getStoreId());
                 $declinedFromGuaranty = $this->getHelper()->getDeclinedFromGuaranty();
 
                 if ($acceptedFromGuarantyAction == 1 || $declinedFromGuaranty == 2) {

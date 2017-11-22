@@ -40,7 +40,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             return false;
         }
 
-        $acceptedFromGuarantyAction = $this->helper->getAcceptedFromGuaranty();
+        $acceptedFromGuarantyAction = $this->helper->getAcceptedFromGuaranty($order->getStoreId());
         $declinedFromGuaranty = $this->helper->getDeclinedFromGuaranty();
 
         // If both workflow configurations are set to 'Do nothing', do not hold the order
