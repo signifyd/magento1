@@ -93,7 +93,8 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
     public function performExactSearch($keys, $filterMethod = null)
     {
         foreach ($keys as $key) {
-            $value = $this->additionalInformation[$key];
+            $value = (is_array($this->additionalInformation) && isset($this->additionalInformation[$key])) ?
+                $this->additionalInformation[$key] : null;
             
             // If we've got value and filterMethod, filter it
             if (!empty($value) && !empty($filterMethod)) {

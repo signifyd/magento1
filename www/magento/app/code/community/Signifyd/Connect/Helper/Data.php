@@ -29,6 +29,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         )
     );
 
+    /** @var  Signifyd_Connect_Helper_Payment_Interface */
+    protected $paymentHelper;
+
     /**
      * @param $method
      * @param null $state
@@ -787,9 +790,15 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $paymentMethodCode = $payment->getMethod();
             $helperName = "signifyd_connect/payment_{$paymentMethodCode}";
             $helperClass = Mage::getConfig()->getHelperClassName($helperName);
+            $paymentHelper = null;
 
-            if (class_exists($helperClass, true)) {
-                $paymentHelper = Mage::helper("signifyd_connect/payment_{$paymentMethodCode}");
+            // Using try .. catch to avoid class_exists exceptions
+            try {
+                if (class_exists($helperClass)) {
+                    $paymentHelper = Mage::helper("signifyd_connect/payment_{$paymentMethodCode}");
+                }
+            } catch (Exception $e) {
+
             }
 
             if (!is_object($paymentHelper) ||
