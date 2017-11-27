@@ -357,6 +357,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         if (empty($incrementId)) {
             $incrementId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
         }
+        $this->getHelper()->log("putOrderOnHoldAsync: " . $incrementId);
 
         if (!empty($incrementId)) {
             Mage::unregister('signifyd_last_increment_id');
@@ -368,6 +369,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             if (!$order->isEmpty()) {
                 $acceptedFromGuarantyAction = $this->getHelper()->getAcceptedFromGuaranty($order->getStoreId());
                 $declinedFromGuaranty = $this->getHelper()->getDeclinedFromGuaranty();
+                $this->getHelper()->log("Accepted From Guaranty: {$acceptedFromGuarantyAction}");
+                $this->getHelper()->log("Declined From Guaranty: {$declinedFromGuaranty}");
 
                 if ($acceptedFromGuarantyAction == 1 || $declinedFromGuaranty == 2) {
                     /** @var Signifyd_Connect_Model_Case $case */
