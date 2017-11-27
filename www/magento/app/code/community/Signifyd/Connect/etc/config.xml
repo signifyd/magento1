@@ -3,7 +3,7 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>3.18.0</version>
+            <version>3.18.1</version>
         </Signifyd_Connect>
     </modules>
     <global>
