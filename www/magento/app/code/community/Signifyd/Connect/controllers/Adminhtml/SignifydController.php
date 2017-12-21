@@ -28,4 +28,9 @@ class Signifyd_Connect_Adminhtml_SignifydController extends Mage_Adminhtml_Contr
     {
         return true;
     }
+
+    public function unholdAction()
+    {
+        echo 33233; die;
+    }
 }

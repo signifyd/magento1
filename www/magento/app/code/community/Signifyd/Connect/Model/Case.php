@@ -304,6 +304,58 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         return true;
     }
 
+    /**
+     * @return bool
+     */
+    public function isHoldReleased()
+    {
+        $holdReleased = $this->getEntries('hold_released');
+        return ($holdReleased == 1) ? true : false;
+    }
+
+    /**
+     * @param null $index
+     * @return array|mixed|null
+     */
+    public function getEntries($index = null)
+    {
+        $entries = $this->getData('entries');
+
+        if (!empty($entries)) {
+            @$entries = unserialize($entries);
+        }
+
+        if (!is_array($entries)) {
+            $entries = array();
+        }
+
+        if (!empty($index)) {
+            return isset($entries[$index]) ? $entries[$index] : null;
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @param $index
+     * @param null $value
+     * @return $this
+     */
+    public function setEntries($index, $value = null)
+    {
+        if (is_array($index)) {
+            $entries = $index;
+        } elseif (is_string($index)) {
+            $entries = $this->getEntries();
+            $entries[$index] = $value;
+        }
+
+        @$entries = serialize($entries);
+        $this->setData('entries', $entries);
+
+        return $this;
+    }
+
     public function processGuarantee($case, $request)
     {
         if (!$case) return false;
