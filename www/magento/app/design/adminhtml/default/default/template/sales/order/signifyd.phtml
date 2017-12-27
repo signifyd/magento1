@@ -1,0 +1,29 @@
+<?php
+/** @var Mage_Core_Block_Template $this */
+/** @var Signifyd_Connect_Model_Case $case */
+$case = $this->getCase();
+?>
+<?php if (!empty($case->getOrderIncrement())): ?>
+    <?php $testLabel = $case->getEntries('testInvestigation') ? 'TEST: ' : ''; ?>
+    <div class="box-left">
+        <div class="entry-edit">
+            <div class="entry-edit-head">
+                <h4><?php echo Mage::helper('signifyd_connect')->__('Fraud Protection Information') ?></h4>
+            </div>
+            <fieldset>
+                <table cellspacing="0" class="form-list">
+                    <tbody>
+                    <tr>
+                        <td class="label"><label>Signifyd Guarantee Decision</label></td>
+                        <td class="value"><strong><?php echo $testLabel . $case->getData('guarantee'); ?></strong></td>
+                    </tr>
+                    <tr>
+                        <td class="label"><label>Signifyd Score</label></td>
+                        <td class="value"><strong><?php echo floor($case->getData('score')); ?></strong></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </fieldset>
+        </div>
+    </div>
+<?php endif ?>

@@ -75,6 +75,7 @@
             <adminhtml>
                 <rewrite>
                     <sales_order_view>Signifyd_Connect_Block_Sales_Order_View</sales_order_view>
+                    <sales_order_view_tab_info>Signifyd_Connect_Block_Sales_Order_View_Tab_Info</sales_order_view_tab_info>
                 </rewrite>
             </adminhtml>
         </blocks>
