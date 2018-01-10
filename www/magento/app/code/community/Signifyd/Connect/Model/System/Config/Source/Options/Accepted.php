@@ -8,11 +8,15 @@ class Signifyd_Connect_Model_System_Config_Source_Options_Accepted
         $options = array(
             array(
                 'value' => 1,
-                'label' => 'Update status to processing'
+                'label' => 'Update order status'
             ),
             array(
                 'value' => 3,
                 'label' => 'Do nothing'
+            ),
+            array(
+                'value' => 4,
+                'label' => 'Capture payment and update order status'
             )
         );
 

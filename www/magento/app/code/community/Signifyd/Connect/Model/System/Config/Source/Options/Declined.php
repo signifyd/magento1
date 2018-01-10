@@ -7,10 +7,10 @@ class Signifyd_Connect_Model_System_Config_Source_Options_Declined
     {
         $options = array(
             // Disabled, Chris Morris request. We'll drop this by now and resume on future
-//            array(
-//                'value' => 2,
-//                'label' => 'Update status to canceled'
-//            ),
+            array(
+                'value' => 2,
+                'label' => 'Void payment and cancel order'
+            ),
             array(
                 'value' => 3,
                 'label' => 'Do nothing'

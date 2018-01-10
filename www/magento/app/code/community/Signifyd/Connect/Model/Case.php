@@ -150,7 +150,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
             $orderModel = Mage::getModel('signifyd_connect/order');
             if ($newGuarantee == 'APPROVED') {
                 switch ($positiveAction) {
-                    // Update status to processing
+                    // Update order status
                     case 1:
                         // this is for when config is set to 'Update status to processing'
                         if ($orderModel->unholdOrder($order, "guarantee approved")) {
@@ -170,6 +170,13 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
                         $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
                         break;
 
+                    // Capture payment and update order status
+                    case 4:
+                        if ($orderModel->unholdOrderAndCapture($order, "guarantee approved")) {
+                            $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
+                        }
+                        break;
+
                     default:
                         $this->logger->addLog("Unknown positive action $negativeAction");
                 }
@@ -182,13 +189,12 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
                         }
                         break;
 
-                    // Update status to canceled
-                    // Disabled, Chris Morris request. We'll drop this by now and resume on future
+                    // Void payment and cancel order
                     case 2:
                         // this is for when config is set to cancel close order
-//                        if ($orderModel->cancelOrder($order, "guarantee declined")) {
-//                            $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
-//                        }
+                        if ($orderModel->cancelOrder($order, "guarantee declined")) {
+                            $this->setMagentoStatusTo($case, Signifyd_Connect_Model_Case::COMPLETED_STATUS);
+                        }
                         break;
 
                     // Do nothing

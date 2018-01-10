@@ -200,4 +200,120 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         
         return $order->isCanceled();
     }
+
+    /**
+     * Method to walk the flow for an order when the config is set to unhold, invoice and capture.
+     * When guaranty is approved
+     *
+     * @param Mage_Sales_Model_Order $order
+     * @param $reason
+     * @return bool
+     */
+    public function unholdOrderAndCapture(Mage_Sales_Model_Order $order, $reason)
+    {
+        if (!$this->checkSettings($order)) {
+            return false;
+        }
+
+        if (!$this->unholdOrder($order, $reason)) {
+            return false;
+        }
+
+        $status = $this->helper->getOrderPaymentStatus($order);
+
+        try {
+            // Authorize the order
+            $result = $this->authorizeOrder($order);
+            if ($result === false) {
+                $this->holdOrder($order, 'failed to authorize order');
+            }
+
+            // Generate the invoice
+            if ($status['capture'] !== true) {
+                $result = $this->generateInvoice($order);
+                if ($result === false) {
+                    $this->holdOrder($order, 'failed to generate invoice');
+                }
+            }
+        } catch (Exception $e) {
+            $this->holdOrder($order, 'failed to authorize/invoice order');
+            $this->logger->addLog("Order {$order->getIncrementId()} unable to be saved because {$e->getMessage()}");
+            $this->logger->addLog("Order {$order->getIncrementId()} was not unheld.");
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param Mage_Sales_Model_Order $order
+     * @return bool
+     */
+    public function authorizeOrder(Mage_Sales_Model_Order $order)
+    {
+        // Get the payment status for this order
+        $status = $this->helper->getOrderPaymentStatus($order);
+
+        if($status['authorize']){
+            $this->logger->addLog("Order {$order->getIncrementId()} is already authorize");
+            return true;
+        }
+
+        $payment = $order->getPayment();
+        $method = $payment->getMethodInstance();
+        if(!$method->canAuthorize()){
+            $this->logger->addLog("Order {$order->getIncrementId()} can not be authorize");
+            return true;
+        }
+
+        $amount = $order->getData('grand_total');
+
+        try{
+            // check if method authorize returns anything usefully
+            $method->authorize($payment, $amount);
+            $this->logger->addLog("Authorize order {$order->getIncrementId()} was successful");
+        } catch (Exception $e) {
+            $this->logger->addLog("Authorize order {$order->getIncrementId()} was not authorized:");
+            $this->logger->addLog($e->__toString());
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Method to generate the invoice after a order was placed
+     * @param $order
+     * @return bool
+     */
+    public function generateInvoice(Mage_Sales_Model_Order $order)
+    {
+        if (!$order->canInvoice()) {
+            $this->logger->addLog("Order {$order->getIncrementId()} can not be invoiced");
+            return false;
+        }
+
+        try {
+            /** @var Mage_Sales_Model_Order_Invoice $invoice */
+            $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
+            $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::CAPTURE_ONLINE);
+            $invoice->register();
+            $transactionSave = Mage::getModel('core/resource_transaction')
+                ->addObject($invoice)
+                ->addObject($invoice->getOrder());
+            $transactionSave->save();
+            $this->logger->addLog("Invoice was created for order: {$order->getIncrementId()}");
+            $invoice->addComment('Automatic Invoice', false);
+            $invoice->sendEmail();
+            $invoice->setEmailSent(true);
+            $invoice->save();
+            $order->addStatusHistoryComment('Automatic Invoice: '.$invoice->getIncrementId());
+            $order->save();
+        } catch (Exception $e) {
+            $this->logger->addLog('Exception while creating invoice: ' . $e->__toString());
+            return false;
+        }
+
+        return true;
+    }
 }
