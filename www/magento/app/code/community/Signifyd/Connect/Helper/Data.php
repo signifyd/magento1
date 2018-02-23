@@ -164,7 +164,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return preg_replace('/[^0-9a-zA-Z:\.]/', '', strtok(str_replace($ip, ',', "\n"), "\n"));
     }
 
-    private function getVersions()
+    protected function getVersions()
     {
         $version = array();
         $version['storePlatformVersion'] = Mage::getVersion();
@@ -174,7 +174,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $version;
     }
 
-    private function getTransactionId($payment)
+    protected function getTransactionId($payment)
     {
         $transId = $payment->getCcTransId();
         if(is_array($transId) && is_string($transId[0])) {
