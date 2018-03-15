@@ -384,8 +384,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function getConfigData($path, Mage_Core_Model_Abstract $entity = null)
     {
-        $this->log("Get config {$path} for entity " . get_class($entity));
-
         if ($entity instanceof Mage_Sales_Model_Order && !$entity->isEmpty()) {
             $storeId = $entity->getStoreId();
         } elseif ($entity instanceof Signifyd_Connect_Model_Case && !$entity->isEmpty()) {
@@ -394,11 +392,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $storeId = null;
         }
 
-        $this->log("Getting config {$path} for store {$storeId}");
-
         $return = Mage::getStoreConfig("signifyd_connect/{$path}", $storeId);
-
-        $this->log("Config value {$return}");
 
         return $return;
     }

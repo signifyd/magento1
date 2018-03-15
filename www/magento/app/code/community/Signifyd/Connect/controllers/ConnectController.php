@@ -115,14 +115,12 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             $this->logger->addLog('API empty request');
             $this->getResponse()->setBody($this->getDefaultMessage());
         } else {
-            $this->logger->addLog('API test 01');
             $requestJson = json_decode($request, true);
             if (empty($requestJson) || !isset($requestJson['orderId'])) {
                 $this->logger->addLog('API invalid request');
                 return;
             }
 
-            $this->logger->addLog('API test 02');
             // Test is only verifying that the endpoint is reachable. So we just complete here
             if ($topic == 'cases/test' && $this->validateTestRequest($request, $hash)) {
                 $case = Mage::getModel('signifyd_connect/case')->load(200000001);
@@ -131,20 +129,16 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 return;
             }
 
-            $this->logger->addLog('API test 03');
             /** @var Signifyd_Connect_Model_Case $case */
             $case = Mage::getModel('signifyd_connect/case')->load($requestJson['orderId']);
 
-            $this->logger->addLog('API test 03.a');
 
-            $this->logger->addLog('API test 04');
             if (!Mage::helper('signifyd_connect')->isEnabled($case)) {
                 $this->logger->addLog('API extension disabled');
                 $this->getResponse()->setBody($this->getDisabledMessage());
                 return;
             }
 
-            $this->logger->addLog('API test 05');
             if ($case->isObjectNew()) {
                 $this->logger->addLog('Case not yet in DB. Likely timing issue. order_increment: ' . $requestJson['orderId']);
                 $this->getResponse()->setHttpResponseCode(409);
