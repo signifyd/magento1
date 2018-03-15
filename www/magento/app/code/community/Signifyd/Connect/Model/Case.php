@@ -49,7 +49,18 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $this->_init('signifyd_connect/case');
         $this->_isPkAutoIncrement = false;
         $this->logger = Mage::helper('signifyd_connect/log');
-        $this->helper = Mage::helper('signifyd_connect');
+    }
+
+    /**
+     * @return Signifyd_Connect_Helper_Data
+     */
+    public function getHelper()
+    {
+        if (!$this->helper instanceof Signifyd_Connect_Helper_Data) {
+            $this->helper = Mage::helper('signifyd_connect');
+        }
+
+        return $this->helper;
     }
 
     public function setMagentoStatusTo($case, $status)
@@ -75,16 +86,13 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $this->_request = $request;
         $this->topic = "cases/review"; // Topic header is most likely not available
 
-        if (is_array($request) && isset($request['orderId']))
+        if (is_array($request) && isset($request['orderId'])) {
             $case = $this->load($request['orderId']);
-        else
+        } else {
             return false;
-
-        $this->order = Mage::getModel('sales/order')->loadByIncrementId($request['orderId']);
-
-        if ($this->order && $this->order->getId()) {
-            $this->storeId = $this->order->getStoreId();
         }
+
+        $this->setOrder();
 
         if ($case) {
             $lookup = $this->caseLookup($case);
@@ -143,8 +151,8 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
 
         // If a guarantee has been set, we no longer care about other actions
         if (!$order->isEmpty() && isset($newGuarantee) && $newGuarantee != $this->_previousGuarantee) {
-            $positiveAction = $this->helper->getAcceptedFromGuaranty($order->getStoreId());
-            $negativeAction = $this->helper->getDeclinedFromGuaranty($order->getStoreId());
+            $positiveAction = $this->getHelper()->getAcceptedFromGuaranty($order);
+            $negativeAction = $this->getHelper()->getDeclinedFromGuaranty($order);
 
             /** @var Signifyd_Connect_Model_Order $orderModel */
             $orderModel = Mage::getModel('signifyd_connect/order');
@@ -216,13 +224,14 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $result = false;
 
         try {
-            $url = $this->helper->getUrl() . '/' . $case->getCode();
-            $response = $this->helper->request($url, null, $this->helper->getAuth(), null, 'application/json');
-            $response_code = $response->getHttpCode();
-            if (substr($response_code, 0, 1) == '2') {
+            $url = $this->getHelper()->getUrl() . '/' . $case->getCode();
+            $auth = $this->getHelper()->getConfigData('settings/key', $case);
+            $response = $this->getHelper()->request($url, null, $auth, null, 'application/json');
+            $responseCode = $response->getHttpCode();
+            if (substr($responseCode, 0, 1) == '2') {
                 $result = json_decode($response->getRawResponse(), true);
             } else {
-                $this->logger->addLog('Fallback request received a ' . $response_code . ' response from Signifyd');
+                $this->logger->addLog('Fallback request received a ' . $responseCode . ' response from Signifyd');
             }
         } catch (Exception $e) {
             $this->logger->addLog('Fallback issue: ' . $e->__toString());
@@ -397,10 +406,22 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $this->_previousScore = $case->getScore();
     }
 
-    public function setOrder(){
-        if($this->order === false){
+    public function setOrder()
+    {
+        if ($this->order === false) {
             $this->order = Mage::getModel('sales/order')->loadByIncrementId($this->_request['orderId']);
+            if ($this->order instanceof Mage_Sales_Model_Order && !$this->order->isEmpty()) {
+                $this->storeId = $this->order->getStoreId();
+            }
         }
         return;
+    }
+
+    /**
+     * @return bool|Mage_Sales_Model_Order
+     */
+    public function getOrder()
+    {
+        return $this->order;
     }
 }

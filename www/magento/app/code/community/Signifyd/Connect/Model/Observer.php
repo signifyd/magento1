@@ -41,10 +41,6 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     public function openCase($observer)
     {
         try {
-            if (!Mage::getStoreConfig('signifyd_connect/settings/enabled') && !$this->getEnabled()) {
-                return $this;
-            }
-
             $event = $observer->getEvent();
 
             /** @var Mage_Sales_Model_Order $order */
@@ -59,7 +55,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 return $this;
             }
 
-            if(Mage::registry('signifyd_action_' . $order->getIncrementId()) == 1) {
+            if (Mage::registry('signifyd_action_' . $order->getIncrementId()) == 1) {
                 return $this;
             }
 
@@ -367,8 +363,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $order->loadByIncrementId($incrementId);
 
             if (!$order->isEmpty()) {
-                $acceptedFromGuarantyAction = $this->getHelper()->getAcceptedFromGuaranty($order->getStoreId());
-                $declinedFromGuaranty = $this->getHelper()->getDeclinedFromGuaranty();
+                $acceptedFromGuarantyAction = $this->getHelper()->getAcceptedFromGuaranty($order);
+                $declinedFromGuaranty = $this->getHelper()->getDeclinedFromGuaranty($order);
                 $this->getHelper()->log("Accepted From Guaranty: {$acceptedFromGuarantyAction}");
                 $this->getHelper()->log("Declined From Guaranty: {$declinedFromGuaranty}");
 

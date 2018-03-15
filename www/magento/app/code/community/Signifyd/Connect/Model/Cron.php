@@ -10,16 +10,32 @@ class Signifyd_Connect_Model_Cron
 {
     /** @var Signifyd_Connect_Helper_Log */
     protected $logger;
+
     /** @var Signifyd_Connect_Helper_Data */
     protected $helper;
 
     /**
-     * Signifyd_Connect_Model_Cron constructor.
+     * @return Signifyd_Connect_Helper_Data
      */
-    public function __construct()
+    public function getHelper()
     {
-        $this->logger = Mage::helper('signifyd_connect/log');
-        $this->helper = Mage::helper('signifyd_connect');
+        if (!$this->helper instanceof Signifyd_Connect_Helper_Data) {
+            $this->helper = Mage::helper('signifyd_connect');
+        }
+
+        return $this->helper;
+    }
+
+    /**
+     * @return Signifyd_Connect_Helper_Log
+     */
+    public function getLogger()
+    {
+        if (!$this->logger instanceof Signifyd_Connect_Helper_Log) {
+            $this->logger = Mage::helper('signifyd_connect/log');
+        }
+
+        return $this->logger;
     }
 
     /**
@@ -27,79 +43,92 @@ class Signifyd_Connect_Model_Cron
      */
     public function retry()
     {
-        $this->logger->addLog("Main retry method called");
+        $this->getLogger()->addLog("Main retry method called");
+        
         // Getting all the cases that were not submitted to Signifyd
-        $cases_for_resubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS);
-        foreach ($cases_for_resubmit as $current_case) {
-            $this->logger->addLog("Preparing for send case no: {$current_case['order_increment']}");
-            $current_order_id = $current_case['order_increment'];
-            $current_order = Mage::getModel('sales/order')->loadByIncrementId($current_order_id);
-            Mage::helper('signifyd_connect')->buildAndSendOrderToSignifyd($current_order,true);
+        $casesForResubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS);
+        /** @var Signifyd_Connect_Model_Case $currentCase */
+        foreach ($casesForResubmit->getItems() as $currentCase) {
+            $currentOrderId = $currentCase->getData('order_increment');
+            $this->getLogger()->addLog("Preparing for send case no: {$currentOrderId}");
+            $currentOrder = Mage::getModel('sales/order')->loadByIncrementId($currentOrderId);
+            $this->getHelper()->buildAndSendOrderToSignifyd($currentOrder, true);
         }
 
         // Getting all the cases that are awaiting review from Signifyd
-        $cases_for_resubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
-        foreach ($cases_for_resubmit as $current_case) {
-            $this->logger->addLog("Preparing for review case no: {$current_case['order_increment']}");
-            $this->processInReviewCase($current_case);
+        $casesForResubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
+        /** @var Signifyd_Connect_Model_Case $currentCase */
+        foreach ($casesForResubmit->getItems() as $currentCase) {
+            $this->getLogger()->addLog('Preparing for review case no: ' . $currentCase->getData('order_increment'));
+            $this->processInReviewCase($currentCase);
         }
 
         // Getting all the cases that need processing after the response was received
-        $cases_for_resubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::PROCESSING_RESPONSE_STATUS);
-        foreach ($cases_for_resubmit as $current_case) {
-            $this->logger->addLog("Preparing for response processing of case no: {$current_case['order_increment']}");
-            $current_order_id = $current_case['order_increment'];
-            $current_order = Mage::getModel('sales/order')->loadByIncrementId($current_order_id);
-            Mage::getModel('signifyd_connect/case')->processAdditional($current_case, false, $current_order);
+        $casesForResubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::PROCESSING_RESPONSE_STATUS);
+        /** @var Signifyd_Connect_Model_Case $currentCase */
+        foreach ($casesForResubmit->getItems() as $currentCase) {
+            $currentOrderId = $currentCase->getData('order_increment');
+            $this->getLogger()->addLog("Preparing for response processing of case no: {$currentOrderId}");
+            $currentOrder = Mage::getModel('sales/order')->loadByIncrementId($currentOrderId);
+            Mage::getModel('signifyd_connect/case')->processAdditional($currentCase->getData(), false, $currentOrder);
         }
 
-        $this->logger->addLog("Main retry method ended");
+        $this->getLogger()->addLog("Main retry method ended");
+        
         return;
     }
 
     /**
      * Getting the retry cases by the status of the case
+     * 
      * @param $status
-     * @return mixed
+     * @return Signifyd_Connect_Model_Resource_Case_Collection
      */
     public function getRetryCasesByStatus($status)
     {
-
         $time = time();
         $lastTime = $time -  60*60*24*7; // not longer than 7 days
         $firstTime = $time -  60*30; // longer than last 30 minuted
         $from = date('Y-m-d H:i:s', $lastTime);
         $to = date('Y-m-d H:i:s', $firstTime);
 
-        $cases = Mage::getModel('signifyd_connect/case')->getCollection()
-            ->addFieldToFilter('updated', array('from' => $from, 'to' => $to))
-            ->addFieldToFilter('magento_status', $status);
+        /** @var Signifyd_Connect_Model_Resource_Case_Collection $casesCollection */
+        $casesCollection = Mage::getModel('signifyd_connect/case')->getCollection();
+        $casesCollection->addFieldToFilter('updated', array('from' => $from, 'to' => $to));
+        $casesCollection->addFieldToFilter('magento_status', $status);
 
-        return $cases->getData();
-
+        return $casesCollection;
     }
 
     /**
      * Process the cases that are in review
-     * @param $case
+     * 
+     * @param Signifyd_Connect_Model_Case $case
      * @return bool
      */
-    public function processInReviewCase($case)
+    public function processInReviewCase(Signifyd_Connect_Model_Case $case)
     {
-        if(empty($case['code'])) return false;
+        $code = $case->getData('code');
 
-        $this->logger->addLog('Process in review case: ' . $case['code']);
-        $case_url = $this->helper->getCaseUrl($case['code']);
-        $response = $this->helper->request($case_url,null, $this->helper->getAuth(),'application/json');
+        if (empty($code)) {
+            return false;
+        }
+
+        $this->getLogger()->addLog('Process in review case: ' . $code);
+        $caseUrl = $this->getHelper()->getCaseUrl($code);
+        $auth = $auth = $this->getHelper()->getConfigData('settings/key', $case);
+        $response = $this->getHelper()->request($caseUrl, null, $auth,'application/json');
+
         try {
-            $response_code = $response->getHttpCode();
-            if (substr($response_code, 0, 1) == '2') {
-                $response_data = $response->getRawResponse();
-                Mage::getModel('signifyd_connect/case')->processFallback($response_data);
+            $responseCode = $response->getHttpCode();
+
+            if (substr($responseCode, 0, 1) == '2') {
+                $responseData = $response->getRawResponse();
+                Mage::getModel('signifyd_connect/case')->processFallback($responseData);
                 return true;
             }
         } catch (Exception $e) {
-            $this->logger->addLog($e->__toString());
+            $this->getLogger()->addLog($e->__toString());
             return false;
         }
 

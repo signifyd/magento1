@@ -8,6 +8,7 @@
  */
 class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Action
 {
+    /** @var Signifyd_Connect_Helper_Log */
     public $logger;
 
     /**
@@ -52,19 +53,21 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
      * @param $hash
      * @return bool
      */
-    public function validRequest($request, $hash)
+    public function validateRequest($request, $hash, Signifyd_Connect_Model_Case $case)
     {
-        $check = base64_encode(hash_hmac('sha256', $request, Mage::helper('signifyd_connect')->getAuth(), true));
+        $this->logger->addLog('API validating');
+        $key = Mage::helper('signifyd_connect')->getConfigData('settings/key', $case);
+        $check = base64_encode(hash_hmac('sha256', $request, $key, true));
         $this->logger->addLog('API request hash check: ' . $check);
+        return ($check == $hash);
+    }
 
-        if ($check == $hash) {
-            return true;
-        } elseif ($this->getHeader('X-SIGNIFYD-TOPIC') == "cases/test") {
+    public function validateTestRequest($request, $hash)
+    {
+        if ($this->getHeader('X-SIGNIFYD-TOPIC') == "cases/test") {
             // In the case that this is a webhook test, the encoding ABCDE is allowed
             $check = base64_encode(hash_hmac('sha256', $request, 'ABCDE', true));
-            if ($check == $hash) {
-                return true;
-            }
+            return ($check == $hash);
         }
 
         return false;
@@ -98,46 +101,63 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
      */
     public function apiAction()
     {
-        if (!Mage::helper('signifyd_connect')->isEnabled()) {
-            $this->getResponse()->setBody($this->getDisabledMessage());
-            return;
-        }
-
         $this->logger = Mage::helper('signifyd_connect/log');
 
         $request = $this->getRawPost();
         $hash = $this->getHeader('X-SIGNIFYD-SEC-HMAC-SHA256');
         $topic = $this->getHeader('X-SIGNIFYD-TOPIC');
 
-        $this->logger->addLog('API request: ' . $request);
-        $this->logger->addLog('API request hash: ' . $hash);
-        $this->logger->addLog('API request topic: ' . $topic);
+        $this->logger->addLog('API: request: ' . $request);
+        $this->logger->addLog('API: request hash: ' . $hash);
+        $this->logger->addLog('API: request topic: ' . $topic);
 
-        if ($request) {
-            if ($this->validRequest($request, $hash)) {
-                // Test is only verifying that the endpoint is reachable. So we just complete here
-                if ($topic == 'cases/test') {
-                    return;
-                }
+        if (empty($request)) {
+            $this->logger->addLog('API empty request');
+            $this->getResponse()->setBody($this->getDefaultMessage());
+        } else {
+            $this->logger->addLog('API test 01');
+            $requestJson = json_decode($request, true);
+            if (empty($requestJson) || !isset($requestJson['orderId'])) {
+                $this->logger->addLog('API invalid request');
+                return;
+            }
 
-                $requestJson = json_decode($request, true);
-                if (empty($requestJson) || !isset($requestJson['orderId'])) {
-                    return;
-                }
+            $this->logger->addLog('API test 02');
+            // Test is only verifying that the endpoint is reachable. So we just complete here
+            if ($topic == 'cases/test' && $this->validateTestRequest($request, $hash)) {
+                $case = Mage::getModel('signifyd_connect/case')->load(200000001);
+                Mage::helper('signifyd_connect')->isEnabled($case);
+                $this->logger->addLog('API OK');
+                return;
+            }
 
-                /** @var Signifyd_Connect_Model_Case $case */
-                $case = Mage::getModel('signifyd_connect/case')->load($requestJson['orderId']);
+            $this->logger->addLog('API test 03');
+            /** @var Signifyd_Connect_Model_Case $case */
+            $case = Mage::getModel('signifyd_connect/case')->load($requestJson['orderId']);
 
-                if ($case->isObjectNew()) {
-                    $this->logger->addLog('Case not yet in DB. Likely timing issue. order_increment: ' . $requestJson['orderId']);
-                    $this->getResponse()->setHttpResponseCode(409);
-                    return;
-                }
+            $this->logger->addLog('API test 03.a');
 
+            $this->logger->addLog('API test 04');
+            if (!Mage::helper('signifyd_connect')->isEnabled($case)) {
+                $this->logger->addLog('API extension disabled');
+                $this->getResponse()->setBody($this->getDisabledMessage());
+                return;
+            }
+
+            $this->logger->addLog('API test 05');
+            if ($case->isObjectNew()) {
+                $this->logger->addLog('Case not yet in DB. Likely timing issue. order_increment: ' . $requestJson['orderId']);
+                $this->getResponse()->setHttpResponseCode(409);
+                return;
+            }
+
+            if ($this->validateRequest($request, $hash, $case)) {
                 // Prevent recurring on save
                 if (is_null(Mage::registry('signifyd_action_' . $requestJson['orderId']))) {
                     Mage::register('signifyd_action_' . $requestJson['orderId'], 1);
                 }
+
+                $this->logger->addLog('API processing');
 
                 switch ($topic) {
                     case "cases/creation":
@@ -151,6 +171,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                         Mage::getModel('signifyd_connect/case')->processGuarantee($case, $requestJson);
                         break;
                     default:
+                        $this->logger->addLog('API invalid topic');
                         $this->getResponse()->setHttpResponseCode(403);
                         $this->getResponse()->setBody('This request type is currently unsupported');
                 }
@@ -158,8 +179,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 $this->logger->addLog('API request failed auth');
                 Mage::getModel('signifyd_connect/case')->processFallback($request);
             }
-        } else {
-            $this->getResponse()->setBody($this->getDefaultMessage());
         }
     }
 

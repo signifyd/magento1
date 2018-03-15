@@ -36,12 +36,12 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
      */
     public function checkSettings(Mage_Sales_Model_Order $order)
     {
-        if (!$this->helper->isEnabled()) {
+        if (!$this->helper->isEnabled($order)) {
             return false;
         }
 
-        $acceptedFromGuarantyAction = $this->helper->getAcceptedFromGuaranty($order->getStoreId());
-        $declinedFromGuaranty = $this->helper->getDeclinedFromGuaranty();
+        $acceptedFromGuarantyAction = $this->helper->getAcceptedFromGuaranty($order);
+        $declinedFromGuaranty = $this->helper->getDeclinedFromGuaranty($order);
 
         // If both workflow configurations are set to 'Do nothing', do not hold the order
         if ($acceptedFromGuarantyAction == 3 && $declinedFromGuaranty == 3) {
