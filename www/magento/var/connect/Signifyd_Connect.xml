@@ -9,7 +9,7 @@
    <description>Supports all versions of Magento</description>
    <license>OSL</license>
    <license_uri>http://opensource.org/licenses/osl-3.0.php</license_uri>
-   <version>4.1.0</version>
+   <version>4.1.1</version>
    <stability>stable</stability>
    <notes>Supports all versions of Magento</notes>
    <authors>
