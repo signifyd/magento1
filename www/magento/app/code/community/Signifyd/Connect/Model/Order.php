@@ -75,15 +75,24 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
 
         $incrementId = $order->getIncrementId();
 
-        if ($order->getStatus() != Mage_Sales_Model_Order::STATE_HOLDED) {
-            $this->logger->addLog("Order {$incrementId} already released from hold");
-            return true;
-        }
-
         if (!$order->canUnhold()) {
+            $state = $order->getState();
+
+            if ($state != $order::STATE_HOLDED) {
+                $reason = "order is not holded";
+            } elseif ($order->isPaymentReview()) {
+                $reason = 'order is in payment review';
+            } elseif ($this->getActionFlag($order::ACTION_FLAG_UNHOLD) === false) {
+                $reason = "order action flag is set to do not unhold";
+            } else {
+                $reason = "unknown reason";
+            }
+
             $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
-            $this->logger->addLog("Order {$incrementId} ({$order->getState()} > {$order->getStatus()}) can not be unheld. " .
-                "Case status: {$case->getSignifydStatus()}");
+            $this->logger->addLog("Order {$incrementId} ({$order->getState()} > {$order->getStatus()}) " .
+                "can not be unheld because {$reason}. " .
+                "Case status: {$case->getSignifydStatus()}"
+            );
             return false;
         }
 
@@ -116,13 +125,22 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
 
         $incrementId = $order->getIncrementId();
 
-        if ($order->getStatus() == Mage_Sales_Model_Order::STATE_HOLDED) {
-            $this->logger->addLog("Order {$incrementId} already on hold status");
-            return true;
-        }
-
         if (!$order->canHold()) {
-            $this->logger->addLog("Order {$incrementId} can not be held");
+            $state = $order->getState();
+
+            if ($order->isCanceled()) {
+                $reason = 'order is canceled';
+            } elseif ($order->isPaymentReview()) {
+                $reason = 'order is in payment review';
+            } elseif (in_array($state, $order::STATE_COMPLETE, $order::STATE_CLOSED, $order::STATE_HOLDED)) {
+                $reason = "order is on {$state} state";
+            } elseif ($this->getActionFlag($order::ACTION_FLAG_HOLD) === false) {
+                $reason = "order action flag is set to do not hold";
+            } else {
+                $reason = "unknown reason";
+            }
+
+            $this->logger->addLog("Order {$incrementId} can not be held because {$reason}");
             return false;
         }
 
