@@ -38,28 +38,70 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         return $this->orderModel;
     }
 
+    public function openCaseCheckout($observer)
+    {
+        $this->getHelper()->log('openCaseCheckout');
+        return $this->openCase($observer);
+    }
+
+    public function openCaseOrderSave($observer)
+    {
+        $this->getHelper()->log('openCaseOrderSave');
+        return $this->openCase($observer);
+    }
+
     public function openCase($observer)
     {
         try {
-            $event = $observer->getEvent();
+            $orders = array();
+
+            if ($observer->getEvent()->hasOrder()) {
+                // Onepage checkout and API
+                $orders[] = $observer->getEvent()->getOrder();
+            } elseif ($observer->getEvent()->hasOrders()) {
+                // Multishipping
+                $orders = $observer->getEvent()->getOrders();
+            } else {
+                // Look for registry key, for methods that open case on other events than sales_order_place_after
+                $incrementId = Mage::registry('signifyd_last_increment_id');
+                Mage::unregister('signifyd_last_increment_id');
+
+                if (empty($incrementId)) {
+                    $incrementId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
+                }
+
+                if (!empty($incrementId)) {
+                    $orders[] = Mage::getModel('sales/order')->loadByIncrementId($incrementId);
+                }
+            }
 
             /** @var Mage_Sales_Model_Order $order */
-            if ($event->hasOrder()) {
-                $order = $event->getOrder();
-            } else if ($event->hasObject()) {
-                $order = $event->getObject();
-            }
+            foreach ($orders as $order) {
+                try {
+                    if (!is_object($order) || $order->isEmpty()) {
+                        $this->getHelper()->log('Empty order passed to observer to open case. Ignoring order.');
+                        continue;
+                    }
 
-            $orderClass = Mage::getConfig()->getModelClassName('sales/order');
-            if (!($order instanceof $orderClass) || $order->isEmpty()) {
-                return $this;
-            }
+                    if (is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
+                        Mage::register('signifyd_action_' . $order->getIncrementId(), 1); // Avoid recurssions
+                    }
 
-            if (Mage::registry('signifyd_action_' . $order->getIncrementId()) == 1) {
-                return $this;
-            }
+                    $result = $this->getHelper()->buildAndSendOrderToSignifyd($order);
+                    $this->getHelper()->log("Create case result for " . $order->getIncrementId() . ": {$result}");
 
-            $this->getHelper()->buildAndSendOrderToSignifyd($order);
+                    //PayPal express can't be held before everything is processed or it won't send confirmation e-mail to customer
+                    //Also there is no different status before the process is complete as is with PayFlow
+                    $asyncHoldMethods = array('paypal_express', 'payflow_link', 'payflow_advanced');
+                    if ($result == "sent" && !in_array($order->getPayment()->getMethod(), $asyncHoldMethods)) {
+                        $this->putOrderOnHold($order);
+                    }
+                } catch (Exception $e) {
+                    $incrementId = $order->getIncrementId();
+                    $incrementId = empty($incrementId) ? '' : " $incrementId";
+                    $this->getHelper()->log("Failed to open case for order{$incrementId}: " . $e->__toString());
+                }
+            }
         } catch (Exception $e) {
             $this->getHelper()->log($e->__toString());
         }
@@ -306,17 +348,19 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
 
     /**
      * Putting an order on hold after the order was placed until the response comes back and an action can be taken.
+     *
      * @param Varien_Event_Observer $observer
      * @return $this
      */
-    public function putOrderOnHold(Varien_Event_Observer $observer)
+    public function putOrderOnHold(Mage_Sales_Model_Order $order)
     {
-        $order = $observer->getEvent()->getOrder();
+        if (!$order->isEmpty()) {
+            /** @var Signifyd_Connect_Model_Case $case */
+            $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
 
-        //PayPal express can't be held before everything is processed or it won't send confirmation e-mail to customer
-        //Also there is no different status before the process is complete as is with PayFlow Link
-        if (!in_array($order->getPayment()->getMethod(), array('paypal_express'))) {
-            $this->getOrderModel()->holdOrder($order, 'after order place');
+            if ($case->isEmpty() || $case->getMagentoStatus() != Signifyd_Connect_Model_Case::COMPLETED_STATUS) {
+                $this->getOrderModel()->holdOrder($order, 'after order place');
+            }
         }
 
         return $this;
@@ -362,33 +406,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $order = Mage::getModel('sales/order');
             $order->loadByIncrementId($incrementId);
 
-            if (!$order->isEmpty()) {
-                $acceptedFromGuarantyAction = $this->getHelper()->getAcceptedFromGuaranty($order);
-                $declinedFromGuaranty = $this->getHelper()->getDeclinedFromGuaranty($order);
-                $this->getHelper()->log("Accepted From Guaranty: {$acceptedFromGuarantyAction}");
-                $this->getHelper()->log("Declined From Guaranty: {$declinedFromGuaranty}");
-
-                if ($acceptedFromGuarantyAction == 1 || $declinedFromGuaranty == 2) {
-                    /** @var Signifyd_Connect_Model_Case $case */
-                    $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
-
-                    if (!$case->isEmpty()) {
-                        // If the configuration is set to 'Update status to processing' on approval
-                        // and the case it is already APPROVED, doesn't need to hold
-                        if ($acceptedFromGuarantyAction == 1 && $case->getGuarantee() == 'APPROVED') {
-                            return $this;
-                        }
-
-                        // If the configuration is set to 'Update status to canceled' when declined
-                        // and the case it is already DECLINED, doesn't need to hold
-                        if ($declinedFromGuaranty == 2 && $case->getGuarantee() == 'DECLINED') {
-                            return $this;
-                        }
-                    }
-                }
-
-                $this->getOrderModel()->holdOrder($order, 'after order place');
-            }
+            $this->putOrderOnHold($order);
         }
 
         return $this;

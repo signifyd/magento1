@@ -80,22 +80,23 @@
             </adminhtml>
         </blocks>
         <events>
-            <model_save_after>
+            <checkout_submit_all_after>
                 <observers>
                     <signifyd_connect>
                         <class>signifyd_connect/observer</class>
-                        <method>openCase</method>
+                        <method>openCaseCheckout</method>
                     </signifyd_connect>
                 </observers>
-            </model_save_after>
-            <sales_order_place_after>
+            </checkout_submit_all_after>
+            <sales_order_save_commit_after>
                 <observers>
                     <signifyd_connect>
                         <class>signifyd_connect/observer</class>
-                        <method>putOrderOnHold</method>
+                        <method>openCaseOrderSave</method>
                     </signifyd_connect>
                 </observers>
-            </sales_order_place_after>
+            </sales_order_save_commit_after>
+
             <!-- Payment methods that need to delay order on hold status -->
             <controller_action_predispatch_paypal_payflow_returnUrl>
                 <observers>

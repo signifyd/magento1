@@ -17,7 +17,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             'checkmo', 'cashondelivery', 'banktransfer','purchaseorder'
         ),
         Mage_Sales_Model_Order::STATE_PENDING_PAYMENT => array(
-            'payflow_link', 'payflow_advanced'
+            'all'
         ),
         Mage_Sales_Model_Order::STATE_CANCELED => array(
             'all'
@@ -404,12 +404,15 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function buildAndSendOrderToSignifyd($order, $forceSend = false)
     {
+        $this->log('buildAndSendOrderToSignifyd');
+
         if ($order instanceof Mage_Sales_Model_Order && !$order->isEmpty()) {
             if (!$this->isEnabled($order)) {
                 return 'disabled';
             }
 
             if ($this->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
+                $this->log('Case creation for order ' . $order->getIncrementId() . ' with state ' . $order->getState() . ' is restricted');
                 return 'restricted';
             }
 
@@ -423,15 +426,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             /** @var Mage_Sales_Model_Order_Payment $lastPayment */
             $lastPayment = $payments->getLastItem()->isEmpty() ? null : $payments->getLastItem();
 
-            $state = $order->getState();
-            if (!$state || $state == Mage_Sales_Model_Order::STATE_PENDING_PAYMENT) {
-                return "notready"; // Note: would not be in the order grid if this were the case
-            }
-
-            if (is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
-                Mage::register('signifyd_action_' . $order->getIncrementId(), 1); // Work will now take place
-            }
-
             $customer = null;
             if ($order->getCustomer()) {
                 $customer = $order->getCustomer();
@@ -444,6 +438,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
             try {
                 $responseCode = $response->getHttpCode();
+                $this->log("Response code: {$responseCode}");
 
                 if (substr($responseCode, 0, 1) == '2') {
                     $responseData = json_decode($response->getRawResponse(), true);

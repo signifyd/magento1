@@ -147,9 +147,9 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
             if ($this->validateRequest($request, $hash, $case)) {
                 // Prevent recurring on save
-                if (is_null(Mage::registry('signifyd_action_' . $requestJson['orderId']))) {
-                    Mage::register('signifyd_action_' . $requestJson['orderId'], 1);
-                }
+//                if (is_null(Mage::registry('signifyd_action_' . $requestJson['orderId']))) {
+//                    Mage::register('signifyd_action_' . $requestJson['orderId'], 1);
+//                }
 
                 $this->logger->addLog('API processing');
 
