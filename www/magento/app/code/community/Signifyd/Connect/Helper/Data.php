@@ -8,6 +8,8 @@
  */
 class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 {
+    protected $apiUrl = 'https://api.signifyd.com/v2/cases';
+
     /**
      * Restricted status on specific states only
      * @var array
@@ -182,7 +184,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
     public function getPurchase($order, $payment)
     {
-        $purchase = array();
+        $purchase = $this->getPurchaseUpdate($order, $payment);
 
         if (!$this->isAdmin() && $this->isDeviceFingerprintEnabled()) {
             $purchase['orderSessionId'] = 'M1' . base64_encode(Mage::getBaseUrl()) . $order->getQuoteId();
@@ -195,6 +197,21 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase['totalPrice'] = floatval($order->getGrandTotal());
         $purchase['shippingPrice'] = floatval($order->getShippingAmount());
         $purchase['products'] = $this->getProducts($order);
+
+        return $purchase;
+    }
+
+    /**
+     * Purchase update does not contain all fields
+     *
+     * @param $order
+     * @param $payment
+     * @return array
+     */
+    public function getPurchaseUpdate($order, $payment)
+    {
+        $purchase = array();
+
         $purchase['paymentGateway'] = $payment->getMethod();
         $purchase['transactionId'] = $this->getTransactionId($payment);
 
@@ -266,6 +283,14 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $recipient;
     }
 
+    public function getRecipientUpdate($order)
+    {
+        $recipient = $this->getRecipient($order);
+        $recipient['address'] = $recipient['deliveryAddress'];
+        unset($recipient['deliveryAddress']);
+        return $recipient;
+    }
+
     public function getUserAccount($customer, $order)
     {
         $user = array(
@@ -315,7 +340,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $user;
     }
 
-    public function generateCase($order, $payment, $customer)
+    public function generateCaseCreateData($order, $payment, $customer)
     {
         $case = array();
 
@@ -328,13 +353,24 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $case;
     }
 
+    public function generateCaseUpdateData($order, $payment)
+    {
+        $case = array();
+
+        $case['purchase'] = $this->getPurchaseUpdate($order, $payment);
+        $case['card'] = $this->getCard($order, $payment);
+        $case['recipient'] = $this->getRecipientUpdate($order);
+
+        return $case;
+    }
+
     /**
      * Getting the cases url
      * @return string
      */
     public function getUrl()
     {
-        return 'https://api.signifyd.com/v2/cases';
+        return $this->apiUrl;
     }
 
     /**
@@ -344,7 +380,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function getCaseUrl($caseCode)
     {
-        return 'https://api.signifyd.com/v2/cases/' . $caseCode;
+        return $this->getUrl() . '/' . $caseCode;
     }
 
     /**
@@ -402,7 +438,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      * @param bool $forceSend
      * @return string
      */
-    public function buildAndSendOrderToSignifyd($order, $forceSend = false)
+    public function buildAndSendOrderToSignifyd($order, $forceSend = false, $updateOnly = false)
     {
         $this->log('buildAndSendOrderToSignifyd');
 
@@ -411,30 +447,55 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 return 'disabled';
             }
 
+            $orderIncrementId = $order->getIncrementId();
+
             if ($this->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
-                $this->log('Case creation for order ' . $order->getIncrementId() . ' with state ' . $order->getState() . ' is restricted');
+                $this->log('Case creation for order ' . $orderIncrementId . ' with state ' . $order->getState() . ' is restricted');
                 return 'restricted';
             }
 
-            $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
-            if ($case->getId() && !$forceSend) {
-                return "exists";
-            }
-
+            /** @var Signifyd_Connect_Model_Case $case */
+            $case = Mage::getModel('signifyd_connect/case')->load($orderIncrementId);
             /** @var Mage_Sales_Model_Resource_Order_Payment_Collection $payments */
             $payments = $order->getPaymentsCollection();
             /** @var Mage_Sales_Model_Order_Payment $lastPayment */
             $lastPayment = $payments->getLastItem()->isEmpty() ? null : $payments->getLastItem();
+            $customer = $order->getCustomer() ? $order->getCustomer() : null;
 
-            $customer = null;
-            if ($order->getCustomer()) {
-                $customer = $order->getCustomer();
+            $caseUpdateData = $this->generateCaseUpdateData($order, $lastPayment, $customer);
+            $caseJson = json_encode($caseUpdateData);
+            $newMd5 = md5($caseJson);
+
+            $isUpdate = $case->getId() ? true : false;
+
+            if (!$isUpdate || $forceSend) {
+                if ($updateOnly) {
+                    return 'not ready';
+                }
+
+                $caseCreateData = $this->generateCaseCreateData($order, $lastPayment, $customer);
+                $caseJson = json_encode($caseCreateData);
+                
+                $case->setOrderIncrement($orderIncrementId);
+                $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
+                $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
+                $case->setEntries('md5', $newMd5);
+                $case->save();
+
+                $requestUri = $this->getUrl();
+            } else {
+                $currentMd5 = $case->getEntries('md5');
+                // If the case exists and has not changed, return 'exists'
+                // MD5 checks must occur on case update data only
+                if ($currentMd5 == $newMd5) {
+                    return 'exists';
+                }
+
+                $requestUri = $this->getCaseUrl($case->getCode());
             }
 
-            $case = $this->generateCase($order, $lastPayment, $customer);
-            $caseObject = $this->markProcessed($order);
             $apiKey = Mage::helper('signifyd_connect')->getConfigData('settings/key', $order);
-            $response = $this->request($this->getUrl(), json_encode($case), $apiKey, 'application/json');
+            $response = $this->request($requestUri, $caseJson, $apiKey, 'application/json', null, $isUpdate);
 
             try {
                 $responseCode = $response->getHttpCode();
@@ -442,19 +503,43 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
                 if (substr($responseCode, 0, 1) == '2') {
                     $responseData = json_decode($response->getRawResponse(), true);
+                    // investigationId is deprecated
+                    $caseId = isset($responseData['caseId']) ? $responseData['caseId'] : $responseData['investigationId'];
 
-                    $caseId = $responseData['investigationId'];
-                    $caseObject = Mage::getModel('signifyd_connect/case')->load($caseObject->getOrderIncrement());
-                    $caseObject->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
-                    $caseObject->setCode($caseId);
-                    $caseObject->setTransactionId($case['purchase']['transactionId']);
-                    $caseObject->setMagentoStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
-                    $caseObject->save();
+                    $case->setCode($caseId);
+                    $case->setCode($caseId);
 
-                    $order->addStatusHistoryComment("Signifyd: case $caseId created for order");
+                    if ($isUpdate) {
+                        $case->setEntries('md5', $newMd5);
+                        $previousScore = intval($case->getScore());
+                        Mage::getModel('signifyd_connect/case')->processCreation($case, $responseData);
+                        $newScore = intval($case->getScore());
+
+                        $orderComment = 'Order update submitted to Signifyd';
+                        $return = 'updated';
+
+                        if (Mage::getDesign()->getArea() == 'adminhtml') {
+                            Mage::getSingleton('core/session')->addSuccess($orderComment);
+
+                            if ($previousScore != $newScore) {
+                                Mage::getSingleton('adminhtml/session')
+                                    ->addWarning("Signifyd score for order {$orderIncrementId} changed from {$previousScore} to {$newScore}");
+                            }
+                        }
+                    } else {
+                        $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
+                        $case->setTransactionId($case['purchase']['transactionId']);
+                        $case->setMagentoStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
+                        $case->save();
+
+                        $orderComment = "Signifyd: case {$caseId} created for order";
+                        $return = 'sent';
+                    }
+
+                    $order->addStatusHistoryComment($orderComment);
                     $order->save(); // Note: this will trigger recursion
 
-                    return "sent";
+                    return $return;
                 }
             } catch (Exception $e) {
                 $this->log($e->__toString());
@@ -514,28 +599,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function getStoreUrl()
     {
         return Mage::getBaseUrl();
-    }
-
-    public function markProcessed($order)
-    {
-        $case = Mage::getModel('signifyd_connect/case');
-        $case->setOrderIncrement($order->getIncrementId());
-        $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
-        $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
-        $case->save();
-
-        return $case;
-    }
-
-    public function unmarkProcessed($order)
-    {
-        $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
-        if($case && !$case->isObjectNew())
-        {
-            Mage::register('isSecureArea', true);
-            $case->delete();
-            Mage::unregister('isSecureArea');
-        }
     }
 
     public function cancelGuarantee($case)

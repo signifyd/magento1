@@ -3,7 +3,7 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>4.1.2</version>
+            <version>4.2.0</version>
         </Signifyd_Connect>
     </modules>
     <global>
@@ -96,6 +96,24 @@
                     </signifyd_connect>
                 </observers>
             </sales_order_save_commit_after>
+
+            <!-- Order update events to check and trigger Signifyd update if it is the case -->
+            <sales_order_address_save_commit_after>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>updateCaseAddressSave</method>
+                    </signifyd_connect>
+                </observers>
+            </sales_order_address_save_commit_after>
+            <sales_order_payment_save_commit_after>
+                <observers>
+                    <signifyd_connect>
+                        <class>signifyd_connect/observer</class>
+                        <method>updateCasePaymentSave</method>
+                    </signifyd_connect>
+                </observers>
+            </sales_order_payment_save_commit_after>
 
             <!-- Payment methods that need to delay order on hold status -->
             <controller_action_predispatch_paypal_payflow_returnUrl>

@@ -50,7 +50,29 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         return $this->openCase($observer);
     }
 
-    public function openCase($observer)
+    public function updateCaseAddressSave($observer)
+    {
+        $this->getHelper()->log('updateCaseAddressSave');
+
+        /** @var Mage_Sales_Model_Order_Address $orderAddress */
+        $orderAddress = $observer->getAddress();
+        $observer->getEvent()->setOrder($orderAddress->getOrder());
+
+        return $this->openCase($observer, true);
+    }
+
+    public function updateCasePaymentSave($observer)
+    {
+        $this->getHelper()->log('updateCasePaymentSave');
+
+        /** @var Mage_Sales_Model_Order_Payment $orderPayment */
+        $orderPayment = $observer->getPayment();
+        $observer->getEvent()->setOrder($orderPayment->getOrder());
+
+        return $this->openCase($observer, true);
+    }
+
+    public function openCase($observer, $updateOnly = false)
     {
         try {
             $orders = array();
@@ -85,9 +107,12 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
 
                     if (is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
                         Mage::register('signifyd_action_' . $order->getIncrementId(), 1); // Avoid recurssions
+                    } else {
+                        // Order already been processed, ignore it
+                        continue;
                     }
 
-                    $result = $this->getHelper()->buildAndSendOrderToSignifyd($order);
+                    $result = $this->getHelper()->buildAndSendOrderToSignifyd($order, false, $updateOnly);
                     $this->getHelper()->log("Create case result for " . $order->getIncrementId() . ": {$result}");
 
                     //PayPal express can't be held before everything is processed or it won't send confirmation e-mail to customer
@@ -100,6 +125,10 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                     $incrementId = $order->getIncrementId();
                     $incrementId = empty($incrementId) ? '' : " $incrementId";
                     $this->getHelper()->log("Failed to open case for order{$incrementId}: " . $e->__toString());
+                }
+
+                if (!is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
+                    Mage::unregister('signifyd_action_' . $order->getIncrementId()); // Avoid recurssions
                 }
             }
         } catch (Exception $e) {

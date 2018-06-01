@@ -290,6 +290,13 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         return $case;
     }
 
+    /**
+     * Process case creation and update
+     *
+     * @param $case
+     * @param $request
+     * @return bool
+     */
     public function processCreation($case, $request)
     {
         if (!$case) return false;
@@ -304,15 +311,15 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
 
         if (isset($request['testInvestigation'])) {
-            $case->setEntries(serialize(array('testInvestigation' => $request['testInvestigation'])));
+            $case->setEntries('testInvestigation', $request['testInvestigation']);
         }
 
         try {
             $case->save();
             $this->processAdditional($case);
-            $this->logger->addLog('Case ' . $case->getId() . ' created with status ' . $case->getSignifydStatus() . ' and score ' . $case->getScore());
+            $this->logger->addLog('Case ' . $case->getId() . ' created/updated with status ' . $case->getSignifydStatus() . ' and score ' . $case->getScore());
         } catch (Exception $e) {
-            $this->logger->addLog('Process creation error: ' . $e->__toString());
+            $this->logger->addLog('Process creation/update error: ' . $e->__toString());
             return false;
         }
 

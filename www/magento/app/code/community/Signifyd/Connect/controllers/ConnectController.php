@@ -123,8 +123,6 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
             // Test is only verifying that the endpoint is reachable. So we just complete here
             if ($topic == 'cases/test' && $this->validateTestRequest($request, $hash)) {
-                $case = Mage::getModel('signifyd_connect/case')->load(200000001);
-                Mage::helper('signifyd_connect')->isEnabled($case);
                 $this->logger->addLog('API OK');
                 return;
             }
@@ -147,9 +145,9 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
 
             if ($this->validateRequest($request, $hash, $case)) {
                 // Prevent recurring on save
-//                if (is_null(Mage::registry('signifyd_action_' . $requestJson['orderId']))) {
-//                    Mage::register('signifyd_action_' . $requestJson['orderId'], 1);
-//                }
+                if (is_null(Mage::registry('signifyd_action_' . $requestJson['orderId']))) {
+                    Mage::register('signifyd_action_' . $requestJson['orderId'], 1);
+                }
 
                 $this->logger->addLog('API processing');
 

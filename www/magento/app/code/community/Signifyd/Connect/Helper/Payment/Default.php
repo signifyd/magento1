@@ -57,7 +57,6 @@ class Signifyd_Connect_Helper_Payment_Default
         $card['last4'] = $this->getLast4();
         $card['expiryMonth'] = $this->getExpiryMonth();
         $card['expiryYear'] = $this->getExpiryYear();
-        $card['hash'] = $this->getHash();
 
         $card['bin'] = $this->filterBin($card['bin']);
         $card['last4'] = $this->filterLast4($card['last4']);
@@ -165,16 +164,6 @@ class Signifyd_Connect_Helper_Payment_Default
         }
 
         return $expiryYear;
-    }
-
-    /**
-     * @return null|string
-     */
-    public function getHash()
-    {
-        $hash = trim($this->payment->getCcNumberEnc());
-
-        return empty($hash) ? null : $hash;
     }
 
     /**
