@@ -23,6 +23,15 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         ),
         Mage_Sales_Model_Order::STATE_CANCELED => array(
             'all'
+        ),
+        Mage_Sales_Model_Order::STATE_CLOSED => array(
+            'all'
+        ),
+        Mage_Sales_Model_Order::STATE_COMPLETE => array(
+            'all'
+        ),
+        Mage_Sales_Model_Order::STATE_CANCELED => array(
+            'all'
         )
     );
 
