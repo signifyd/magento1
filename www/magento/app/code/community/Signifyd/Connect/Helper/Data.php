@@ -29,9 +29,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         ),
         Mage_Sales_Model_Order::STATE_COMPLETE => array(
             'all'
-        ),
-        Mage_Sales_Model_Order::STATE_CANCELED => array(
-            'all'
         )
     );
 
@@ -292,14 +289,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $recipient;
     }
 
-    public function getRecipientUpdate($order)
-    {
-        $recipient = $this->getRecipient($order);
-        $recipient['address'] = $recipient['deliveryAddress'];
-        unset($recipient['deliveryAddress']);
-        return $recipient;
-    }
-
     public function getUserAccount($customer, $order)
     {
         $user = array(
@@ -368,7 +357,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
         $case['purchase'] = $this->getPurchaseUpdate($order, $payment);
         $case['card'] = $this->getCard($order, $payment);
-        $case['recipient'] = $this->getRecipientUpdate($order);
+        $case['recipient'] = $this->getRecipient($order);
 
         return $case;
     }
@@ -647,6 +636,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($curl, CURLOPT_FAILONERROR, true);
 
         if ($auth) {
             curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
