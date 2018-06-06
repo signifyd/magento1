@@ -21,6 +21,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         Mage_Sales_Model_Order::STATE_PENDING_PAYMENT => array(
             'all'
         ),
+        Mage_Sales_Model_Order::STATE_HOLDED => array(
+            'all'
+        ),
+        Mage_Sales_Model_Order::STATE_PAYMENT_REVIEW => array(
+            'all'
+        ),
         Mage_Sales_Model_Order::STATE_CANCELED => array(
             'all'
         ),
