@@ -116,8 +116,6 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $this->setOrder();
         $this->logger->addLog('Process review case:' . $case->getId());
 
-        $original_status = $case->getSignifydStatus();
-
         $case = $this->updateScore($case);
         $case = $this->updateStatus($case);
         $case = $this->updateGuarantee($case);
@@ -125,7 +123,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         try {
             $case->save();
-            $this->processAdditional($case, $original_status);
+            $this->processAdditional($case);
         } catch (Exception $e) {
             $this->logger->addLog('Process review error: ' . $e->__toString());
         }
@@ -138,7 +136,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
      * @param null|Mage_Sales_Model_Order $order
      * @return bool
      */
-    public function processAdditional($case, $original_status = false, Mage_Sales_Model_Order $order = null)
+    public function processAdditional($case, Mage_Sales_Model_Order $order = null)
     {
         $this->logger->addLog('Process additional case: ' . $case['order_increment']);
         if ($order == null) {
@@ -385,8 +383,6 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $this->setPrevious($case);
         $this->setOrder();
 
-        $original_status = $case->getSignifydStatus();
-
         $case = $this->updateScore($case);
         $case = $this->updateStatus($case);
         $case = $this->updateGuarantee($case);
@@ -394,7 +390,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         try {
             $case->save();
-            $this->processAdditional($case, $original_status);
+            $this->processAdditional($case);
         } catch (Exception $e) {
             $this->logger->addLog('Process guarantee error: ' . $e->__toString());
             return false;

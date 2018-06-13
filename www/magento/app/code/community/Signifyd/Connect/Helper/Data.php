@@ -11,7 +11,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     protected $apiUrl = 'https://api.signifyd.com/v2/cases';
 
     /**
-     * Restricted status on specific states only
+     * Restricted states and payment methods
      * @var array
      */
     protected $restrictedStatesMethods = array(
@@ -19,9 +19,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             'checkmo', 'cashondelivery', 'banktransfer','purchaseorder'
         ),
         Mage_Sales_Model_Order::STATE_PENDING_PAYMENT => array(
-            'all'
-        ),
-        Mage_Sales_Model_Order::STATE_HOLDED => array(
             'all'
         ),
         Mage_Sales_Model_Order::STATE_PAYMENT_REVIEW => array(
@@ -452,9 +449,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             }
 
             $orderIncrementId = $order->getIncrementId();
+            $state = $order->getState();
 
-            if ($this->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
-                $this->log('Case creation for order ' . $orderIncrementId . ' with state ' . $order->getState() . ' is restricted');
+            if ($this->isRestricted($order->getPayment()->getMethod(), $state) ||
+                $state == Mage_Sales_Model_Order::STATE_HOLDED) {
+                $this->log('Case creation for order ' . $orderIncrementId . ' with state ' . $state . ' is restricted');
                 return 'restricted';
             }
 
@@ -479,7 +478,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
                 $caseCreateData = $this->generateCaseCreateData($order, $lastPayment, $customer);
                 $caseJson = json_encode($caseCreateData);
-                
+
                 $case->setOrderIncrement($orderIncrementId);
                 $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
                 $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
