@@ -194,8 +194,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function getPurchase($order, $payment)
     {
         $purchase = $this->getPurchaseUpdate($order, $payment);
+        $originStoreCode = $order->getData('origin_store_code');
 
-        if (!$this->isAdmin() && $this->isDeviceFingerprintEnabled()) {
+        if (!empty($originStoreCode) && $originStoreCode != 'admin' && $this->isDeviceFingerprintEnabled()) {
             $purchase['orderSessionId'] = 'M1' . base64_encode(Mage::getBaseUrl()) . $order->getQuoteId();
         }
         // T715: Send null rather than false when we can't get the IP Address
@@ -206,6 +207,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase['totalPrice'] = floatval($order->getGrandTotal());
         $purchase['shippingPrice'] = floatval($order->getShippingAmount());
         $purchase['products'] = $this->getProducts($order);
+
+        if ($originStoreCode == 'admin') {
+            $purchase['orderChannel'] = 'PHONE';
+        } elseif (!empty($originStoreCode)) {
+            $purchase['orderChannel'] = 'WEB';
+        }
 
         return $purchase;
     }
@@ -788,19 +795,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function getDeclinedFromGuaranty(Mage_Core_Model_Abstract $entity)
     {
         return $this->getConfigData('advanced/declined_from_guaranty', $entity);
-    }
-
-    public function isAdmin()
-    {
-        if (Mage::app()->getStore()->isAdmin()) {
-            return true;
-        }
-
-        if (Mage::getDesign()->getArea() == 'adminhtml') {
-            return true;
-        }
-
-        return false;
     }
 
     /**

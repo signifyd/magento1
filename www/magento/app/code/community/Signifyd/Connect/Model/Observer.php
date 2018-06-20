@@ -105,6 +105,14 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                         continue;
                     }
 
+                    if (empty($order->getData('origin_store_code'))) {
+                        $request = Mage::app()->getFrontController()->getRequest();
+
+                        if (stripos($request->getRequestUri(), '/api/') === false) {
+                            $order->setData('origin_store_code', Mage::app()->getStore()->getCode());
+                        }
+                    }
+
                     if (is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
                         Mage::register('signifyd_action_' . $order->getIncrementId(), 1); // Avoid recurssions
                     } else {
