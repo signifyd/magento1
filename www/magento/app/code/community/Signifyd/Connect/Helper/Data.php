@@ -285,7 +285,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
         // Some customers have reported seeing "n/a@na.na" come through instead of a valid or null address
         //  We suspect that it is due to an older version of Magento. If it becomes unnecessary, do remove the extra check.
-        if (!$recipient['confirmationEmail'] || $recipient['confirmationEmail'] == 'n/a@na.na') {
+        if (!isset($recipient['confirmationEmail']) || $recipient['confirmationEmail'] == 'n/a@na.na') {
             $recipient['confirmationEmail'] = $order->getCustomerEmail();
         }
 
