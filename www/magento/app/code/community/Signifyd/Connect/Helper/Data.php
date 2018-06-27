@@ -69,28 +69,90 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         Mage::helper('signifyd_connect/log')->addLog($message);
     }
 
-    public function getProducts($quote)
+    public function getDiscountCodes(Mage_Sales_Model_Order $order)
+    {
+        $discountCodes = array();
+        $couponCode = $order->getCouponCode();
+
+        /** @var Mage_SalesRule_Model_Coupon $rule */
+        $coupon = Mage::getModel('salesrule/coupon')->load($couponCode, 'code');
+        $couponId = $coupon->getId();
+
+        if (!empty($couponId)) {
+            /** @var Mage_SalesRule_Model_Rule $rule */
+            $rule = Mage::getModel('salesrule/rule')->load(intval($coupon->getRuleId()));
+            $simpleAction = $rule->getSimpleAction();
+            $discountAmount = $rule->getDiscountAmount();
+
+            switch ($simpleAction) {
+                case 'by_percent':
+                    $discountCodes[] = array(
+                        'percentage' => $discountAmount,
+                        'code' => $couponCode
+                    );
+                    break;
+
+                case 'by_fixed':
+                    $discountCodes[] = array(
+                        'amount' => $discountAmount,
+                        'code' => $couponCode
+                    );
+                    break;
+
+                case 'cart_fixed':
+                    $discountCodes[] = array(
+                        'amount' => $discountAmount,
+                        'code' => $couponCode
+                    );
+                    break;
+            }
+        }
+
+        return $discountCodes;
+    }
+
+    public function getShipments(Mage_Sales_Model_Order $order)
+    {
+        $shipments = array();
+        $shippingMethod = $order->getShippingMethod();
+
+        if (!empty($shippingMethod)) {
+            $shippingMethod = $order->getShippingMethod(true);
+
+            $shipments[] = array(
+                'shippingPrice' => floatval($order->getShippingAmount()),
+                'shipper' => $shippingMethod->getCarrierCode(),
+                'shippingMethod' => $shippingMethod->getMethod()
+            );
+        }
+
+        return $shipments;
+    }
+
+    public function getProducts(Mage_Sales_Model_Order $order)
     {
         $products = array();
 
-        foreach ($quote->getAllItems() as $item) {
-            $product_type = $item->getProductType();
+        /** @var Mage_Sales_Model_Quote_Item $item */
+        foreach ($order->getAllItems() as $item) {
+            $productType = $item->getProductType();
 
-            if (!$product_type || $product_type == 'simple' || $product_type == 'downloadable'
-                || $product_type == 'grouped' || $product_type == 'virtual' ) {
-                $product_object = $item->getData('product');
+            if (!$productType || $productType == 'simple' || $productType == 'downloadable'
+                || $productType == 'grouped' || $productType == 'virtual' ) {
+                $productObject = $item->getData('product');
 
-                if (!$product_object || !$product_object->getId()) {
-                    $product_object = Mage::getModel('catalog/product')->load($product_type);
+                if (!$productObject || !$productObject->getId()) {
+                    $productObject = Mage::getModel('catalog/product')->load($productType);
                 }
 
-                if ($product_object) {
+                if ($productObject) {
                     $product = array();
 
                     $product['itemId'] = $item->getSku();
                     $product['itemName'] = $item->getName();
-                    $product['itemUrl'] = $this->getProductUrl($product_object);
-                    $product['itemImage'] = $this->getProductImage($product_object);
+                    $product['itemIsDigital'] = (bool) in_array($productType, array('downloadable', 'virtual'));
+                    $product['itemUrl'] = $this->getProductUrl($productObject);
+                    $product['itemImage'] = $this->getProductImage($productObject);
 
                     $qty = 1;
                     if ($item->getQty()) {
@@ -104,8 +166,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                         $price = $item->getPrice();
                     } else if ($item->getBasePrice() > 0) {
                         $price = $item->getBasePrice();
-                    } else if ($product_object->getData('price') > 0) {
-                        $price = $product_object->getData('price');
+                    } else if ($productObject->getData('price') > 0) {
+                        $price = $productObject->getData('price');
                     } else {
                         $parent = $item->getData('parent');
 
@@ -125,8 +187,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     $weight = 0;
                     if ($item->hasWeight()) {
                         $weight = $item->getWeight();
-                    } else if ($product_object->hasWeight()) {
-                        $weight = $product_object->getWeight();
+                    } else if ($productObject->hasWeight()) {
+                        $weight = $productObject->getWeight();
                     }
 
                     $product['itemQuantity'] = intval($qty);
@@ -207,6 +269,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase['totalPrice'] = floatval($order->getGrandTotal());
         $purchase['shippingPrice'] = floatval($order->getShippingAmount());
         $purchase['products'] = $this->getProducts($order);
+        $purchase['shipments'] = $this->getShipments($order);
 
         if ($originStoreCode == 'admin') {
             $purchase['orderChannel'] = 'PHONE';
