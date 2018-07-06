@@ -269,6 +269,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase['totalPrice'] = floatval($order->getGrandTotal());
         $purchase['shippingPrice'] = floatval($order->getShippingAmount());
         $purchase['products'] = $this->getProducts($order);
+        $purchase['discountCodes'] = $this->getDiscountCodes($order);
         $purchase['shipments'] = $this->getShipments($order);
 
         if ($originStoreCode == 'admin') {
