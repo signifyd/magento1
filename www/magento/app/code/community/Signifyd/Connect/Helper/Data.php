@@ -682,14 +682,35 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $body = json_encode(array("guaranteeDisposition" => "CANCELED"));
         $auth = Mage::helper('signifyd_connect')->getConfigData('settings/key', $case);
         $response = $this->request($url, $body, $auth, 'application/json', null, true);
+
         $code = $response->getHttpCode();
-        if(substr($code, 0, 1) == '2') {
+
+        if (substr($code, 0, 1) == '2') {
             $case->setGuarantee('CANCELED');
             $case->save();
+
+            $orderComment = "Guarantee canceled on Signifyd";
         } else {
-            $this->log("Guarantee cancel failed");
+            $orderComment = "Failed to cancel guarantee on Signifyd";
         }
-        $this->log("Received $code from guarantee cancel");
+
+        @$responseBody = json_decode($response->getRawResponse());
+        if (is_object($responseBody) && !empty($responseBody->messages)) {
+            $messages = implode(', ', $responseBody->messages);
+            $orderComment .= " with message '{$messages}'";
+        }
+
+        $this->log("{$orderComment} (HTTP code {$code})");
+
+        if (!empty($orderComment)) {
+            /** @var Mage_Sales_Model_Order $order */
+            $order = Mage::getModel('sales/order')->loadByIncrementId($case->getOrderIncrement());
+
+            if (!$order->isEmpty()) {
+                $order->addStatusHistoryComment($orderComment);
+                $order->save();
+            }
+        }
     }
 
     public function request($url, $data = null, $auth = null, $contenttype = "application/x-www-form-urlencoded",
@@ -712,7 +733,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($curl, CURLOPT_FAILONERROR, true);
 
         if ($auth) {
             curl_setopt($curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
@@ -749,7 +769,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $this->log("Response ($url):\n " . print_r($response, true));
         }
 
-        if ($raw_response === false || curl_errno($curl)) {
+        $code = intval($response->getHttpCode());
+
+        if ($code >= 400 || curl_errno($curl)) {
             $error = curl_error($curl);
 
             if (Mage::getStoreConfig('signifyd_connect/log/all')) {

@@ -349,16 +349,18 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         }
     }
 
-    public function handleCancel($order)
+    public function handleCancel($incrementId)
     {
         $helper = $this->getHelper();
-        $case = Mage::getModel('signifyd_connect/case')->load($order);
-        if($case->isObjectNew()) {
-            $helper->log("Guarantee cancel: Signifyd case for order $order does not exist in DB");
+
+        $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
+        if ($case->isObjectNew()) {
+            $helper->log("Guarantee cancel: Signifyd case for order {$incrementId} does not exist in DB");
             return;
         }
-        if($case->getGuarantee() == 'N/A' || $case->getGuarantee() == 'DECLINED') {
-            $helper->log("Guarantee cancel: Skipped. No guarantee active");
+
+        if (in_array($case->getGuarantee(), array('N/A', 'DECLINED', 'CANCELED'))) {
+            $helper->log('Guarantee cancel skipped, because case guarantee is ' . $case->getGuarantee());
             return;
         }
 
@@ -369,17 +371,46 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     public function salesOrderPaymentCancel($observer)
     {
         $helper = $this->getHelper();
+
         try {
-            $event = $observer->getEvent();
-            if($event->getPayment()->getOrder()) {
-                $order = $event->getPayment()->getOrder()->getIncrementId();
+            /** @var Mage_Sales_Model_Order_Payment $payment */
+            $payment = $observer->getEvent()->getPayment();
+
+            if ($payment instanceof Mage_Sales_Model_Order_Payment) {
+                $order = $payment->getOrder();
+
+                if ($order instanceof Mage_Sales_Model_Order) {
+                    $this->handleCancel($order->getIncrementId());
+                }
             } else {
                 $helper->log("Event salesOrderPaymentCancel has no order");
                 return;
             }
-            $this->handleCancel($order);
-        } catch(Exception $ex) {
-            $helper->log("Guarantee cancel: $ex");
+        } catch (Exception $e) {
+            $helper->log("Guarantee cancel: " . $e->getMessage());
+        }
+    }
+
+    public function salesOrderCreditmemoRefund(Varien_Event_Observer $observer)
+    {
+        $helper = $this->getHelper();
+
+        try {
+            /** @var Mage_Sales_Model_Order_Creditmemo $creditmemo */
+            $creditmemo = $observer->getEvent()->getCreditmemo();
+
+            if ($creditmemo instanceof Mage_Sales_Model_Order_Creditmemo) {
+                $order = $creditmemo->getOrder();
+
+                if ($order instanceof Mage_Sales_Model_Order) {
+                    $this->handleCancel($order->getIncrementId());
+                }
+            } else {
+                $helper->log("Event salesOrderCreditmemoCancel has no order");
+                return;
+            }
+        } catch(Exception $e) {
+            $helper->log("Guarantee cancel: " . $e->getMessage());
         }
     }
 
