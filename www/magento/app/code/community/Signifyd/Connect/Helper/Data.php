@@ -74,38 +74,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $discountCodes = array();
         $couponCode = $order->getCouponCode();
 
-        /** @var Mage_SalesRule_Model_Coupon $rule */
-        $coupon = Mage::getModel('salesrule/coupon')->load($couponCode, 'code');
-        $couponId = $coupon->getId();
-
-        if (!empty($couponId)) {
-            /** @var Mage_SalesRule_Model_Rule $rule */
-            $rule = Mage::getModel('salesrule/rule')->load(intval($coupon->getRuleId()));
-            $simpleAction = $rule->getSimpleAction();
-            $discountAmount = $rule->getDiscountAmount();
-
-            switch ($simpleAction) {
-                case 'by_percent':
-                    $discountCodes[] = array(
-                        'percentage' => $discountAmount,
-                        'code' => $couponCode
-                    );
-                    break;
-
-                case 'by_fixed':
-                    $discountCodes[] = array(
-                        'amount' => $discountAmount,
-                        'code' => $couponCode
-                    );
-                    break;
-
-                case 'cart_fixed':
-                    $discountCodes[] = array(
-                        'amount' => $discountAmount,
-                        'code' => $couponCode
-                    );
-                    break;
-            }
+        if (!empty($couponCode)) {
+            $discountCodes[] = array(
+                'amount' => abs($order->getDiscountAmount()),
+                'code' => $couponCode
+            );
         }
 
         return $discountCodes;
@@ -520,13 +493,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             }
 
             $orderIncrementId = $order->getIncrementId();
-            $state = $order->getState();
-
-            if ($this->isRestricted($order->getPayment()->getMethod(), $state) ||
-                $state == Mage_Sales_Model_Order::STATE_HOLDED) {
-                $this->log('Case creation for order ' . $orderIncrementId . ' with state ' . $state . ' is restricted');
-                return 'restricted';
-            }
 
             /** @var Signifyd_Connect_Model_Case $case */
             $case = Mage::getModel('signifyd_connect/case')->load($orderIncrementId);
@@ -541,6 +507,13 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $newMd5 = md5($caseJson);
 
             $isUpdate = $case->getId() ? true : false;
+            $state = $order->getState();
+
+            if ($this->isRestricted($order->getPayment()->getMethod(), $state) ||
+                $state == Mage_Sales_Model_Order::STATE_HOLDED && !$isUpdate) {
+                $this->log('Case creation/update for order ' . $orderIncrementId . ' with state ' . $state . ' is restricted');
+                return 'restricted';
+            }
 
             if (!$isUpdate || $forceSend) {
                 if ($updateOnly) {
@@ -558,6 +531,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
                 $requestUri = $this->getUrl();
             } else {
+                $caseCode = $case->getCode();
+                if (empty($caseCode)) {
+                    return 'no case for update';
+                }
+
                 $currentMd5 = $case->getEntries('md5');
                 // If the case exists and has not changed, return 'exists'
                 // MD5 checks must occur on case update data only
@@ -565,7 +543,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     return 'exists';
                 }
 
-                $requestUri = $this->getCaseUrl($case->getCode());
+                $requestUri = $this->getCaseUrl($caseCode);
             }
 
             $apiKey = Mage::helper('signifyd_connect')->getConfigData('settings/key', $order);
