@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Data Helper
  *
@@ -16,7 +17,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     protected $restrictedStatesMethods = array(
         'all' => array(
-            'checkmo', 'cashondelivery', 'banktransfer','purchaseorder'
+            'checkmo', 'cashondelivery', 'banktransfer', 'purchaseorder'
         ),
         Mage_Sales_Model_Order::STATE_PENDING_PAYMENT => array(
             'all'
@@ -111,7 +112,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $productType = $item->getProductType();
 
             if (!$productType || $productType == 'simple' || $productType == 'downloadable'
-                || $productType == 'grouped' || $productType == 'virtual' ) {
+                || $productType == 'grouped' || $productType == 'virtual') {
                 $productObject = $item->getData('product');
 
                 if (!$productObject || !$productObject->getId()) {
@@ -123,7 +124,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
                     $product['itemId'] = $item->getSku();
                     $product['itemName'] = $item->getName();
-                    $product['itemIsDigital'] = (bool) in_array($productType, array('downloadable', 'virtual'));
+                    $product['itemIsDigital'] = (bool)in_array($productType, array('downloadable', 'virtual'));
                     $product['itemUrl'] = $this->getProductUrl($productObject);
                     $product['itemImage'] = $this->getProductImage($productObject);
 
@@ -218,11 +219,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     protected function getTransactionId($payment)
     {
         $transId = $payment->getCcTransId();
-        if(is_array($transId) && is_string($transId[0])) {
+        if (is_array($transId) && is_string($transId[0])) {
             $transId = $transId[0];
-        } else if(!is_string($transId)) {
+        } else if (!is_string($transId)) {
             $transId = null;
         }
+
         return $transId;
     }
 
@@ -234,6 +236,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if (!empty($originStoreCode) && $originStoreCode != 'admin' && $this->isDeviceFingerprintEnabled()) {
             $purchase['orderSessionId'] = 'M1' . base64_encode(Mage::getBaseUrl()) . $order->getQuoteId();
         }
+
         // T715: Send null rather than false when we can't get the IP Address
         $purchase['browserIpAddress'] = ($this->getIpAddress($order) ? $this->getIpAddress($order) : null);
         $purchase['orderId'] = $order->getIncrementId();
@@ -320,13 +323,14 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         // In the case of non-shipped (ex: downloadable) orders, shipping address will be null so
         // in that case, we need to avoid the exception.
         $shipping_address = $order->getShippingAddress();
-        if($shipping_address) {
+        if ($shipping_address) {
             $recipient['deliveryAddress'] = $this->getSignifydAddress($shipping_address);
             $recipient['fullName'] = $shipping_address->getFirstname() . ' ' . $shipping_address->getLastname();
             $recipient['confirmationPhone'] = $shipping_address->getTelephone();
             // Email: Note that this field is always the same for both addresses
             $recipient['confirmationEmail'] = $shipping_address->getEmail();
         }
+
         // Some customers have reported seeing "n/a@na.na" come through instead of a valid or null address
         //  We suspect that it is due to an older version of Magento. If it becomes unnecessary, do remove the extra check.
         if (!isset($recipient['confirmationEmail']) || $recipient['confirmationEmail'] == 'n/a@na.na') {
@@ -625,7 +629,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return '';
     }
 
-    public function getProductImage($product, $size="150")
+    public function getProductImage($product, $size = "150")
     {
         $image = null;
 
@@ -691,11 +695,16 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
 
-    public function request($url, $data = null, $auth = null, $contenttype = "application/x-www-form-urlencoded",
-                            $accept = null, $is_update = false)
-    {
+    public function request(
+        $url,
+        $data = null,
+        $auth = null,
+        $contenttype = "application/x-www-form-urlencoded",
+        $accept = null,
+        $is_update = false
+    ) {
         if (Mage::getStoreConfig('signifyd_connect/log/all')) {
-            $authMask = preg_replace ( "/\S/", "*", $auth, strlen($auth) - 4 );
+            $authMask = preg_replace("/\S/", "*", $auth, strlen($auth) - 4);
             $this->log("Request:\nURL: $url \nAuth: $authMask\nData: $data");
         }
 
@@ -722,7 +731,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         if ($data) {
-            if($is_update) curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
+            if ($is_update) curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
             else curl_setopt($curl, CURLOPT_POST, 1);
 
             $headers[] = "Content-Type: $contenttype";
@@ -779,25 +788,25 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $baseTotalRefunded = $order->getBaseTotalRefunded();
 
         // Check authorization
-        if(!empty($paymentAuthorized)){
+        if (!empty($paymentAuthorized)) {
             $status['authorize'] = true;
         }
 
         // Special case for Paypal payment type "order"
-        if($this->isPaypalOrder($paymentMethod)){
+        if ($this->isPaypalOrder($paymentMethod)) {
             $paymentAdditional = $paymentMethod->getData('additional_information');
-            if(isset($paymentAdditional['is_order_action']) && $paymentAdditional['is_order_action']){
+            if (isset($paymentAdditional['is_order_action']) && $paymentAdditional['is_order_action']) {
                 $status['authorize'] = true;
             }
         }
 
         // Check capture
-        if(!empty($baseTotalPaid)){
+        if (!empty($baseTotalPaid)) {
             $status['capture'] = true;
         }
 
         // Check credit memo
-        if(!empty($baseTotalRefunded)){
+        if (!empty($baseTotalRefunded)) {
             $status['credit_memo'] = true;
         }
 
@@ -815,13 +824,13 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function isPaypalOrder($paymentMethod)
     {
         $code = $paymentMethod->getMethodInstance()->getCode();
-        return (stripos($code, 'paypal_express') !== false)? true : false;
+        return (stripos($code, 'paypal_express') !== false) ? true : false;
     }
 
     public function isGuarantyDeclined($order)
     {
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
-        return ($case->getGuarantee() == 'DECLINED')? true : false;
+        return ($case->getGuarantee() == 'DECLINED') ? true : false;
     }
 
     /**
@@ -838,7 +847,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
     public function isDeviceFingerprintEnabled()
     {
-        return (bool) Mage::getStoreConfig('signifyd_connect/settings/enable_device_fingerprint');
+        return (bool)Mage::getStoreConfig('signifyd_connect/settings/enable_device_fingerprint');
     }
 
     /**
