@@ -6,8 +6,8 @@ try {
     $currentAcceptedAction = Mage::getStoreConfig('signifyd_connect/advanced/accepted_from_guaranty');
     $currentDeclinedAction = Mage::getStoreConfig('signifyd_connect/advanced/declined_from_guaranty');
 
-    $currentAcceptedAction = Mage::getConfig()->getNode('signifyd_connect/advanced/accepted_from_guaranty','default', 0);
-    $currentDeclinedAction = Mage::getConfig()->getNode('signifyd_connect/advanced/declined_from_guaranty','default', 0);
+    $currentAcceptedAction = Mage::getConfig()->getNode('signifyd_connect/advanced/accepted_from_guaranty', 'default', 0);
+    $currentDeclinedAction = Mage::getConfig()->getNode('signifyd_connect/advanced/declined_from_guaranty', 'default', 0);
 
     $newAcceptedAction = $currentAcceptedAction == 1 ? 3 : ($currentAcceptedAction == 2 ? 4 : $currentAcceptedAction);
     $newDeclinedAction = $currentDeclinedAction == 1 ? 3 : $currentDeclinedAction;

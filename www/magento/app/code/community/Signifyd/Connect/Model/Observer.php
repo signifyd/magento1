@@ -142,6 +142,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         } catch (Exception $e) {
             $this->getHelper()->log($e->__toString());
         }
+
         // If we get here, then we have failed to create the case.
         return $this;
     }
@@ -190,7 +191,6 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 $route = Mage::getConfig()->getNode('admin/routers/adminhtml/args/frontName');
             }
         } catch (Exception $e) {
-
         }
 
         if (!$route) {
@@ -283,20 +283,22 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         $collection = $observer->getOrderGridCollection();
         $select = $collection->getSelect();
 
-		// This will prevent us from rejoining.
+        // This will prevent us from rejoining.
         if(strchr($select, 'signifyd')) {
             return;
         }
 
         if ($this->oldSupport()) {
-            $select->joinLeft(array(
+            $select->joinLeft(
+                array(
                 'signifyd'=>$collection->getTable('signifyd_connect/case')),
                 'signifyd.order_increment=e.increment_id',
                 array('score' => 'score')
             );
             $this->joins++;
         } else {
-            $select->joinLeft(array(
+            $select->joinLeft(
+                array(
                 'signifyd'=>$collection->getTable('signifyd_connect/case')),
                 'signifyd.order_increment=main_table.increment_id',
                 array('score' => 'score', 'guarantee' => 'guarantee', 'entries' => 'entries')
@@ -451,7 +453,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         }
 
             return $this;
-        }
+    }
 
     /**
      * Put the order on hold asynchronously. Used for payment geteways that can't have the order on hold
@@ -465,6 +467,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         if (empty($incrementId)) {
             $incrementId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
         }
+
         $this->getHelper()->log("putOrderOnHoldAsync: " . $incrementId);
 
         if (!empty($incrementId)) {

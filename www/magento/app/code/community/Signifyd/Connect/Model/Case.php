@@ -417,6 +417,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
                 $this->storeId = $this->order->getStoreId();
             }
         }
+
         return;
     }
 

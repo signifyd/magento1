@@ -47,6 +47,7 @@ class Signifyd_Connect_SignifydTest extends PHPUnit_Framework_TestCase
         if ($this->customer_data && is_array($this->customer_data) && count($this->customer_data)) {
             $this->customer = Mage::getModel('customer/customer')->addData($this->customer_data);
         }
+
         $this->billing = Mage::getModel('sales/order_address')->addData($this->billing_data);
         $this->shipping = Mage::getModel('sales/order_address')->addData($this->shipping_data);
         $this->payment = Mage::getModel('sales/order_payment')->addData($this->payment_data);

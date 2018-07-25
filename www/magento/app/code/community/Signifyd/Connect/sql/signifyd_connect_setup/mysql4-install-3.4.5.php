@@ -2,7 +2,8 @@
 
 $this->startSetup();
 $this->register();
-$this->run("
+$this->run(
+    "
 DROP TABLE IF EXISTS `{$this->getTable('signifyd_connect_case')}`;
 CREATE TABLE IF NOT EXISTS `{$this->getTable('signifyd_connect_case')}` (
   `case_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -17,5 +18,6 @@ CREATE TABLE IF NOT EXISTS `{$this->getTable('signifyd_connect_case')}` (
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=8 ;
 
 CREATE INDEX signifyd_connect_case_order ON `{$this->getTable('signifyd_connect_case')}` (order_increment);
-");
+"
+);
 $this->endSetup();

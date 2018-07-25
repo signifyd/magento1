@@ -117,7 +117,7 @@ class Signifyd_Connect_Model_Cron
         $this->getLogger()->addLog('Process in review case: ' . $code);
         $caseUrl = $this->getHelper()->getCaseUrl($code);
         $auth = $auth = $this->getHelper()->getConfigData('settings/key', $case);
-        $response = $this->getHelper()->request($caseUrl, null, $auth,'application/json');
+        $response = $this->getHelper()->request($caseUrl, null, $auth, 'application/json');
 
         try {
             $responseCode = $response->getHttpCode();

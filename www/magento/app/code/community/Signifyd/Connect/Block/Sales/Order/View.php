@@ -23,10 +23,12 @@ class Signifyd_Connect_Block_Sales_Order_View extends Mage_Adminhtml_Block_Sales
                     $message = 'Signifyd has not reviewed this order, are you sure you want to unhold?';
                     $url = $this->getUrl('adminhtml/signifyd_order/unhold');
 
-                    $this->_addButton('order_unhold', array(
+                    $this->_addButton(
+                        'order_unhold', array(
                         'label' => Mage::helper('sales')->__('Unhold'),
                         'onclick' => 'if (confirm(\''. $message . '\')) { setLocation(\'' . $url . '\'); }',
-                    ));
+                        )
+                    );
                 }
             }
         }

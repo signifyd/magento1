@@ -89,7 +89,8 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             }
 
             $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
-            $this->logger->addLog("Order {$incrementId} ({$order->getState()} > {$order->getStatus()}) " .
+            $this->logger->addLog(
+                "Order {$incrementId} ({$order->getState()} > {$order->getStatus()}) " .
                 "can not be unheld because {$reason}. " .
                 "Case status: {$case->getSignifydStatus()}"
             );
@@ -182,8 +183,10 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         if ($status['authorize'] === true && $status['capture'] === true) {
             $this->holdOrder($order, $reason);
             $this->logger->addLog("Order {$incrementId} cannot be canceled because it has a sum already captured");
-            $order->addStatusHistoryComment('Signifyd: order cannot be canceled because it has a sum already captured. ' .
-                'Please do a manual refund/cancelation.');
+            $order->addStatusHistoryComment(
+                'Signifyd: order cannot be canceled because it has a sum already captured. ' .
+                'Please do a manual refund/cancelation.'
+            );
             $order->save();
             return false;
         }

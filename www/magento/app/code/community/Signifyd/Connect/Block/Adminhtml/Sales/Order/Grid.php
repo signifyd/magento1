@@ -59,38 +59,49 @@ class Signifyd_Connect_Block_Adminhtml_Sales_Order_Grid extends Mage_Adminhtml_B
         $helper = Mage::helper('signifyd_connect');
         $currency = (string) Mage::getStoreConfig(Mage_Directory_Model_Currency::XML_PATH_CURRENCY_BASE);
         
-        $this->addColumn('increment_id', array(
+        $this->addColumn(
+            'increment_id', array(
             'header' => $helper->__('Order #'),
             'index'  => 'increment_id'
-        ));
+            )
+        );
         
-        $this->addColumn('purchased_on', array(
+        $this->addColumn(
+            'purchased_on', array(
             'header' => $helper->__('Purchased On'),
             'type'   => 'datetime',
             'index'  => 'created_at'
-        ));
+            )
+        );
         
         if (!$this->oldSupport()) {
-            $this->addColumn('fullname', array(
+            $this->addColumn(
+                'fullname', array(
                 'header'       => $helper->__('Name'),
                 'index'        => 'fullname',
                 'filter_index' => 'CONCAT(customer_firstname, \' \', customer_lastname)'
-            ));
+                )
+            );
         }
         
-        $this->addColumn('grand_total', array(
+        $this->addColumn(
+            'grand_total', array(
             'header'        => $helper->__('Grand Total'),
             'index'         => 'grand_total',
             'type'          => 'currency',
             'currency_code' => $currency
-        ));
+            )
+        );
         
-        $this->addColumn('shipping_method', array(
+        $this->addColumn(
+            'shipping_method', array(
             'header' => $helper->__('Shipping Method'),
             'index'  => 'shipping_description'
-        ));
+            )
+        );
         
-        $this->addColumn('score', array(
+        $this->addColumn(
+            'score', array(
             'header' => $helper->__('Signifyd Score'),
             'align' => 'left',
             'type' => 'text',
@@ -98,23 +109,28 @@ class Signifyd_Connect_Block_Adminhtml_Sales_Order_Grid extends Mage_Adminhtml_B
             'filter' => false,
             'renderer' => 'signifyd_connect/renderer',
             'width' => '100px',
-        ));
+            )
+        );
 
-        $this->addColumn('guarantee', array(
+        $this->addColumn(
+            'guarantee', array(
             'header' => $helper->__('Signifyd Guarantee Status'),
             'align' => 'left',
             'type' => 'text',
             'index' => 'guarantee',
             'filter' => false,
             'renderer' => 'signifyd_connect/renderer',
-        ));
+            )
+        );
         
-        $this->addColumn('order_status', array(
+        $this->addColumn(
+            'order_status', array(
             'header'  => $helper->__('Status'),
             'index'   => 'status',
             'type'    => 'options',
             'options' => Mage::getSingleton('sales/order_config')->getStatuses(),
-        ));
+            )
+        );
         
         return parent::_prepareColumns();
     }
