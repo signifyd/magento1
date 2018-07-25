@@ -105,7 +105,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                         continue;
                     }
 
-                    if (empty($order->getData('origin_store_code'))) {
+                    $originStoreCode = $order->getData('origin_store_code');
+                    if (empty($originStoreCode)) {
                         $request = Mage::app()->getFrontController()->getRequest();
 
                         if (stripos($request->getRequestUri(), '/api/') === false) {
