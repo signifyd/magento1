@@ -124,7 +124,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
                     $product['itemId'] = $item->getSku();
                     $product['itemName'] = $item->getName();
-                    $product['itemIsDigital'] = (bool)in_array($productType, array('downloadable', 'virtual'));
+                    $product['itemIsDigital'] = (bool) $item->getIsVirtual();
                     $product['itemUrl'] = $this->getProductUrl($productObject);
                     $product['itemImage'] = $this->getProductImage($productObject);
 
