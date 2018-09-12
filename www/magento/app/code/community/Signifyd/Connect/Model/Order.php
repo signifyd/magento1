@@ -58,6 +58,11 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             return false;
         }
 
+        if ($this->helper->isIgnored($order)) {
+            $this->logger->addLog("Order {$order->getIncrementId()} ignored");
+            return false;
+        }
+
         return true;
     }
 

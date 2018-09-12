@@ -40,6 +40,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     protected $paymentHelper;
 
     /**
+     * Check if order is restricted by payment method and state
+     *
      * @param $method
      * @param null $state
      * @return bool
@@ -63,6 +65,32 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         return false;
+    }
+
+    /**
+     * Check if order is ignored based on installation date
+     *
+     * If there is no record of the installation date on database order will not be ignored
+     *
+     * @param Mage_Sales_Model_Order $order
+     * @return bool
+     */
+    public function isIgnored(Mage_Sales_Model_Order $order)
+    {
+        $installationDateConfig = Mage::getStoreConfig('signifyd_connect/log/installation_date');
+
+        if (empty($installationDateConfig)) {
+            return false;
+        }
+
+        $installationDate = new Zend_Date($installationDateConfig);
+        $createdAtDate = new Zend_Date($order->getCreatedAt());
+
+        if ($createdAtDate->isEarlier($installationDate)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     public function log($message)
@@ -517,6 +545,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $state == Mage_Sales_Model_Order::STATE_HOLDED && !$isUpdate) {
                 $this->log('Case creation/update for order ' . $orderIncrementId . ' with state ' . $state . ' is restricted');
                 return 'restricted';
+            }
+
+            if ($this->isIgnored($order)) {
+                $this->log('Case creation/update for order ' . $orderIncrementId . ' ignored');
+                return 'ignored';
             }
 
             if (!$isUpdate || $forceSend) {
