@@ -50,8 +50,12 @@ class Signifyd_Connect_Model_Cron
         /** @var Signifyd_Connect_Model_Case $currentCase */
         foreach ($casesForResubmit->getItems() as $currentCase) {
             $currentOrderId = $currentCase->getData('order_increment');
-            $this->getLogger()->addLog("Preparing for send case no: {$currentOrderId}");
+            /** @var Mage_Sales_Model_Order $currentOrder */
             $currentOrder = Mage::getModel('sales/order')->loadByIncrementId($currentOrderId);
+
+            $this->getLogger()->addLog("Preparing for send case no: {$currentOrderId}");
+            $this->getLogger()->addLog("Order {$currentOrderId} state: {$currentOrder->getState()}, event: cron retry");
+
             $this->getHelper()->buildAndSendOrderToSignifyd($currentOrder, true);
         }
 
@@ -68,8 +72,12 @@ class Signifyd_Connect_Model_Cron
         /** @var Signifyd_Connect_Model_Case $currentCase */
         foreach ($casesForResubmit->getItems() as $currentCase) {
             $currentOrderId = $currentCase->getData('order_increment');
-            $this->getLogger()->addLog("Preparing for response processing of case no: {$currentOrderId}");
+            /** @var Mage_Sales_Model_Order $currentOrder */
             $currentOrder = Mage::getModel('sales/order')->loadByIncrementId($currentOrderId);
+
+            $this->getLogger()->addLog("Preparing for response processing of case no: {$currentOrderId}");
+            $this->getLogger()->addLog("Order {$currentOrderId} state: {$currentOrder->getState()}, event: cron retry");
+
             Mage::getModel('signifyd_connect/case')->processAdditional($currentCase->getData(), false, $currentOrder);
         }
 

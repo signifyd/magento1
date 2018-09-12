@@ -121,6 +121,9 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                         continue;
                     }
 
+                    $eventName = $observer->getEvent()->getName();
+                    $this->getHelper()->log("Order {$order->getIncrementId()} state: {$order->getState()}, event: {$eventName}");
+
                     $result = $this->getHelper()->buildAndSendOrderToSignifyd($order, false, $updateOnly);
                     $this->getHelper()->log("Create case result for " . $order->getIncrementId() . ": {$result}");
 
