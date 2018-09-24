@@ -40,7 +40,7 @@ class Signifyd_Connect_Helper_Payment_Authorizenet extends Signifyd_Connect_Help
      */
     public function getBin()
     {
-        if (!empty($this->authorizeCard)) {
+        if (!empty($this->authorizeCard) && isset($this->authorizeCard['cc_bin'])) {
             $bin = $this->authorizeCard['cc_bin'];
             return $this->filterBin($bin);
         }
