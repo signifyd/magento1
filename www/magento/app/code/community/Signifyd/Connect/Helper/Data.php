@@ -538,7 +538,16 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $caseJson = json_encode($caseUpdateData);
             $newMd5 = md5($caseJson);
 
-            $isUpdate = $case->getId() ? true : false;
+            if ($case->getId()) {
+                if ($case->getMagentoStatus() == Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS) {
+                    $isUpdate = false;
+                } else {
+                    $isUpdate = true;
+                }
+            } else {
+                $isUpdate = false;
+            }
+
             $state = $order->getState();
 
             if ($this->isRestricted($order->getPayment()->getMethod(), $state) ||
@@ -910,8 +919,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function getPaymentHelper(Mage_Sales_Model_Order $order = null, Mage_Sales_Model_Order_Payment $payment = null)
     {
-        if (!is_object($this->paymentHelper) ||
-            !in_array('Signifyd_Connect_Helper_Payment_Interface', class_implements($this->paymentHelper))) {
+        if ($this->needToInitHelper($order, $payment)) {
             $paymentMethodCode = $payment->getMethod();
             $helperName = "signifyd_connect/payment_{$paymentMethodCode}";
             $helperClass = Mage::getConfig()->getHelperClassName($helperName);
@@ -936,5 +944,29 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         return $this->paymentHelper;
+    }
+
+    /**
+     * Check if helper it is already initialized with giver order and payment
+     *
+     * @param Mage_Sales_Model_Order|null $order
+     * @param Mage_Sales_Model_Order_Payment|null $payment
+     * @return bool
+     */
+    protected function needToInitHelper(Mage_Sales_Model_Order $order = null, Mage_Sales_Model_Order_Payment $payment = null)
+    {
+        if (is_object($this->paymentHelper)) {
+            if (in_array('Signifyd_Connect_Helper_Payment_Interface', class_implements($this->paymentHelper))) {
+                if ($this->paymentHelper->isInitializedForOrderPayment($order, $payment)) {
+                    return false;
+                } else {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        } else {
+            return true;
+        }
     }
 }

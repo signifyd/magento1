@@ -35,6 +35,7 @@ class Signifyd_Connect_Helper_Payment_Default
         $this->order = $order;
         $this->payment = $payment;
         $this->additionalInformation = $payment->getAdditionalInformation();
+        $this->signifydData = array();
 
         $registrySignifydData = Mage::registry('signifyd_data');
         if (!empty($registrySignifydData) && is_array($registrySignifydData)) {
@@ -43,6 +44,33 @@ class Signifyd_Connect_Helper_Payment_Default
         }
 
         return $this;
+    }
+
+    /**
+     * Check if helper is initialized for given order and payment
+     *
+     * @param Mage_Sales_Model_Order $order
+     * @param Mage_Sales_Model_Order_Payment $payment
+     * @return bool
+     */
+    public function isInitializedForOrderPayment(Mage_Sales_Model_Order $order, Mage_Sales_Model_Order_Payment $payment)
+    {
+        // Is helper initialized
+        if ($this->order->isEmpty() || $this->payment->getId() == false) {
+            return false;
+        }
+
+        // Empty parameters
+        if ($order->isEmpty() || $payment->getId() == false) {
+            return false;
+        }
+
+        // Both order and payment parameters helper match helper properties
+        if ($this->order->getId() == $order->getId() && $this->payment->getId() == $payment->getId()) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
