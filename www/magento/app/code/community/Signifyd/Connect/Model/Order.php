@@ -138,7 +138,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
                 $reason = 'order is canceled';
             } elseif ($order->isPaymentReview()) {
                 $reason = 'order is in payment review';
-            } elseif (in_array($state, $order::STATE_COMPLETE, $order::STATE_CLOSED, $order::STATE_HOLDED)) {
+            } elseif (in_array($state, array($order::STATE_COMPLETE, $order::STATE_CLOSED, $order::STATE_HOLDED))) {
                 $reason = "order is on {$state} state";
             } elseif ($this->getActionFlag($order::ACTION_FLAG_HOLD) === false) {
                 $reason = "order action flag is set to do not hold";

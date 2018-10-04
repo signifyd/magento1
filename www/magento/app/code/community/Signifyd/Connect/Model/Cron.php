@@ -78,7 +78,7 @@ class Signifyd_Connect_Model_Cron
             $this->getLogger()->addLog("Preparing for response processing of case no: {$currentOrderId}");
             $this->getLogger()->addLog("Order {$currentOrderId} state: {$currentOrder->getState()}, event: cron retry");
 
-            Mage::getModel('signifyd_connect/case')->processAdditional($currentCase->getData(), false, $currentOrder);
+            Mage::getModel('signifyd_connect/case')->processAdditional($currentCase->getData(), $currentOrder);
         }
 
         $this->getLogger()->addLog("Main retry method ended");
