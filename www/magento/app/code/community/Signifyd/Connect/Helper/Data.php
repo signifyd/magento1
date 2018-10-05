@@ -83,14 +83,33 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             return false;
         }
 
-        $installationDate = new Zend_Date($installationDateConfig);
-        $createdAtDate = new Zend_Date($order->getCreatedAt());
+        $installationDate = $this->getTime($installationDateConfig);
+        $createdAtDate = $this->getTime($order->getCreatedAt());
 
-        if ($createdAtDate->isEarlier($installationDate)) {
+        if ($createdAtDate < $installationDate) {
+            $this->log('Installation date: ' . $installationDate);
+            $this->log('Created at date: ' . $createdAtDate);
+
             return true;
         } else {
             return false;
         }
+    }
+
+    public function getTime($dateTime)
+    {
+        $dateTime = explode(' ', $dateTime);
+
+        if (count($dateTime) == 2) {
+            $date = explode('-', $dateTime[0]);
+            $time = explode(':', $dateTime[1]);
+
+            if (count($date) == 3 && count($time) == 3) {
+                return mktime($time[0], $time[1], $time[2], $date[1], $date[2], $date[0]);
+            }
+        }
+        
+        return false;
     }
 
     public function log($message)
