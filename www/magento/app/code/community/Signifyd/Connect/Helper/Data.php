@@ -226,31 +226,54 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
     public function getIPAddress($order)
     {
-        if ($order->getRemoteIp()) {
-            if ($order->getXForwardedFor()) {
-                return $this->filterIp($order->getXForwardedFor());
-            }
+        $ipAddress = $this->filterIp($order->getXForwardedFor());
 
-            return $this->filterIp($order->getRemoteIp());
+        if (empty($ipAddress) == false) {
+            return $ipAddress;
         }
 
-        // Checks each configured value in app/etc/local.xml & falls back to REMOTE_ADDR. See app/etc/local.xml.additional for examples.
+        $ipAddress = $this->filterIp($order->getRemoteIp());
+
+        if (empty($ipAddress) == false) {
+            return $ipAddress;
+        }
+
+        // Checks each configured value in app/etc/local.xml & falls back to REMOTE_ADDR.
+        // See app/etc/local.xml.additional for examples.
         return $this->filterIp(Mage::helper('core/http')->getRemoteAddr(false));
     }
 
     public function filterIp($ip)
     {
+        $ipv4Pattern = '[0-9]{1,3}(?:\.[0-9]{1,3}){3}';
+        $ipv6Pattern = '[a-f0-9]{0,4}(?:\:[a-f0-9]{0,4}){2,7}';
+        $ipPattern = '/' . $ipv4Pattern . '|' . $ipv6Pattern . '/';
+
         $matches = array();
+        $validIps = array();
+        $validPublicIps = array();
 
-        if (preg_match('/[0-9]{1,3}(?:\.[0-9]{1,3}){3}/', $ip, $matches)) { //ipv4
-            return current($matches);
+        $count = preg_match_all($ipPattern, $ip, $matches);
+
+        if ($count > 0) {
+            foreach ($matches[0] as $match) {
+                if (filter_var($match,FILTER_VALIDATE_IP)) {
+                    $validIps[] = $match;
+
+                    if (filter_var($match,FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE)) {
+                        $validPublicIps[] = $match;
+                    }
+                }
+            }
+
+            if (count($validPublicIps) > 0) {
+                return array_shift($validPublicIps);
+            } elseif (count($validIps)) {
+                return array_shift($validIps);
+            }
         }
 
-        if (preg_match('/[a-f0-9]{0,4}(?:\:[a-f0-9]{0,4}){2,7}/', strtolower($ip), $matches)) { //ipv6
-            return current($matches);
-        }
-
-        return preg_replace('/[^0-9a-zA-Z:\.]/', '', strtok(str_replace($ip, ',', "\n"), "\n"));
+        return false;
     }
 
     protected function getVersions()
@@ -285,7 +308,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         // T715: Send null rather than false when we can't get the IP Address
-        $purchase['browserIpAddress'] = ($this->getIpAddress($order) ? $this->getIpAddress($order) : null);
+        $purchase['browserIpAddress'] = $this->getIpAddress($order);
         $purchase['orderId'] = $order->getIncrementId();
         $purchase['createdAt'] = date('c', strtotime($order->getCreatedAt())); // e.g: 2004-02-12T15:19:21+00:00
         $purchase['currency'] = $order->getOrderCurrencyCode();
