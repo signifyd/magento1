@@ -46,8 +46,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      * @param null $state
      * @return bool
      */
-    public function isRestricted($method, $state = null)
+    public function isRestricted($method, $state)
     {
+        if (empty($state)) {
+            return true;
+        }
+
         if (in_array($method, $this->restrictedStatesMethods['all'])) {
             return true;
         }
