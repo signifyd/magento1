@@ -408,6 +408,11 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             if ($creditmemo instanceof Mage_Sales_Model_Order_Creditmemo) {
                 $order = $creditmemo->getOrder();
 
+                if ($order->canCreditmemo()) {
+                    $helper->log("Order {$order->getIncrementId()} still can be refunded, case will not be cancelled");
+                    return;
+                }
+
                 if ($order instanceof Mage_Sales_Model_Order) {
                     $this->handleCancel($order->getIncrementId());
                 }
