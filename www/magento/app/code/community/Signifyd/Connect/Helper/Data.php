@@ -247,17 +247,36 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $this->filterIp(Mage::helper('core/http')->getRemoteAddr(false));
     }
 
+    /**
+     * Gets XForwardedFor as a list
+     *
+     * @param $order
+     * @return array|mixed
+     */
+    public function getXForwardedFor($order)
+    {
+        $matches = array();
+
+        $count = $this->pregMatchAllIps($order->getXForwardedFor(), $matches);
+
+        $this->log($order->getXForwardedFor());
+        $this->log("Count: {$count}");
+
+        if ($count > 0) {
+            $this->log(print_r($matches, true));
+            return $matches[0];
+        }
+
+        return array();
+    }
+
     public function filterIp($ip)
     {
-        $ipv4Pattern = '[0-9]{1,3}(?:\.[0-9]{1,3}){3}';
-        $ipv6Pattern = '[a-f0-9]{0,4}(?:\:[a-f0-9]{0,4}){2,7}';
-        $ipPattern = '/' . $ipv4Pattern . '|' . $ipv6Pattern . '/';
-
         $matches = array();
         $validIps = array();
         $validPublicIps = array();
 
-        $count = preg_match_all($ipPattern, $ip, $matches);
+        $count = $this->pregMatchAllIps($ip, $matches);
 
         if ($count > 0) {
             foreach ($matches[0] as $match) {
@@ -278,6 +297,24 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         return false;
+    }
+
+    /**
+     * Performs a preg_match_all searching IP addresses
+     *
+     * Populates $matches param with matches and return match count, same behavior as preg_match_all
+     *
+     * @param $string
+     * @param $matches
+     * @return int
+     */
+    public function pregMatchAllIps($string, &$matches)
+    {
+        $ipv4Pattern = '[0-9]{1,3}(?:\.[0-9]{1,3}){3}';
+        $ipv6Pattern = '[a-f0-9]{0,4}(?:\:[a-f0-9]{0,4}){2,7}';
+        $ipPattern = '/' . $ipv4Pattern . '|' . $ipv6Pattern . '/';
+
+        return preg_match_all($ipPattern, $string, $matches);
     }
 
     protected function getVersions()
@@ -302,6 +339,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $transId;
     }
 
+    /**
+     * @param Mage_Sales_Model_Order $order
+     * @param Mage_Sales_Model_Order_Payment $payment
+     * @return array
+     */
     public function getPurchase($order, $payment)
     {
         $purchase = $this->getPurchaseUpdate($order, $payment);
@@ -311,8 +353,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $purchase['orderSessionId'] = 'M1' . base64_encode(Mage::getBaseUrl()) . $order->getQuoteId();
         }
 
-        // T715: Send null rather than false when we can't get the IP Address
         $purchase['browserIpAddress'] = $this->getIpAddress($order);
+        $purchase['xForwardedIpAddresses'] = $this->getXForwardedFor($order);
         $purchase['orderId'] = $order->getIncrementId();
         $purchase['createdAt'] = date('c', strtotime($order->getCreatedAt())); // e.g: 2004-02-12T15:19:21+00:00
         $purchase['currency'] = $order->getOrderCurrencyCode();
