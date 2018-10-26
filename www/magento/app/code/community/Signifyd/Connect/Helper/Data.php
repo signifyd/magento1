@@ -328,6 +328,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase['avsResponseCode'] = $paymentHelper->filterAvsResponseCode($purchase['avsResponseCode']);
         $purchase['cvvResponseCode'] = $paymentHelper->filterCvvResponseCode($purchase['cvvResponseCode']);
 
+        foreach ($purchase as $field => $info) {
+            if (empty($info)) {
+                unset($purchase[$field]);
+            }
+        }
+
         return $purchase;
     }
 

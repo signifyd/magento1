@@ -91,6 +91,12 @@ class Signifyd_Connect_Helper_Payment_Default
         $card['expiryMonth'] = $this->filterExpiryMonth($card['expiryMonth']);
         $card['expiryYear'] = $this->filterExpiryYear($card['expiryYear']);
 
+        foreach ($card as $field => $info) {
+            if (empty($info)) {
+                unset($card[$field]);
+            }
+        }
+
         return $card;
     }
 
