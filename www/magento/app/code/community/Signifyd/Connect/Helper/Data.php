@@ -622,7 +622,18 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $responseCode = $response->getHttpCode();
                 $this->log("Response code: {$responseCode}");
 
-                if (substr($responseCode, 0, 1) == '2') {
+                if ($responseCode == 204) {
+                    $case->setMagentoStatus($case::COMPLETED_STATUS);
+                    $case->save();
+
+                    $orderComment = 'Signifyd: order requested to be excluded from guarantee';
+                    $order->addStatusHistoryComment($orderComment);
+                    $order->save();
+
+                    $this->log($orderComment);
+
+                    return 'signifyd_restricted';
+                } elseif (substr($responseCode, 0, 1) == '2') {
                     $responseData = json_decode($response->getRawResponse(), true);
                     // investigationId is deprecated
                     $caseId = isset($responseData['caseId']) ? $responseData['caseId'] : $responseData['investigationId'];
