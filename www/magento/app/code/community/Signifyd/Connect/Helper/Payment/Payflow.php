@@ -2,6 +2,32 @@
 
 class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Payment_Default
 {
+    /**
+     * List of mapping AVS codes
+     *
+     * Keys are concatenation of Street (avsaddr) and ZIP (avszip) codes
+     *
+     * @var array
+     */
+    protected $avsMap = array(
+        'YN' => 'A',
+        'NN' => 'N',
+        'XX' => 'U',
+        'YY' => 'Y',
+        'NY' => 'Z'
+    );
+
+    /**
+     * List of mapping CVV codes
+     *
+     * @var array
+     */
+    protected $cvvMap = array(
+        'Y' => 'M',
+        'N' => 'N',
+        'X' => 'U'
+    );
+
     public function getAvsResponseCode()
     {
         $avsResponseCode = $this->signifydData['cc_avs_status'];
@@ -71,12 +97,13 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             if (isset($paymentData['custref']) && !empty($paymentData['custref'])) {
                 $signifydData = array();
 
-                if (isset($paymentData['procavs'])) {
-                    $signifydData['cc_avs_status'] = $paymentData['procavs'];
+                if (isset($paymentData['avsaddr']) && isset($paymentData['avszip']) &&
+                    isset($this->avsMap[$paymentData['avsaddr'] . $paymentData['avszip']])) {
+                    $signifydData['cc_avs_status'] = $this->avsMap[$paymentData['avsaddr'] . $paymentData['avszip']];
                 }
 
-                if (isset($paymentData['proccvv2'])) {
-                    $signifydData['cc_cid_status'] = $paymentData['proccvv2'];
+                if (isset($paymentData['cvv2match']) && isset($this->cvvMap[$paymentData['cvv2match']])) {
+                    $signifydData['cc_cid_status'] = $this->cvvMap[$paymentData['cvv2match']];
                 }
 
                 if (isset($paymentData['acct'])) {

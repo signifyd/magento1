@@ -3,7 +3,7 @@
 class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_Helper_Payment_Default
 {
     /**
-     * @var Stripe\Charge
+     * @var /Stripe/Charge
      */
     protected $charge;
 
