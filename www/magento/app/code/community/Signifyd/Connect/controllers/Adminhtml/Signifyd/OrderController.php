@@ -22,7 +22,11 @@ class Signifyd_Connect_Adminhtml_Signifyd_OrderController extends Mage_Adminhtml
             $case->save();
         }
 
-        $order->addStatusHistoryComment('Order released from hold by merchant');
+        /** @var Mage_Admin_Model_Session $adminSession */
+        $adminSession = Mage::getSingleton('admin/session');
+        /** @var Mage_Admin_Model_User $admin */
+        $admin = $adminSession->getUser();
+        $order->addStatusHistoryComment("Signifyd: Order unheld by {$admin->getUsername()}");
         $order->save();
 
         $result = parent::unholdAction();

@@ -329,11 +329,11 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
                 ->addObject($invoice->getOrder());
             $transactionSave->save();
             $this->logger->addLog("Invoice was created for order: {$order->getIncrementId()}");
-            $invoice->addComment('Automatic Invoice', false);
+            $invoice->addComment('Signifyd: create order invoice', false);
             $invoice->sendEmail();
             $invoice->setEmailSent(true);
             $invoice->save();
-            $order->addStatusHistoryComment('Automatic Invoice: '.$invoice->getIncrementId());
+            $order->addStatusHistoryComment("Signifyd: create order invoice: {$invoice->getIncrementId()}");
             $order->save();
         } catch (Exception $e) {
             $this->logger->addLog('Exception while creating invoice: ' . $e->__toString());
