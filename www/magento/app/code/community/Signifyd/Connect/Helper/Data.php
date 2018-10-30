@@ -46,8 +46,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      * @param null $state
      * @return bool
      */
-    public function isRestricted($method, $state = null)
+    public function isRestricted($method, $state)
     {
+        if (empty($state)) {
+            return true;
+        }
+
         if (in_array($method, $this->restrictedStatesMethods['all'])) {
             return true;
         }
@@ -483,7 +487,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if (!empty($incrementId)) {
             /** @var Mage_Sales_Model_Mysql4_Order_Grid_Collection $collection */
             $collection = Mage::getResourceModel('sales/order_grid_collection');
-            $collection->addFieldToFilter('increment_id', $incrementId);
+            $collection->addFieldToFilter('main_table.increment_id', $incrementId);
             /** @var Mage_Sales_Model_Order $orderGrid */
             $orderGrid = $collection->getFirstItem();
 
