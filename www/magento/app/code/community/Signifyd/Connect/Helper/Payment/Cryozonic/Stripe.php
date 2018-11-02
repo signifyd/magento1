@@ -84,10 +84,12 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
      */
     public function getCvvResponseCode()
     {
-        $cvcCheck = $this->charge->source->cvc_check;
+        if (is_object($this->charge) && isset($this->charge->source->cvc_check)) {
+            $cvcCheck = $this->charge->source->cvc_check;
 
-        if (isset($this->cvvMap[$cvcCheck])) {
-            return $this->filterCvvResponseCode($this->cvvMap[$cvcCheck]);
+            if (isset($this->cvvMap[$cvcCheck])) {
+                return $this->filterCvvResponseCode($this->cvvMap[$cvcCheck]);
+            }
         }
 
         return null;
