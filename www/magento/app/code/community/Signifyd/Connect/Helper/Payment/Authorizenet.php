@@ -22,6 +22,20 @@ class Signifyd_Connect_Helper_Payment_Authorizenet extends Signifyd_Connect_Help
     }
 
     /**
+     * @return null|string
+     */
+    public function getCvvResponseCode()
+    {
+        $cvvResponseCode = $this->payment->getCcCidStatus();
+
+        if ($cvvResponseCode == 'B') {
+            $cvvResponseCode = 'U';
+        }
+
+        return $this->filterCvvResponseCode($cvvResponseCode);
+    }
+
+    /**
      * @return string
      */
     public function getCardHolderName()

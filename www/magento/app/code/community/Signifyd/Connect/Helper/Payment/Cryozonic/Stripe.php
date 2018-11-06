@@ -3,9 +3,41 @@
 class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_Helper_Payment_Default
 {
     /**
-     * @var Stripe\Charge
+     * @var /Stripe/Charge
      */
     protected $charge;
+
+    /**
+     * List of mapping AVS codes
+     *
+     * Keys are concatenation of Address Line 1 (address_line1_check) and
+     * Postal Code (address_zip_check) verification responses
+     *
+     * @var array
+     */
+    protected $avsMap = array(
+        'pass-pass' => 'Y',
+        'pass-fail' => 'A',
+        'fail-pass' => 'Z',
+        'fail-fail' => 'N',
+        'pass-unchecked' => 'A',
+        'unchecked-pass' => 'Z',
+        'unchecked-fail' => 'N',
+        'fail-unchecked' => 'N',
+        'unchecked-unchecked' => 'U'
+    );
+
+    /**
+     * List of mapping CVV codes
+     *
+     * @var array
+     */
+    protected $cvvMap = array(
+        'pass' => 'M',
+        'fail' => 'N',
+        'unchecked' => 'P',
+        'unavailable' => 'P'
+    );
 
     /**
      * @param Mage_Sales_Model_Order $order
@@ -29,6 +61,38 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
         }
 
         return $return;
+    }
+
+    /**
+     * @return null|string
+     */
+    public function getAvsResponseCode()
+    {
+        $addressLine1Check = $this->charge->source->address_line1_check;
+        $addressZipCheck = $this->charge->source->address_zip_check;
+        $key = "{$addressLine1Check}-{$addressZipCheck}";
+
+        if (isset($this->avsMap[$key])) {
+            return $this->filterAvsResponseCode($this->avsMap[$key]);
+        }
+
+        return null;
+    }
+
+    /**
+     * @return null|string
+     */
+    public function getCvvResponseCode()
+    {
+        if (is_object($this->charge) && isset($this->charge->source->cvc_check)) {
+            $cvcCheck = $this->charge->source->cvc_check;
+
+            if (isset($this->cvvMap[$cvcCheck])) {
+                return $this->filterCvvResponseCode($this->cvvMap[$cvcCheck]);
+            }
+        }
+
+        return null;
     }
 
     /**
