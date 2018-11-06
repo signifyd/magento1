@@ -96,7 +96,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
             $this->logger->addLog(
                 "Order {$incrementId} ({$order->getState()} > {$order->getStatus()}) " .
-                "can not be unheld because {$reason}. " .
+                "cannot be unheld because {$reason}. " .
                 "Case status: {$case->getSignifydStatus()}"
             );
             return false;
@@ -146,7 +146,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
                 $reason = "unknown reason";
             }
 
-            $this->logger->addLog("Order {$incrementId} can not be held because {$reason}");
+            $this->logger->addLog("Order {$incrementId} cannot be held because {$reason}");
             return false;
         }
 
@@ -179,32 +179,48 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
 
         $incrementId = $order->getIncrementId();
 
-        if ($order->isCanceled()) {
-            $this->logger->addLog("Order {$incrementId} already canceled");
-            return true;
-        }
-
-        $status = $this->helper->getOrderPaymentStatus($order);
-        if ($status['authorize'] === true && $status['capture'] === true) {
-            $this->holdOrder($order, $reason);
-            $this->logger->addLog("Order {$incrementId} cannot be canceled because it has a sum already captured");
-            $order->addStatusHistoryComment(
-                'Signifyd: order cannot be canceled because it has a sum already captured. ' .
-                'Please do a manual refund/cancelation.'
-            );
-            $order->save();
-            return false;
-        }
-
         if (!$this->unholdOrder($order, $reason)) {
             return false;
         }
 
         if (!$order->canCancel()) {
+            $state = $order->getState();
+
+            if ($order->isPaymentReview()) {
+                $reason = 'order is in payment review';
+            } else {
+                $allInvoiced = true;
+
+                foreach ($order->getAllItems() as $item) {
+                    if ($item->getQtyToInvoice()) {
+                        $allInvoiced = false;
+                        break;
+                    }
+                }
+
+                if ($allInvoiced) {
+                    $reason = 'all order items are invoiced';
+                } elseif ($order->isCanceled()) {
+                    $reason = 'order is cancelled';
+                } elseif (in_array($state, array($order::STATE_COMPLETE, $order::STATE_CLOSED))) {
+                    $reason = "order is on {$state} state";
+                } elseif ($order->getActionFlag($order::ACTION_FLAG_CANCEL) === false) {
+                    $reason = "order action flag is set to do not cancel";
+                } else {
+                    $paymentStatus = $this->helper->getOrderPaymentStatus($order);
+
+                    if ($paymentStatus['authorize'] === true && $paymentStatus['capture'] === true) {
+                        $reason = "order has a sum already captured. Please do a manual refund/cancelation.";
+                    }
+                }
+
+            }
+
             $this->holdOrder($order, $reason);
-            $this->logger->addLog("Order {$incrementId} cannot be canceled");
-            $order->addStatusHistoryComment("Signifyd: order cannot be canceled. Tried to cancel order because {$reason}.");
+            $this->logger->addLog("Order {$incrementId} cannot be canceled because {$reason}");
+            $order->addStatusHistoryComment("Signifyd: order cannot be canceled because {$reason}.");
             $order->save();
+
             return false;
         }
 
@@ -288,7 +304,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         $payment = $order->getPayment();
         $method = $payment->getMethodInstance();
         if(!$method->canAuthorize()){
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be authorize");
+            $this->logger->addLog("Order {$order->getIncrementId()} cannot be authorize");
             return true;
         }
 
@@ -315,7 +331,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
     public function generateInvoice(Mage_Sales_Model_Order $order)
     {
         if (!$order->canInvoice()) {
-            $this->logger->addLog("Order {$order->getIncrementId()} can not be invoiced");
+            $this->logger->addLog("Order {$order->getIncrementId()} cannot be invoiced");
             return false;
         }
 
