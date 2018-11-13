@@ -16,8 +16,12 @@ class Signifyd_Connect_Model_Payflowpro extends Mage_Paypal_Model_Payflowpro
                 $signifydData['cc_avs_status'] = $paymentData['procavs'];
             }
 
-            if (isset($paymentData['proccvv2'])) {
-                $signifydData['cc_cid_status'] = $paymentData['proccvv2'];
+            if (isset($paymentData['avsaddr']) && isset($paymentData['avszip'])) {
+                $signifydData['cc_avs_status'] = $paymentData['avsaddr'] . $paymentData['avszip'];
+            }
+
+            if (isset($paymentData['cvv2match'])) {
+                $signifydData['cc_cid_status'] = $paymentData['cvv2match'];
             }
 
             if (isset($paymentData['acct'])) {

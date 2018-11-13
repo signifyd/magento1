@@ -2,34 +2,64 @@
 
 class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Payment_Default
 {
+    /**
+     * List of mapping AVS codes
+     *
+     * Keys are concatenation of Street (avsaddr) and ZIP (avszip) codes
+     *
+     * @var array
+     */
+    protected $avsMap = array(
+        'YN' => 'A',
+        'NN' => 'N',
+        'XX' => 'U',
+        'YY' => 'Y',
+        'NY' => 'Z'
+    );
+
+    /**
+     * List of mapping CVV codes
+     *
+     * @var array
+     */
+    protected $cvvMap = array(
+        'Y' => 'M',
+        'N' => 'N',
+        'X' => 'U'
+    );
+
     public function getAvsResponseCode()
     {
-        $avsResponseCode = $this->signifydData['cc_avs_status'];
-        $avsResponseCode = $this->filterAvsResponseCode($avsResponseCode);
+        if (isset($this->signifydData['cc_avs_status'])) {
+            $avsResponseCode = $this->signifydData['cc_avs_status'];
 
-        if (empty($avsResponseCode)) {
-            $avsResponseCode = parent::getAvsResponseCode();
+            if (isset($this->avsMap[$avsResponseCode])) {
+                return $this->filterAvsResponseCode($this->avsMap[$avsResponseCode]);
+            }
         }
 
-        return $avsResponseCode;
+        return null;
     }
 
     public function getCvvResponseCode()
     {
-        $cvvResponseCode = $this->signifydData['cc_cid_status'];
-        $cvvResponseCode = $this->filterCvvResponseCode($cvvResponseCode);
+        if (isset($this->signifydData['cc_cid_status'])) {
+            $cvvResponseCode = $this->signifydData['cc_cid_status'];
 
-        if (empty($cvvResponseCode)) {
-            $cvvResponseCode = parent::getCvvResponseCode();
+            if (isset($this->cvvMap[$cvvResponseCode])) {
+                return $this->filterCvvResponseCode($this->cvvMap[$cvvResponseCode]);
+            }
         }
 
-        return $cvvResponseCode;
+        return null;
     }
 
     public function getLast4()
     {
-        $last4 = $this->signifydData['cc_last4'];
-        $last4 = $this->filterLast4($last4);
+        if (isset($this->signifydData['cc_last4'])) {
+            $last4 = $this->signifydData['cc_last4'];
+            $last4 = $this->filterLast4($last4);
+        }
 
         if (empty($last4)) {
             $last4 = parent::getLast4();
@@ -40,8 +70,10 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
 
     public function getExpiryMonth()
     {
-        $expiryMonth = $this->signifydData['cc_exp_month'];
-        $expiryMonth = $this->filterExpiryMonth($expiryMonth);
+        if (isset($this->signifydData['cc_exp_month'])) {
+            $expiryMonth = $this->signifydData['cc_exp_month'];
+            $expiryMonth = $this->filterExpiryMonth($expiryMonth);
+        }
 
         if (empty($expiryMonth)) {
             $expiryMonth = parent::getExpiryMonth();
@@ -52,8 +84,10 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
 
     public function getExpiryYear()
     {
-        $expiryYear = $this->signifydData['cc_exp_year'];
-        $expiryYear = $this->filterExpiryYear($expiryYear);
+        if (isset($this->signifydData['cc_exp_year'])) {
+            $expiryYear = $this->signifydData['cc_exp_year'];
+            $expiryYear = $this->filterExpiryYear($expiryYear);
+        }
 
         if (empty($expiryYear)) {
             $expiryYear = parent::getExpiryYear();
@@ -71,12 +105,12 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             if (isset($paymentData['custref']) && !empty($paymentData['custref'])) {
                 $signifydData = array();
 
-                if (isset($paymentData['procavs'])) {
-                    $signifydData['cc_avs_status'] = $paymentData['procavs'];
+                if (isset($paymentData['avsaddr']) && isset($paymentData['avszip'])) {
+                    $signifydData['cc_avs_status'] = $paymentData['avsaddr'] . $paymentData['avszip'];
                 }
 
-                if (isset($paymentData['proccvv2'])) {
-                    $signifydData['cc_cid_status'] = $paymentData['proccvv2'];
+                if (isset($paymentData['cvv2match'])) {
+                    $signifydData['cc_cid_status'] = $paymentData['cvv2match'];
                 }
 
                 if (isset($paymentData['acct'])) {
