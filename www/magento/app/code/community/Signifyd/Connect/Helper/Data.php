@@ -389,12 +389,29 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     /**
      * @param $order
      * @param Mage_Sales_Model_Order_Payment $payment
+     * @param Signifyd_Connect_Model_Case
      * @return array
      */
-    public function getCard($order, $payment)
+    public function getCard($order, $payment, $case = null)
     {
         $card = $this->getPaymentHelper($order, $payment)->getCardData();
         $card['billingAddress'] = $this->getSignifydAddress($order->getBillingAddress());
+
+        if (is_object($case) && $case->getId()) {
+            $cardData = $case->getEntries('card_data');
+
+            if (empty($cardData) == false && is_array($cardData)) {
+                foreach ($cardData as $key => $value) {
+                    // If card data has not been provided, but it has been provided before, use stored value
+                    if (empty($card[$key]) && empty($value) == false) {
+                        $card[$key] = $value;
+                    }
+                }
+            }
+        }
+
+        // Sorting array by key to avoid unnecessary case updates to Signifyd
+        ksort($card);
 
         return $card;
     }
@@ -495,28 +512,28 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $user;
     }
 
-    public function generateCaseCreateData($order, $payment, $customer)
+    public function generateCaseCreateData($order, $payment, $customer, $case = null)
     {
-        $case = array();
+        $caseData = array();
 
-        $case['purchase'] = $this->getPurchase($order, $payment);
-        $case['recipient'] = $this->getRecipient($order);
-        $case['card'] = $this->getCard($order, $payment);
-        $case['userAccount'] = $this->getUserAccount($customer, $order);
-        $case['clientVersion'] = $this->getVersions();
+        $caseData['purchase'] = $this->getPurchase($order, $payment);
+        $caseData['recipient'] = $this->getRecipient($order);
+        $caseData['card'] = $this->getCard($order, $payment, $case);
+        $caseData['userAccount'] = $this->getUserAccount($customer, $order);
+        $caseData['clientVersion'] = $this->getVersions();
 
-        return $case;
+        return $caseData;
     }
 
-    public function generateCaseUpdateData($order, $payment)
+    public function generateCaseUpdateData($order, $payment, $case = null)
     {
-        $case = array();
+        $caseData = array();
 
-        $case['purchase'] = $this->getPurchaseUpdate($order, $payment);
-        $case['card'] = $this->getCard($order, $payment);
-        $case['recipient'] = $this->getRecipient($order);
+        $caseData['purchase'] = $this->getPurchaseUpdate($order, $payment);
+        $caseData['card'] = $this->getCard($order, $payment, $case);
+        $caseData['recipient'] = $this->getRecipient($order);
 
-        return $case;
+        return $caseData;
     }
 
     /**
@@ -612,7 +629,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $lastPayment = $payments->getLastItem()->isEmpty() ? null : $payments->getLastItem();
             $customer = $order->getCustomer() ? $order->getCustomer() : null;
 
-            $caseUpdateData = $this->generateCaseUpdateData($order, $lastPayment, $customer);
+            $caseUpdateData = $this->generateCaseUpdateData($order, $lastPayment, $case);
             $caseJson = json_encode($caseUpdateData);
             $newMd5 = md5($caseJson);
 
@@ -644,13 +661,18 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     return 'not ready';
                 }
 
-                $caseCreateData = $this->generateCaseCreateData($order, $lastPayment, $customer);
+                $caseCreateData = $this->generateCaseCreateData($order, $lastPayment, $customer, $case);
                 $caseJson = json_encode($caseCreateData);
+
+                // Save card data to use on case update
+                $cardData = $caseCreateData['card'];
+                unset($cardData['billingAddress']);
 
                 $case->setOrderIncrement($orderIncrementId);
                 $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
                 $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                 $case->setEntries('md5', $newMd5);
+                $case->setEntries('card_data', $cardData);
                 $case->save();
 
                 $requestUri = $this->getUrl();
