@@ -68,12 +68,16 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
      */
     public function getAvsResponseCode()
     {
-        $addressLine1Check = $this->charge->source->address_line1_check;
-        $addressZipCheck = $this->charge->source->address_zip_check;
-        $key = "{$addressLine1Check}-{$addressZipCheck}";
+        if (is_object($this->charge) &&
+            isset($this->charge->source->address_line1_check) &&
+            isset($this->charge->source->address_zip_check) ) {
+            $addressLine1Check = $this->charge->source->address_line1_check;
+            $addressZipCheck = $this->charge->source->address_zip_check;
+            $key = "{$addressLine1Check}-{$addressZipCheck}";
 
-        if (isset($this->avsMap[$key])) {
-            return $this->filterAvsResponseCode($this->avsMap[$key]);
+            if (isset($this->avsMap[$key])) {
+                return $this->filterAvsResponseCode($this->avsMap[$key]);
+            }
         }
 
         return null;
