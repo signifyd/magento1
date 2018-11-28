@@ -1069,4 +1069,169 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             return true;
         }
     }
+
+    public function generateFulfillmentData(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $trackingNumbers = $this->getTrackingNumbers();
+
+        // At this moment fulfillment must be sent only if it has tracking numbers
+        if (empty($trackingNumbers)) {
+            return false;
+        }
+
+        $fulfillment = array(
+            'id' => $shipment->getId(),
+            'orderId' => $shipment->getOrder()->getIncrementId(),
+            //TODO: format data on format yyyy-MM-dd'T'HH:mm:ssZ
+            'createdAt' => $shipment->getCreatedAt(),
+            'deliveryEmail' => $this->getDeliveryEmail($shipment),
+            'fulfillmentStatus' => $this->getFulfillmentStatus($shipment),
+            'trackingNumbers' => $trackingNumbers,
+            'trackingUrls' => $this->getTrackingUrls(),
+            'products' => $this->getFulfillmentProducts(),
+            'shipmentStatus' => $this->getShipmentStatus($shipment),
+            'deliveryAddress' => array(
+                'streetAddress' => $shipment->getShippingAddress()->getStreetFull(),
+                'unit' => null,
+                'city' => $shipment->getShippingAddress()->getCity(),
+                'provinceCode' => $shipment->getShippingAddress()->getRegionCode(),
+                'postalCode' => $shipment->getShippingAddress()->getPostcode(),
+                'countryCode' => $shipment->getShippingAddress()->getCountry()
+            ),
+            'recipientName' => $shipment->getShippingAddress()->getName(),
+            'confirmationName' => null,
+            'confirmationPhone' => null,
+            'shippingCarrier' => $shipment->getOrder()->getShippingMethod()
+        );
+
+        return $fulfillment;
+    }
+
+    /**
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return string
+     */
+    public function getDeliveryEmail(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $deliveryEmail = $shipment->getOrder()->getShippingAddress()->getEmail();
+
+        if (empty($deliveryEmail)) {
+            $deliveryEmail = $shipment->getOrder()->getCustomerEmail();
+        }
+
+        return $deliveryEmail;
+    }
+
+    /**
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return string
+     */
+    public function getFulfillmentStatus(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $validFulfillmentStatus = array(
+            'partial',
+            'complete',
+            'replacement'
+        );
+
+        $shipmentsCount = $shipment->getOrder()->getShipmentsCollection()->count();
+
+        if ($shipmentsCount == 1 && $shipment->getOrder()->canShip() == false) {
+            return 'complete';
+        } else {
+            return 'partial';
+        }
+    }
+
+    /**
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return array
+     */
+    public function getTrackingNumbers(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $trackingNumbers = array();
+
+        /** @var Mage_Sales_Model_Resource_Order_Shipment_Track_Collection $trackingCollection */
+        $trackingCollection = $shipment->getTracksCollection();
+
+        /** @var Mage_Sales_Model_Order_Shipment_Track $tracking */
+        foreach ($trackingCollection->getItems() as $tracking) {
+            $number = trim($tracking->getNumber());
+
+            if (empty($number) == false) {
+                $trackingNumbers[] = $tracking->getNumber();
+            }
+        }
+
+        return $trackingNumbers;
+    }
+
+    /**
+     * Magento default tracking URLs are not accessible if you're not logged in
+     *
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return array
+     */
+    public function getTrackingUrls(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        return array();
+    }
+
+    /**
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return array
+     */
+    public function getFulfillmentProducts(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $products = array();
+
+        /** @var Mage_Sales_Model_Order_Shipment_Item $item */
+        foreach ($shipment->getAllItems() as $item) {
+            $product = $item->getOrderItem()->getProduct();
+
+            /**
+             * About fields itemCategory and itemSubCategory, Chris Morris has explained on MAG-286
+             *
+             * This is meant to determine which products that were in the create case are associated to the fulfillment.
+             * Since we don’t pass itemSubCategory or itemCategory in the create case we should keep these empty.
+             */
+
+            $products[] = array(
+                'itemId' => $item->getSku(),
+                'itemName' => $item->getName(),
+                'itemIsDigital' => $item->getOrderItem()->getIsVirtual(),
+                'itemCategory' => null,
+                'itemSubCategory' => null,
+                'itemUrl' => $product->getUrlInStore(),
+                'itemImage' => $item->getOrderItem()->getProduct()->getImageUrl(),
+                'itemQuantity' => $item->getQty(),
+                'itemPrice' => $item->getPrice(),
+                'itemWeight' => $item->getWeight()
+            );
+        }
+
+        return $products;
+    }
+
+    /**
+     * Magento do not track shipment stauts
+     *
+     * Rewrite this method if you have and want to send these informations to Signifyd
+     *
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return null
+     */
+    public function getShipmentStatus(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $validShipmentStatus = array(
+            'in transit',
+            'out for delivery',
+            'waiting for pickup',
+            'failed attempt',
+            'delivered',
+            'exception'
+        );
+
+        return null;
+    }
 }
