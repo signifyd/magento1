@@ -691,11 +691,19 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 unset($cardData['billingAddress']);
 
                 // Save payment data on purchase to use on case update
-                $purchaseData = array(
-                    'transactionId' => $caseCreateData['purchase']['transactionId'],
-                    'avsResponseCode' => $caseCreateData['purchase']['avsResponseCode'],
-                    'cvvResponseCode' => $caseCreateData['purchase']['cvvResponseCode']
-                );
+                $purchaseData = array();
+
+                if (isset($caseCreateData['purchase']['transactionId'])) {
+                    $purchaseData['transactionId'] = $caseCreateData['purchase']['transactionId'];
+                }
+
+                if (isset($caseCreateData['purchase']['avsResponseCode'])) {
+                    $purchaseData['avsResponseCode'] = $caseCreateData['purchase']['avsResponseCode'];
+                }
+
+                if (isset($caseCreateData['purchase']['cvvResponseCode'])) {
+                    $purchaseData['cvvResponseCode'] = $caseCreateData['purchase']['cvvResponseCode'];
+                }
 
                 $case->setOrderIncrement($orderIncrementId);
                 $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
