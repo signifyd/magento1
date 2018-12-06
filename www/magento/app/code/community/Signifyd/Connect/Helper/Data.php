@@ -326,11 +326,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     /**
      * @param Mage_Sales_Model_Order $order
      * @param Mage_Sales_Model_Order_Payment $payment
+     * @param Signifyd_Connect_Model_Case
      * @return array
      */
-    public function getPurchase($order, $payment)
+    public function getPurchase($order, $payment, $case = null)
     {
-        $purchase = $this->getPurchaseUpdate($order, $payment);
+        $purchase = $this->getPurchaseUpdate($order, $payment, $case);
         $originStoreCode = $order->getData('origin_store_code');
 
         if (!empty($originStoreCode) && $originStoreCode != 'admin' && $this->isDeviceFingerprintEnabled()) {
@@ -362,9 +363,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      *
      * @param $order
      * @param $payment
+     * @param Signifyd_Connect_Model_Case
      * @return array
      */
-    public function getPurchaseUpdate($order, $payment)
+    public function getPurchaseUpdate($order, $payment, $case = null)
     {
         $purchase = array();
 
@@ -376,6 +378,26 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase['cvvResponseCode'] = $paymentHelper->getCvvResponseCode();
         $purchase['avsResponseCode'] = $paymentHelper->filterAvsResponseCode($purchase['avsResponseCode']);
         $purchase['cvvResponseCode'] = $paymentHelper->filterCvvResponseCode($purchase['cvvResponseCode']);
+
+        $this->log("Purchase from payment method: " . json_encode($purchase));
+
+        if (is_object($case) && $case->getId()) {
+            $purchaseData = $case->getEntries('purchase_data');
+
+            if (empty($purchaseData) == false && is_array($purchaseData)) {
+                foreach ($purchaseData as $key => $value) {
+                    // If purchase data has not been provided, but it has been provided before, use stored value
+                    if (empty($purchase[$key]) && empty($value) == false) {
+                        $purchase[$key] = $value;
+                    }
+                }
+            }
+        }
+
+        $this->log("Purchase with database data: " . json_encode($purchase));
+
+        // Sorting array by key to avoid unnecessary case updates to Signifyd
+        ksort($purchase);
 
         foreach ($purchase as $field => $info) {
             if (empty($info)) {
@@ -516,7 +538,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     {
         $caseData = array();
 
-        $caseData['purchase'] = $this->getPurchase($order, $payment);
+        $caseData['purchase'] = $this->getPurchase($order, $payment, $case);
         $caseData['recipient'] = $this->getRecipient($order);
         $caseData['card'] = $this->getCard($order, $payment, $case);
         $caseData['userAccount'] = $this->getUserAccount($customer, $order);
@@ -529,7 +551,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     {
         $caseData = array();
 
-        $caseData['purchase'] = $this->getPurchaseUpdate($order, $payment);
+        $caseData['purchase'] = $this->getPurchaseUpdate($order, $payment, $case);
         $caseData['card'] = $this->getCard($order, $payment, $case);
         $caseData['recipient'] = $this->getRecipient($order);
 
@@ -668,11 +690,19 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $cardData = $caseCreateData['card'];
                 unset($cardData['billingAddress']);
 
+                // Save payment data on purchase to use on case update
+                $purchaseData = array(
+                    'transactionId' => $caseCreateData['purchase']['transactionId'],
+                    'avsResponseCode' => $caseCreateData['purchase']['avsResponseCode'],
+                    'cvvResponseCode' => $caseCreateData['purchase']['cvvResponseCode']
+                );
+
                 $case->setOrderIncrement($orderIncrementId);
                 $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
                 $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                 $case->setEntries('md5', $newMd5);
                 $case->setEntries('card_data', $cardData);
+                $case->setEntries('purchase_data', $purchaseData);
                 $case->save();
 
                 $requestUri = $this->getUrl();
