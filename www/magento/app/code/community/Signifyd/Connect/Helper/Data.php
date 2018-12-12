@@ -9,7 +9,7 @@
  */
 class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 {
-    protected $apiUrl = 'https://api.signifyd.com/v2/cases';
+    protected $apiUrl = 'https://api.signifyd.com/v2';
 
     /**
      * Restricted states and payment methods
@@ -537,7 +537,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     }
 
     /**
-     * Getting the cases url
+     * Getting the API url
+     *
      * @return string
      */
     public function getUrl()
@@ -546,13 +547,25 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     }
 
     /**
-     * Getting the case url based on the case code
+     * Getting the case url given case code
+     *
      * @param $caseCode
      * @return string
      */
-    public function getCaseUrl($caseCode)
+    public function getCaseUrl($caseCode = null)
     {
-        return $this->getUrl() . '/' . $caseCode;
+        return $this->getUrl() . '/cases' . (empty($caseCode) ? '' : '/' . $caseCode);
+    }
+
+    /**
+     * Getting a fulfillment URL for given order increment ID
+     *
+     * @param $orderIncrementId
+     * @return string
+     */
+    public function getFulfillmentUrl($orderIncrementId)
+    {
+        return $this->getUrl() . "/fulfillments/{$orderIncrementId}";
     }
 
     /**
@@ -596,6 +609,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $storeId = $entity->getStoreId();
         } elseif ($entity instanceof Signifyd_Connect_Model_Case && !$entity->isEmpty()) {
             $storeId = $this->getCaseStoreId($entity);
+        } elseif ($entity instanceof Mage_Sales_Model_Order_Shipment && $entity->getId() > 0) {
+            $storeId = $entity->getStoreId();
         } else {
             $storeId = null;
         }
@@ -675,7 +690,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $case->setEntries('card_data', $cardData);
                 $case->save();
 
-                $requestUri = $this->getUrl();
+                $requestUri = $this->getCaseUrl();
             } else {
                 $caseCode = $case->getCode();
                 if (empty($caseCode)) {
@@ -692,7 +707,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $requestUri = $this->getCaseUrl($caseCode);
             }
 
-            $apiKey = Mage::helper('signifyd_connect')->getConfigData('settings/key', $order);
+            $apiKey = $this->getConfigData('settings/key', $order);
             $response = $this->request($requestUri, $caseJson, $apiKey, 'application/json', null, $isUpdate);
 
             try {
@@ -704,7 +719,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     // investigationId is deprecated
                     $caseId = isset($responseData['caseId']) ? $responseData['caseId'] : $responseData['investigationId'];
 
-                    $case->setCode($caseId);
                     $case->setCode($caseId);
 
                     if ($isUpdate) {
@@ -802,9 +816,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function cancelGuarantee($case)
     {
         $caseId = $case->getCode();
-        $url = $this->getUrl() . "/$caseId/guarantee";
+        $url = $this->getCaseUrl($caseId) . '/guarantee';
         $body = json_encode(array("guaranteeDisposition" => "CANCELED"));
-        $auth = Mage::helper('signifyd_connect')->getConfigData('settings/key', $case);
+        $auth = $this->getConfigData('settings/key', $case);
         $response = $this->request($url, $body, $auth, 'application/json', null, true);
 
         $code = $response->getHttpCode();
@@ -1070,9 +1084,63 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
     }
 
+    public function buildAndSendFulfillmentToSignifyd(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        if ($shipment->getId() <= 0) {
+            return false;
+        }
+
+        $orderIncrementId = $shipment->getOrder()->getIncrementId();
+
+        /** @var Signifyd_Connect_Model_Case $case */
+        $case = Mage::getModel('signifyd_connect/case')->load($orderIncrementId);
+
+        if ($case->getId() <= 0) {
+            return false;
+        }
+
+        if ($case->getEntries('fulfilled') == 1) {
+            return false;
+        }
+
+        $this->log("Fulfillment for case order {$orderIncrementId}");
+
+        try {
+            $fulfillmentData = $this->generateFulfillmentData($shipment);
+        } catch (Exception $e) {
+            $this->log("Fulfillment error: {$e->getMessage()}");
+            return false;
+        }
+
+        if ($fulfillmentData == false) {
+            return false;
+        }
+
+        $fulfillmentJson = json_encode($fulfillmentData);
+        $requestUri = $this->getFulfillmentUrl($orderIncrementId);
+        $apiKey = $this->getConfigData('settings/key', $shipment);
+        $response = $this->request($requestUri, $fulfillmentJson, $apiKey, 'application/json', null);
+
+        $responseHttpCode = $response->getHttpCode();
+
+        if (substr($responseHttpCode, 0, 1) == '2') {
+            $message = "Fulfillment sent to Signifyd";
+
+            $case->setEntries('fulfilled', 1);
+            $case->save();
+        } else {
+            $message = "Failed to send fulfillment to Signifyd";
+        }
+
+        $this->log($message);
+
+        $shipment->addComment($message);
+        $shipment->save();
+    }
+
     public function generateFulfillmentData(Mage_Sales_Model_Order_Shipment $shipment)
     {
-        $trackingNumbers = $this->getTrackingNumbers();
+        $trackingNumbers = $this->getTrackingNumbers($shipment);
 
         // At this moment fulfillment must be sent only if it has tracking numbers
         if (empty($trackingNumbers)) {
@@ -1080,15 +1148,14 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         $fulfillment = array(
-            'id' => $shipment->getId(),
+            'id' => $shipment->getIncrementId(),
             'orderId' => $shipment->getOrder()->getIncrementId(),
-            //TODO: format data on format yyyy-MM-dd'T'HH:mm:ssZ
-            'createdAt' => $shipment->getCreatedAt(),
+            'createdAt' => $shipment->getCreatedAtDate()->toString("yyyy-MM-ddTHH:mm:ss") . 'Z',
             'deliveryEmail' => $this->getDeliveryEmail($shipment),
             'fulfillmentStatus' => $this->getFulfillmentStatus($shipment),
             'trackingNumbers' => $trackingNumbers,
-            'trackingUrls' => $this->getTrackingUrls(),
-            'products' => $this->getFulfillmentProducts(),
+            'trackingUrls' => $this->getTrackingUrls($shipment),
+            'products' => $this->getFulfillmentProducts($shipment),
             'shipmentStatus' => $this->getShipmentStatus($shipment),
             'deliveryAddress' => array(
                 'streetAddress' => $shipment->getShippingAddress()->getStreetFull(),
@@ -1104,7 +1171,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             'shippingCarrier' => $shipment->getOrder()->getShippingMethod()
         );
 
-        return $fulfillment;
+        return array('fulfillments' => array($fulfillment));
     }
 
     /**
@@ -1196,17 +1263,23 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
              * Since we don’t pass itemSubCategory or itemCategory in the create case we should keep these empty.
              */
 
+            try {
+                $imageUrl = $item->getOrderItem()->getProduct()->getImageUrl();
+            } catch (Exception $e) {
+                $imageUrl = null;
+            }
+
             $products[] = array(
                 'itemId' => $item->getSku(),
                 'itemName' => $item->getName(),
-                'itemIsDigital' => $item->getOrderItem()->getIsVirtual(),
+                'itemIsDigital' => (bool) $item->getOrderItem()->getIsVirtual(),
                 'itemCategory' => null,
                 'itemSubCategory' => null,
                 'itemUrl' => $product->getUrlInStore(),
-                'itemImage' => $item->getOrderItem()->getProduct()->getImageUrl(),
-                'itemQuantity' => $item->getQty(),
-                'itemPrice' => $item->getPrice(),
-                'itemWeight' => $item->getWeight()
+                'itemImage' => $imageUrl,
+                'itemQuantity' => floatval($item->getQty()),
+                'itemPrice' => floatval($item->getPrice()),
+                'itemWeight' => floatval($item->getWeight())
             );
         }
 
