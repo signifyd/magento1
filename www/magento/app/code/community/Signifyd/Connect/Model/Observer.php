@@ -15,7 +15,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     protected $orderModel;
 
     /**
-     * @return Mage_Core_Helper_Abstract|Signifyd_Connect_Helper_Data
+     * @return Signifyd_Connect_Helper_Data
      */
     public function getHelper()
     {
@@ -487,6 +487,36 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $order->loadByIncrementId($incrementId);
 
             $this->putOrderOnHold($order);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param Varien_Event_Observer $observer
+     * @return $this
+     */
+    public function salesOrderShipmentTrackSaveCommitAfter(Varien_Event_Observer $observer)
+    {
+        /** @var Mage_Sales_Model_Order_Shipment_Track $track */
+        $track = $observer->getData('track');
+
+        if ($track instanceof Mage_Sales_Model_Order_Shipment_Track) {
+            $shipment = $track->getShipment();
+
+            if ($shipment instanceof Mage_Sales_Model_Order_Shipment) {
+                // This observer can be called multiple times during a single shipment save
+                // This registry entry is used to don't trigger fulfillment creation multiple times on a single save
+                $registryKey = "signifyd_action_shipment_{$shipment->getId()}";
+
+                if (Mage::registry($registryKey) == 1) {
+                    return $this;
+                }
+
+                Mage::register($registryKey, 1);
+
+                $this->getHelper()->buildAndSendFulfillmentToSignifyd($shipment);
+            }
         }
 
         return $this;
