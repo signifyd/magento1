@@ -1124,12 +1124,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $responseHttpCode = $response->getHttpCode();
 
         if (substr($responseHttpCode, 0, 1) == '2') {
-            $message = "Fulfillment sent to Signifyd";
+            $message = "Signifyd: Fullfilment sent";
 
             $case->setEntries('fulfilled', 1);
             $case->save();
         } else {
-            $message = "Failed to send fulfillment to Signifyd";
+            $message = "Signifyd: Fullfilment failed to send";
         }
 
         $this->log($message);
@@ -1147,11 +1147,13 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             return false;
         }
 
+        $deliveryEmail = $this->isOrderVirtual($shipment->getOrder()) ? $this->getDeliveryEmail($shipment) : null;
+
         $fulfillment = array(
             'id' => $shipment->getIncrementId(),
             'orderId' => $shipment->getOrder()->getIncrementId(),
             'createdAt' => $shipment->getCreatedAtDate()->toString("yyyy-MM-ddTHH:mm:ss") . 'Z',
-            'deliveryEmail' => $this->getDeliveryEmail($shipment),
+            'deliveryEmail' => $deliveryEmail,
             'fulfillmentStatus' => $this->getFulfillmentStatus($shipment),
             'trackingNumbers' => $trackingNumbers,
             'trackingUrls' => $this->getTrackingUrls($shipment),
@@ -1172,6 +1174,21 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         );
 
         return array('fulfillments' => array($fulfillment));
+    }
+
+    public function isOrderVirtual(Mage_Sales_Model_Order $order)
+    {
+        $isVirtual = true;
+
+        /** @var Mage_Sales_Model_Order_Item $item */
+        foreach ($order->getAllItems() as $item) {
+            if ($item->getIsVirtual() == false) {
+                $isVirtual = false;
+                break;
+            }
+        }
+
+        return $isVirtual;
     }
 
     /**
