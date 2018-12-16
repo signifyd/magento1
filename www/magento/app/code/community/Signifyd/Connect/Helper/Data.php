@@ -9,7 +9,7 @@
  */
 class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 {
-    protected $apiUrl = 'https://api.signifyd.com/v2/cases';
+    protected $apiUrl = 'https://api.signifyd.com/v2';
 
     /**
      * Restricted states and payment methods
@@ -559,7 +559,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     }
 
     /**
-     * Getting the cases url
+     * Getting the API url
+     *
      * @return string
      */
     public function getUrl()
@@ -568,13 +569,25 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     }
 
     /**
-     * Getting the case url based on the case code
+     * Getting the case url given case code
+     *
      * @param $caseCode
      * @return string
      */
-    public function getCaseUrl($caseCode)
+    public function getCaseUrl($caseCode = null)
     {
-        return $this->getUrl() . '/' . $caseCode;
+        return $this->getUrl() . '/cases' . (empty($caseCode) ? '' : '/' . $caseCode);
+    }
+
+    /**
+     * Getting a fulfillment URL for given order increment ID
+     *
+     * @param $orderIncrementId
+     * @return string
+     */
+    public function getFulfillmentUrl($orderIncrementId)
+    {
+        return $this->getUrl() . "/fulfillments/{$orderIncrementId}";
     }
 
     /**
@@ -618,6 +631,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $storeId = $entity->getStoreId();
         } elseif ($entity instanceof Signifyd_Connect_Model_Case && !$entity->isEmpty()) {
             $storeId = $this->getCaseStoreId($entity);
+        } elseif ($entity instanceof Mage_Sales_Model_Order_Shipment && $entity->getId() > 0) {
+            $storeId = $entity->getStoreId();
         } else {
             $storeId = null;
         }
@@ -713,7 +728,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $case->setEntries('purchase_data', $purchaseData);
                 $case->save();
 
-                $requestUri = $this->getUrl();
+                $requestUri = $this->getCaseUrl();
             } else {
                 $caseCode = $case->getCode();
                 if (empty($caseCode)) {
@@ -730,7 +745,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $requestUri = $this->getCaseUrl($caseCode);
             }
 
-            $apiKey = Mage::helper('signifyd_connect')->getConfigData('settings/key', $order);
+            $apiKey = $this->getConfigData('settings/key', $order);
             $response = $this->request($requestUri, $caseJson, $apiKey, 'application/json', null, $isUpdate);
 
             try {
@@ -753,7 +768,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     // investigationId is deprecated
                     $caseId = isset($responseData['caseId']) ? $responseData['caseId'] : $responseData['investigationId'];
 
-                    $case->setCode($caseId);
                     $case->setCode($caseId);
 
                     if ($isUpdate) {
@@ -851,9 +865,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function cancelGuarantee($case)
     {
         $caseId = $case->getCode();
-        $url = $this->getUrl() . "/$caseId/guarantee";
+        $url = $this->getCaseUrl($caseId) . '/guarantee';
         $body = json_encode(array("guaranteeDisposition" => "CANCELED"));
-        $auth = Mage::helper('signifyd_connect')->getConfigData('settings/key', $case);
+        $auth = $this->getConfigData('settings/key', $case);
         $response = $this->request($url, $body, $auth, 'application/json', null, true);
 
         $code = $response->getHttpCode();
@@ -1117,5 +1131,246 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         } else {
             return true;
         }
+    }
+
+    public function buildAndSendFulfillmentToSignifyd(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        if ($shipment->getId() <= 0) {
+            return false;
+        }
+
+        $orderIncrementId = $shipment->getOrder()->getIncrementId();
+
+        /** @var Signifyd_Connect_Model_Case $case */
+        $case = Mage::getModel('signifyd_connect/case')->load($orderIncrementId);
+
+        if ($case->getId() <= 0) {
+            return false;
+        }
+
+        if ($case->getEntries('fulfilled') == 1) {
+            return false;
+        }
+
+        $this->log("Fulfillment for case order {$orderIncrementId}");
+
+        try {
+            $fulfillmentData = $this->generateFulfillmentData($shipment);
+        } catch (Exception $e) {
+            $this->log("Fulfillment error: {$e->getMessage()}");
+            return false;
+        }
+
+        if ($fulfillmentData == false) {
+            return false;
+        }
+
+        $fulfillmentJson = json_encode($fulfillmentData);
+        $requestUri = $this->getFulfillmentUrl($orderIncrementId);
+        $apiKey = $this->getConfigData('settings/key', $shipment);
+        $response = $this->request($requestUri, $fulfillmentJson, $apiKey, 'application/json', null);
+
+        $responseHttpCode = $response->getHttpCode();
+
+        if (substr($responseHttpCode, 0, 1) == '2') {
+            $message = "Signifyd: Fullfilment sent";
+
+            $case->setEntries('fulfilled', 1);
+            $case->save();
+        } else {
+            $message = "Signifyd: Fullfilment failed to send";
+        }
+
+        $this->log($message);
+
+        $shipment->addComment($message);
+        $shipment->save();
+    }
+
+    public function generateFulfillmentData(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $trackingNumbers = $this->getTrackingNumbers($shipment);
+
+        // At this moment fulfillment must be sent only if it has tracking numbers
+        if (empty($trackingNumbers)) {
+            return false;
+        }
+
+        $deliveryEmail = $this->isOrderVirtual($shipment->getOrder()) ? $this->getDeliveryEmail($shipment) : null;
+
+        $fulfillment = array(
+            'id' => $shipment->getIncrementId(),
+            'orderId' => $shipment->getOrder()->getIncrementId(),
+            'createdAt' => $shipment->getCreatedAtDate()->toString("yyyy-MM-ddTHH:mm:ss") . 'Z',
+            'deliveryEmail' => $deliveryEmail,
+            'fulfillmentStatus' => $this->getFulfillmentStatus($shipment),
+            'trackingNumbers' => $trackingNumbers,
+            'trackingUrls' => $this->getTrackingUrls($shipment),
+            'products' => $this->getFulfillmentProducts($shipment),
+            'shipmentStatus' => $this->getShipmentStatus($shipment),
+            'deliveryAddress' => array(
+                'streetAddress' => $shipment->getShippingAddress()->getStreetFull(),
+                'unit' => null,
+                'city' => $shipment->getShippingAddress()->getCity(),
+                'provinceCode' => $shipment->getShippingAddress()->getRegionCode(),
+                'postalCode' => $shipment->getShippingAddress()->getPostcode(),
+                'countryCode' => $shipment->getShippingAddress()->getCountry()
+            ),
+            'recipientName' => $shipment->getShippingAddress()->getName(),
+            'confirmationName' => null,
+            'confirmationPhone' => null,
+            'shippingCarrier' => $shipment->getOrder()->getShippingMethod()
+        );
+
+        return array('fulfillments' => array($fulfillment));
+    }
+
+    public function isOrderVirtual(Mage_Sales_Model_Order $order)
+    {
+        $isVirtual = true;
+
+        /** @var Mage_Sales_Model_Order_Item $item */
+        foreach ($order->getAllItems() as $item) {
+            if ($item->getIsVirtual() == false) {
+                $isVirtual = false;
+                break;
+            }
+        }
+
+        return $isVirtual;
+    }
+
+    /**
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return string
+     */
+    public function getDeliveryEmail(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $deliveryEmail = $shipment->getOrder()->getShippingAddress()->getEmail();
+
+        if (empty($deliveryEmail)) {
+            $deliveryEmail = $shipment->getOrder()->getCustomerEmail();
+        }
+
+        return $deliveryEmail;
+    }
+
+    /**
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return string
+     */
+    public function getFulfillmentStatus(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $validFulfillmentStatus = array(
+            'partial',
+            'complete',
+            'replacement'
+        );
+
+        $shipmentsCount = $shipment->getOrder()->getShipmentsCollection()->count();
+
+        if ($shipmentsCount == 1 && $shipment->getOrder()->canShip() == false) {
+            return 'complete';
+        } else {
+            return 'partial';
+        }
+    }
+
+    /**
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return array
+     */
+    public function getTrackingNumbers(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $trackingNumbers = array();
+
+        /** @var Mage_Sales_Model_Resource_Order_Shipment_Track_Collection $trackingCollection */
+        $trackingCollection = $shipment->getTracksCollection();
+
+        /** @var Mage_Sales_Model_Order_Shipment_Track $tracking */
+        foreach ($trackingCollection->getItems() as $tracking) {
+            $number = trim($tracking->getNumber());
+
+            if (empty($number) == false) {
+                $trackingNumbers[] = $tracking->getNumber();
+            }
+        }
+
+        return $trackingNumbers;
+    }
+
+    /**
+     * Magento default tracking URLs are not accessible if you're not logged in
+     *
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return array
+     */
+    public function getTrackingUrls(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        return array();
+    }
+
+    /**
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return array
+     */
+    public function getFulfillmentProducts(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $products = array();
+
+        /** @var Mage_Sales_Model_Order_Shipment_Item $item */
+        foreach ($shipment->getAllItems() as $item) {
+            $product = $item->getOrderItem()->getProduct();
+
+            /**
+             * About fields itemCategory and itemSubCategory, Chris Morris has explained on MAG-286
+             *
+             * This is meant to determine which products that were in the create case are associated to the fulfillment.
+             * Since we don’t pass itemSubCategory or itemCategory in the create case we should keep these empty.
+             */
+
+            try {
+                $imageUrl = $item->getOrderItem()->getProduct()->getImageUrl();
+            } catch (Exception $e) {
+                $imageUrl = null;
+            }
+
+            $products[] = array(
+                'itemId' => $item->getSku(),
+                'itemName' => $item->getName(),
+                'itemIsDigital' => (bool) $item->getOrderItem()->getIsVirtual(),
+                'itemCategory' => null,
+                'itemSubCategory' => null,
+                'itemUrl' => $product->getUrlInStore(),
+                'itemImage' => $imageUrl,
+                'itemQuantity' => floatval($item->getQty()),
+                'itemPrice' => floatval($item->getPrice()),
+                'itemWeight' => floatval($item->getWeight())
+            );
+        }
+
+        return $products;
+    }
+
+    /**
+     * Magento do not track shipment stauts
+     *
+     * Rewrite this method if you have and want to send these informations to Signifyd
+     *
+     * @param Mage_Sales_Model_Order_Shipment $shipment
+     * @return null
+     */
+    public function getShipmentStatus(Mage_Sales_Model_Order_Shipment $shipment)
+    {
+        $validShipmentStatus = array(
+            'in transit',
+            'out for delivery',
+            'waiting for pickup',
+            'failed attempt',
+            'delivered',
+            'exception'
+        );
+
+        return null;
     }
 }
