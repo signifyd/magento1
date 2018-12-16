@@ -127,7 +127,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                     $result = $this->getHelper()->buildAndSendOrderToSignifyd($order, false, $updateOnly);
                     $this->getHelper()->log("Create case result for " . $order->getIncrementId() . ": {$result}");
 
-                    //PayPal express can't be held before everything is processed or it won't send confirmation e-mail to customer
+                    //PayPal express can't be put on hold before everything is processed or
+                    //it won't send confirmation e-mail to customer
                     //Also there is no different status before the process is complete as is with PayFlow
                     $asyncHoldMethods = array('paypal_express', 'payflow_link', 'payflow_advanced');
                     if ($result == "sent" && !in_array($order->getPayment()->getMethod(), $asyncHoldMethods)) {

@@ -762,7 +762,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                         Mage::getModel('signifyd_connect/case')->processCreation($case, $responseData);
                         $newScore = intval($case->getScore());
 
-                        $orderComment = 'Order update submitted to Signifyd';
+                        $orderComment = 'Signifyd: case updated';
                         $return = 'updated';
 
                         if (Mage::getDesign()->getArea() == 'adminhtml') {
@@ -779,7 +779,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                         $case->setMagentoStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
                         $case->save();
 
-                        $orderComment = "Signifyd: case {$caseId} created for order";
+                        $orderComment = "Signifyd: case created {$caseId}";
                         $return = 'sent';
                     }
 
@@ -862,9 +862,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $case->setGuarantee('CANCELED');
             $case->save();
 
-            $orderComment = "Guarantee canceled on Signifyd";
+            $orderComment = "Signifyd: guarantee canceled";
         } else {
-            $orderComment = "Failed to cancel guarantee on Signifyd";
+            $orderComment = "Signifyd: failed to cancel guarantee";
         }
 
         @$responseBody = json_decode($response->getRawResponse());
