@@ -222,7 +222,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $result = false;
 
         try {
-            $url = $this->getHelper()->getUrl() . '/' . $case->getCode();
+            $url = $this->getHelper()->getCaseUrl($case->getCode());
             $auth = $this->getHelper()->getConfigData('settings/key', $case);
             $response = $this->getHelper()->request($url, null, $auth, null, 'application/json');
             $responseCode = $response->getHttpCode();
