@@ -93,24 +93,21 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
                 $reason = "unknown reason";
             }
 
-            $case = Mage::getModel('signifyd_connect/case')->load($incrementId);
-            $this->logger->addLog(
-                "Order {$incrementId} ({$order->getState()} > {$order->getStatus()}) " .
-                "cannot be unheld because {$reason}. " .
-                "Case status: {$case->getSignifydStatus()}"
-            );
+            $order->addStatusHistoryComment("Signifyd: order cannot be updated, {$reason}");
+            $order->save();
+
+            $this->logger->addLog("Order {$incrementId} cannot be updated, {$reason}");
             return false;
         }
 
         try {
             $order->unhold();
-            $order->addStatusHistoryComment("Signifyd: order unheld, $reason");
+            $order->addStatusHistoryComment("Signifyd: order updated, $reason");
             $order->save();
 
-            $this->logger->addLog("Order {$order->getIncrementId()} unheld because {$reason}");
+            $this->logger->addLog("Order {$order->getIncrementId()} removed from hold: {$reason}");
         } catch (Exception $e) {
-            $this->logger->addLog("Order {$order->getIncrementId()} unable to be saved because {$e->getMessage()}");
-            $this->logger->addLog("Order {$order->getIncrementId()} was not unheld.");
+            $this->logger->addLog("Order {$order->getIncrementId()} was not removed from hold: {$e->getMessage()}");
             return false;
         }
 
@@ -146,7 +143,11 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
                 $reason = "unknown reason";
             }
 
-            $this->logger->addLog("Order {$incrementId} cannot be held because {$reason}");
+            $order->addStatusHistoryComment("Signifyd: order cannot be updated to on hold, {$reason}");
+            $order->save();
+
+            $this->logger->addLog("Order {$incrementId} cannot be updated to on hold, {$reason}");
+
             return false;
         }
 
@@ -155,10 +156,9 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: {$reason}");
             $order->save();
 
-            $this->logger->addLog("Order {$incrementId} held: {$reason}");
+            $this->logger->addLog("Order {$incrementId} put on hold: {$reason}");
         } catch (Exception $e) {
-            $this->logger->addLog("Order {$incrementId} unable to be saved because " . $e->getMessage());
-            $this->logger->addLog("Order {$incrementId} was not held.");
+            $this->logger->addLog("Order {$incrementId} was not put on hold: " . $e->getMessage());
             return false;
         }
 
@@ -279,8 +279,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             }
         } catch (Exception $e) {
             $this->holdOrder($order, 'failed to authorize/invoice order');
-            $this->logger->addLog("Order {$order->getIncrementId()} unable to be saved because {$e->getMessage()}");
-            $this->logger->addLog("Order {$order->getIncrementId()} was not unheld.");
+            $this->logger->addLog("Order {$order->getIncrementId()} was not removed from hold: {$e->getMessage()}");
             return false;
         }
 
