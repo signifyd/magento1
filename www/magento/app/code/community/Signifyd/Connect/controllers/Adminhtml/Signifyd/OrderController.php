@@ -26,7 +26,7 @@ class Signifyd_Connect_Adminhtml_Signifyd_OrderController extends Mage_Adminhtml
         $adminSession = Mage::getSingleton('admin/session');
         /** @var Mage_Admin_Model_User $admin */
         $admin = $adminSession->getUser();
-        $order->addStatusHistoryComment("Signifyd: Order updated by {$admin->getUsername()}");
+        $order->addStatusHistoryComment("Signifyd: order status updated by {$admin->getUsername()}");
         $order->save();
 
         $result = parent::unholdAction();

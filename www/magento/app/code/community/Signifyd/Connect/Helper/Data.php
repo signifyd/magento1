@@ -1143,8 +1143,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
         /** @var Signifyd_Connect_Model_Case $case */
         $case = Mage::getModel('signifyd_connect/case')->load($orderIncrementId);
+        $caseCode = $case instanceof Signifyd_Connect_Model_Case ? $case->getCode() : null;
 
-        if ($case->getId() <= 0) {
+        if (empty($caseCode)) {
             return false;
         }
 
