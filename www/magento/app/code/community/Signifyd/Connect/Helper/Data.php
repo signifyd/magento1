@@ -14,30 +14,41 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     /**
      * Restricted states and payment methods
      * @var array
+     * @deprecated
+     *
+     * Restricted payment methods are no longer managed in this method.
+     * Please add customized restricted payment methods to core_config_data table as below.
+     *
+     * INSERT INTO core_config_data(path, value) VALUES (
+     * 'signifyd_connect/settings/restrict_payment_methods',
+     * 'checkmo,cashondelivery,banktransfer,purchaseorder'
+     * );
      */
+    // TODO: Remove property content, even the array
     protected $restrictedStatesMethods = array(
-        'all' => array(
-            'checkmo', 'cashondelivery', 'banktransfer', 'purchaseorder'
-        ),
-        Mage_Sales_Model_Order::STATE_PENDING_PAYMENT => array(
-            'all'
-        ),
-        Mage_Sales_Model_Order::STATE_PAYMENT_REVIEW => array(
-            'all'
-        ),
-        Mage_Sales_Model_Order::STATE_CANCELED => array(
-            'all'
-        ),
-        Mage_Sales_Model_Order::STATE_CLOSED => array(
-            'all'
-        ),
-        Mage_Sales_Model_Order::STATE_COMPLETE => array(
-            'all'
-        )
+        'all' => 'checkmo,cashondelivery,purchaseorder'
     );
 
     /** @var  Signifyd_Connect_Helper_Payment_Interface */
     protected $paymentHelper;
+
+    /**
+     * Used on mysql4-upgrade-4.4.0-4.4.1.php for backward compatibility
+     *
+     * Do not remove this method
+     *
+     * Tries to get restricted states methods (and payment methods) from class property
+     *
+     * @return array
+     */
+    public function getRestrictStatesMethods()
+    {
+        if (isset($this->restrictedStatesMethods) && empty($this->restrictedStatesMethods) == false) {
+            return $this->restrictedStatesMethods;
+        } else {
+            return false;
+        }
+    }
 
     /**
      * Check if order is restricted by payment method and state
@@ -46,25 +57,35 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      * @param null $state
      * @return bool
      */
-    public function isRestricted($method, $state)
+    public function isRestricted($method, $state, $action='default')
     {
         if (empty($state)) {
             return true;
         }
 
-        if (in_array($method, $this->restrictedStatesMethods['all'])) {
+        $restrictedPaymentMethods = Mage::getStoreConfig('signifyd_connect/settings/restrict_payment_methods');
+        $restrictedPaymentMethods = explode(',', $restrictedPaymentMethods);
+        $restrictedPaymentMethods = array_map('trim', $restrictedPaymentMethods);
+
+        if (in_array($method, $restrictedPaymentMethods)) {
             return true;
         }
 
-        if (isset($this->restrictedStatesMethods[$state]) &&
-            is_array($this->restrictedStatesMethods[$state]) &&
-            in_array('all', $this->restrictedStatesMethods[$state])) {
-            return true;
+        return $this->isStateRestricted($state, $action);
+    }
+
+    public function isStateRestricted($state, $action='default')
+    {
+        $restrictedStates = Mage::getStoreConfig("signifyd_connect/settings/restrict_states_{$action}");
+        $restrictedStates = explode(',', $restrictedStates);
+        $restrictedStates = array_map('trim', $restrictedStates);
+        $restrictedStates = array_filter($restrictedStates);
+
+        if (empty($restrictedStates) && $action != 'default') {
+            return $this->isStateRestricted($state, 'default');
         }
 
-        if (!empty($state) && isset($this->restrictedStatesMethods[$state]) &&
-            is_array($this->restrictedStatesMethods[$state]) &&
-            in_array($method, $this->restrictedStatesMethods[$state])) {
+        if (in_array($state, $restrictedStates)) {
             return true;
         }
 
@@ -682,8 +703,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
             $state = $order->getState();
 
-            if ($this->isRestricted($order->getPayment()->getMethod(), $state) ||
-                $state == Mage_Sales_Model_Order::STATE_HOLDED && !$isUpdate) {
+            if ($this->isRestricted($order->getPayment()->getMethod(), $state, ($isUpdate ? 'update' : 'create'))) {
                 $this->log('Case creation/update for order ' . $orderIncrementId . ' with state ' . $state . ' is restricted');
                 return 'restricted';
             }

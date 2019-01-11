@@ -3,7 +3,7 @@
 <config>
     <modules>
         <Signifyd_Connect>
-            <version>4.4.0</version>
+            <version>4.4.1</version>
         </Signifyd_Connect>
     </modules>
     <global>
@@ -211,6 +211,9 @@
             <settings>
                 <enabled>0</enabled>
                 <url>https://api.signifyd.com/v2</url>
+                <restrict_states_default>pending_payment,payment_review,canceled,closed,complete</restrict_states_default>
+                <restrict_states_create>holded,pending_payment,payment_review,canceled,closed,complete</restrict_states_create>
+                <restrict_payment_methods>checkmo,cashondelivery,banktransfer,purchaseorder</restrict_payment_methods>
             </settings>
             <advanced>
                 <hold_orders>0</hold_orders>
