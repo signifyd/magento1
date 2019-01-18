@@ -206,22 +206,6 @@
             </signifyd_connect>
         </routers>
     </frontend>
-    <default>
-        <signifyd_connect>
-            <settings>
-                <enabled>0</enabled>
-                <url>https://api.signifyd.com/v2</url>
-                <restrict_states_default>pending_payment,payment_review,canceled,closed,complete</restrict_states_default>
-                <restrict_states_create>holded,pending_payment,payment_review,canceled,closed,complete</restrict_states_create>
-                <restrict_payment_methods>checkmo,cashondelivery,banktransfer,purchaseorder</restrict_payment_methods>
-            </settings>
-            <advanced>
-                <hold_orders>0</hold_orders>
-                <hold_orders_threshold>500</hold_orders_threshold>
-                <invoice_orders>0</invoice_orders>
-            </advanced>
-        </signifyd_connect>
-    </default>
     <admin>
         <routers>
             <adminhtml>
@@ -318,6 +302,10 @@
                 option to change it at the admin (MAG1-55)
                 -->
                 <enable_device_fingerprint>1</enable_device_fingerprint>
+
+                <restrict_states_default>pending_payment,payment_review,canceled,closed,complete</restrict_states_default>
+                <restrict_states_create>holded,pending_payment,payment_review,canceled,closed,complete</restrict_states_create>
+                <restrict_payment_methods>checkmo,cashondelivery,banktransfer,purchaseorder</restrict_payment_methods>
             </settings>
             <advanced>
                 <accepted_from_guaranty>3</accepted_from_guaranty>

@@ -24,10 +24,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      * 'checkmo,cashondelivery,banktransfer,purchaseorder'
      * );
      */
-    // TODO: Remove property content, even the array
-    protected $restrictedStatesMethods = array(
-        'all' => 'checkmo,cashondelivery,purchaseorder'
-    );
+    protected $restrictedStatesMethods;
 
     /** @var  Signifyd_Connect_Helper_Payment_Interface */
     protected $paymentHelper;
