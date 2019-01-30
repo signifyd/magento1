@@ -439,7 +439,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
 
             if ($case->isEmpty() || $case->getMagentoStatus() != Signifyd_Connect_Model_Case::COMPLETED_STATUS) {
-                $this->getOrderModel()->holdOrder($order, 'after order place');
+                $this->getOrderModel()->holdOrder($order, 'order updated to on-hold');
             }
         }
 
