@@ -22,11 +22,6 @@ class Signifyd_Connect_Helper_Payment_Paypal_Express extends Signifyd_Connect_He
         return null;
     }
 
-    public function getCardHolderName()
-    {
-        return null;
-    }
-
     public function getBin()
     {
         return null;
