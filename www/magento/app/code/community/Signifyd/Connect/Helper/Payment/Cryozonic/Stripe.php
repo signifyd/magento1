@@ -68,6 +68,8 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
      */
     public function getAvsResponseCode()
     {
+        $avsResponseCode = null;
+
         if (is_object($this->charge) &&
             isset($this->charge->source->address_line1_check) &&
             isset($this->charge->source->address_zip_check) ) {
@@ -76,11 +78,13 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
             $key = "{$addressLine1Check}-{$addressZipCheck}";
 
             if (isset($this->avsMap[$key])) {
-                return $this->filterAvsResponseCode($this->avsMap[$key]);
+                $avsResponseCode = $this->filterAvsResponseCode($this->avsMap[$key]);
             }
         }
 
-        return null;
+        $this->log('AVS found on payment helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode));
+
+        return $avsResponseCode;
     }
 
     /**
@@ -88,15 +92,19 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
      */
     public function getCvvResponseCode()
     {
+        $cvvResponseCode = null;
+
         if (is_object($this->charge) && isset($this->charge->source->cvc_check)) {
             $cvcCheck = $this->charge->source->cvc_check;
 
             if (isset($this->cvvMap[$cvcCheck])) {
-                return $this->filterCvvResponseCode($this->cvvMap[$cvcCheck]);
+                $cvvResponseCode = $this->filterCvvResponseCode($this->cvvMap[$cvcCheck]);
             }
         }
 
-        return null;
+        $this->log('CVV found on payment helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode));
+
+        return $cvvResponseCode;
     }
 
     /**
@@ -119,10 +127,15 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
     {
         if (is_object($this->charge) && isset($this->charge->source->last4)) {
             $last4 = $this->filterLast4($this->charge->source->last4);
-            if (!empty($last4)) return $last4;
         }
 
-        return parent::getLast4();
+        $this->log('Last4 found on payment helper: ' . (empty($last4) ? 'false' : 'true'));
+
+        if (empty($last4)) {
+            $last4 = parent::getLast4();
+        }
+
+        return $last4;
     }
 
     /**
@@ -132,10 +145,15 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
     {
         if (is_object($this->charge) && isset($this->charge->source->exp_month)) {
             $expiryMonth = $this->filterExpiryMonth($this->charge->source->exp_month);
-            if (!empty($expiryMonth)) return $expiryMonth;
         }
 
-        return parent::getExpiryMonth();
+        $this->log('Expiry month found on payment helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth));
+
+        if (empty($expiryMonth)) {
+            $expiryMonth = parent::getExpiryMonth();
+        }
+
+        return $expiryMonth;
     }
 
     /**
@@ -145,9 +163,14 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
     {
         if (is_object($this->charge) && isset($this->charge->source->exp_year)) {
             $expiryYear = $this->filterExpiryYear($this->charge->source->exp_year);
-            if (!empty($expiryYear)) return $expiryYear;
         }
 
-        return parent::getExpiryYear();
+        $this->log('Expiry year found on payment helper: ' . (empty($expiryYear) ? 'false' : $expiryYear));
+
+        if (empty($expiryYear)) {
+            $expiryYear = parent::getExpiryYear();
+        }
+
+        return $expiryYear;
     }
 }

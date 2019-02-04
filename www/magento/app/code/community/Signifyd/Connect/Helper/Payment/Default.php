@@ -78,6 +78,8 @@ class Signifyd_Connect_Helper_Payment_Default
      */
     public function getCardData()
     {
+        $this->log('Getting card data informations using ' . get_class($this));
+
         $card = array();
 
         $card['cardHolderName'] = $this->getCardHolderName();
@@ -85,6 +87,10 @@ class Signifyd_Connect_Helper_Payment_Default
         $card['last4'] = $this->getLast4();
         $card['expiryMonth'] = $this->getExpiryMonth();
         $card['expiryYear'] = $this->getExpiryYear();
+
+        $filteredDataCard = $card;
+        $filteredDataCard['last4'] = empty($filteredDataCard['last4']) ? 'not found' : 'found';
+        $this->log("Data collected from payment method: " . json_encode($filteredDataCard));
 
         $card['bin'] = $this->filterBin($card['bin']);
         $card['last4'] = $this->filterLast4($card['last4']);
@@ -97,6 +103,10 @@ class Signifyd_Connect_Helper_Payment_Default
             }
         }
 
+        $filteredDataCard = $card;
+        $filteredDataCard['last4'] = empty($filteredDataCard['last4']) ? 'not found' : 'found';
+        $this->log("Filtered data: " . json_encode($filteredDataCard));
+
         return $card;
     }
 
@@ -106,7 +116,11 @@ class Signifyd_Connect_Helper_Payment_Default
     public function getAvsResponseCode()
     {
         $avsResponseCode = $this->payment->getCcAvsStatus();
-        return $this->filterAvsResponseCode($avsResponseCode);
+        $avsResponseCode = $this->filterAvsResponseCode($avsResponseCode);
+
+        $this->log('AVS found on default helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode));
+
+        return $avsResponseCode;
     }
 
     /**
@@ -115,7 +129,11 @@ class Signifyd_Connect_Helper_Payment_Default
     public function getCvvResponseCode()
     {
         $cvvResponseCode = $this->payment->getCcCidStatus();
-        return $this->filterCvvResponseCode($cvvResponseCode);
+        $cvvResponseCode = $this->filterCvvResponseCode($cvvResponseCode);
+
+        $this->log('CVV found on default helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode));
+
+        return $cvvResponseCode;
     }
 
     /**
@@ -151,6 +169,8 @@ class Signifyd_Connect_Helper_Payment_Default
             $bin = $this->filterBin($bin);
         }
 
+        $this->log('Bin found on default helper: ' . (empty($bin) ? 'false' : $bin));
+
         return $bin;
     }
 
@@ -167,6 +187,8 @@ class Signifyd_Connect_Helper_Payment_Default
             $last4 = $this->filterLast4($last4);
         }
 
+        $this->log('Last4 found on default helper: ' . (empty($last4) ? 'false' : 'true'));
+
         return $last4;
     }
 
@@ -182,6 +204,8 @@ class Signifyd_Connect_Helper_Payment_Default
             $expiryMonth = $this->filterExpiryMonth($this->signifydData['cc_exp_month']);
         }
 
+        $this->log('Expiry month found on default helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth));
+
         return $expiryMonth;
     }
 
@@ -196,6 +220,8 @@ class Signifyd_Connect_Helper_Payment_Default
         if (empty($expiryYear) && isset($this->signifydData['cc_exp_year'])) {
             $expiryYear = $this->filterExpiryYear($this->signifydData['cc_exp_year']);
         }
+
+        $this->log('Expiry year found on default helper: ' . (empty($expiryYear) ? 'false' : $expiryYear));
 
         return $expiryYear;
     }
@@ -303,5 +329,10 @@ class Signifyd_Connect_Helper_Payment_Default
         }
 
         return null;
+    }
+
+    public function log($message)
+    {
+        Mage::helper('signifyd_connect/log')->addLog($message);
     }
 }

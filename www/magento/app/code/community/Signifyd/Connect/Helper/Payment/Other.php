@@ -146,14 +146,18 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
     public function getAvsResponseCode()
     {
         $avsResponseCode = parent::getAvsResponseCode();
+
         if (!empty($avsResponseCode)) {
             return $avsResponseCode;
         }
 
         $avsResponseCode = $this->performExactSearch($this->avsResponseCodeKeys, 'filterAvsResponseCode');
+
         if (empty($avsResponseCode)) {
             $avsResponseCode = $this->performExpressionSearch($this->avsResponseCodeExpressions, 'filterAvsResponseCode');
         }
+
+        $this->log('AVS found on other helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode));
 
         return $avsResponseCode;
     }
@@ -164,14 +168,18 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
     public function getCvvResponseCode()
     {
         $cvvResponseCode = parent::getCvvResponseCode();
+
         if (!empty($cvvResponseCode)) {
             return $cvvResponseCode;
         }
 
         $cvvResponseCode = $this->performExactSearch($this->cvvResponseCodeKeys, 'filterCvvResponseCode');
+
         if (empty($cvvResponseCode)) {
             $cvvResponseCode = $this->performExpressionSearch($this->cvvResponseCodeExpressions, 'filterCvvResponseCode');
         }
+
+        $this->log('CVV found on other helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode));
 
         return $cvvResponseCode;
     }
@@ -182,14 +190,18 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
     public function getBin()
     {
         $bin = parent::getBin();
+
         if (!empty($bin)) {
             return $bin;
         }
 
         $bin = $this->performExactSearch($this->binKeys, 'filterBin');
+
         if (empty($bin)) {
             $bin = $this->performExpressionSearch($this->binExpressions, 'filterBin');
         }
+
+        $this->log('Bin found on other helper: ' . (empty($bin) ? 'false' : $bin));
 
         return $bin;
     }
@@ -200,14 +212,18 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
     public function getLast4()
     {
         $last4 = parent::getLast4();
+
         if (!empty($last4)) {
             return $last4;
         }
 
         $last4 = $this->performExactSearch($this->last4Keys, 'filterLast4');
+
         if (empty($last4)) {
             $last4 = $this->performExpressionSearch($this->last4Expressions, 'filterLast4');
         }
+
+        $this->log('Last4 found on other helper: ' . (empty($last4) ? 'false' : 'true'));
 
         return $last4;
     }
@@ -218,14 +234,18 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
     public function getExpiryMonth()
     {
         $expiryMonth = parent::getExpiryMonth();
+
         if (!empty($expiryMonth)) {
             return $expiryMonth;
         }
         
         $expiryMonth = $this->performExactSearch($this->expiryMonthKeys, 'filterExpiryMonth');
+
         if (empty($expiryMonth)) {
             $expiryMonth = $this->performExpressionSearch($this->expiryMonthExpressions, 'filterExpiryMonth');
         }
+
+        $this->log('Expiry month found on other helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth));
 
         return $expiryMonth;
     }
@@ -236,14 +256,18 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
     public function getExpiryYear()
     {
         $expiryYear = parent::getExpiryYear();
+
         if (!empty($expiryYear)) {
             return $expiryYear;
         }
 
         $expiryYear = $this->performExactSearch($this->expiryYearKeys, 'filterExpiryYear');
+
         if (empty($expiryYear)) {
             $expiryYear = $this->performExpressionSearch($this->expiryYearExpressions, 'filterExpiryYear');
         }
+
+        $this->log('Expiry year found on other helper: ' . (empty($expiryYear) ? 'false' : $expiryYear));
 
         return $expiryYear;
     }
