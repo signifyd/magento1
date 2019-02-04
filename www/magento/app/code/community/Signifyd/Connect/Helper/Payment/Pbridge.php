@@ -13,6 +13,8 @@ class Signifyd_Connect_Helper_Payment_Pbridge extends Signifyd_Connect_Helper_Pa
             $last4 = $this->filterLast4($this->additionalInformation['pbridge_data']['cc_last4']);
         }
 
+        $this->log('Last4 found on payment helper: ' . (empty($last4) ? 'false' : 'true'));
+
         return $last4;
     }
 

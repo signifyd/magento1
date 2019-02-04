@@ -926,8 +926,21 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $is_update = false
     ) {
         if (Mage::getStoreConfig('signifyd_connect/log/all')) {
+            $dataObject = json_decode($data);
+            $jsonError = json_last_error();
+
+            if (empty($jsonError)) {
+                if (isset($dataObject->card) && isset($dataObject->card->last4)) {
+                    $dataObject->card->last4 = empty($dataObject->card->last4) ? 'not found' : 'found';
+                }
+
+                $logData = json_encode($dataObject);
+            } else {
+                $logData = $data;
+            }
+
             $authMask = preg_replace("/\S/", "*", $auth, strlen($auth) - 4);
-            $this->log("Request:\nURL: $url \nAuth: $authMask\nData: $data");
+            $this->log("Request:\nURL: {$url} \nAuth: {$authMask}\nData: {$logData}");
         }
 
         $curl = curl_init();

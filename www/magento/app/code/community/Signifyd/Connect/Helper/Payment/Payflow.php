@@ -30,28 +30,40 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
 
     public function getAvsResponseCode()
     {
+        $avsResponseCode = null;
+
         if (isset($this->signifydData['cc_avs_status'])) {
             $avsResponseCode = $this->signifydData['cc_avs_status'];
 
             if (isset($this->avsMap[$avsResponseCode])) {
-                return $this->filterAvsResponseCode($this->avsMap[$avsResponseCode]);
+                $avsResponseCode = $this->filterAvsResponseCode($this->avsMap[$avsResponseCode]);
+            } else {
+                $avsResponseCode = null;
             }
         }
 
-        return null;
+        $this->log('AVS found on payment helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode));
+
+        return $avsResponseCode;
     }
 
     public function getCvvResponseCode()
     {
+        $cvvResponseCode = null;
+
         if (isset($this->signifydData['cc_cid_status'])) {
             $cvvResponseCode = $this->signifydData['cc_cid_status'];
 
             if (isset($this->cvvMap[$cvvResponseCode])) {
-                return $this->filterCvvResponseCode($this->cvvMap[$cvvResponseCode]);
+                $cvvResponseCode = $this->filterCvvResponseCode($this->cvvMap[$cvvResponseCode]);
+            } else {
+                $cvvResponseCode = null;
             }
         }
 
-        return null;
+        $this->log('CVV found on payment helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode));
+
+        return $cvvResponseCode;
     }
 
     public function getLast4()
@@ -60,6 +72,8 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             $last4 = $this->signifydData['cc_last4'];
             $last4 = $this->filterLast4($last4);
         }
+
+        $this->log('Last4 found on payment helper: ' . (empty($last4) ? 'false' : 'true'));
 
         if (empty($last4)) {
             $last4 = parent::getLast4();
@@ -75,6 +89,8 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             $expiryMonth = $this->filterExpiryMonth($expiryMonth);
         }
 
+        $this->log('Expiry month found on payment helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth));
+
         if (empty($expiryMonth)) {
             $expiryMonth = parent::getExpiryMonth();
         }
@@ -88,6 +104,8 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             $expiryYear = $this->signifydData['cc_exp_year'];
             $expiryYear = $this->filterExpiryYear($expiryYear);
         }
+
+        $this->log('Expiry year found on payment helper: ' . (empty($expiryYear) ? 'false' : $expiryYear));
 
         if (empty($expiryYear)) {
             $expiryYear = parent::getExpiryYear();

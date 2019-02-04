@@ -32,7 +32,11 @@ class Signifyd_Connect_Helper_Payment_Authorizenet extends Signifyd_Connect_Help
             $cvvResponseCode = 'U';
         }
 
-        return $this->filterCvvResponseCode($cvvResponseCode);
+        $cvvResponseCode = $this->filterCvvResponseCode($cvvResponseCode);
+
+        $this->log('CVV found on payment helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode));
+
+        return $cvvResponseCode;
     }
 
     /**
@@ -56,10 +60,16 @@ class Signifyd_Connect_Helper_Payment_Authorizenet extends Signifyd_Connect_Help
     {
         if (!empty($this->authorizeCard) && isset($this->authorizeCard['cc_bin'])) {
             $bin = $this->authorizeCard['cc_bin'];
-            return $this->filterBin($bin);
+            $bin = $this->filterBin($bin);
         }
 
-        return parent::getBin();
+        $this->log('Bin found on payment helper: ' . (empty($bin) ? 'false' : $bin));
+
+        if (empty($bin)) {
+            $bin = parent::getBin();
+        }
+
+        return $bin;
     }
 
     /**
@@ -69,10 +79,16 @@ class Signifyd_Connect_Helper_Payment_Authorizenet extends Signifyd_Connect_Help
     {
         if (!empty($this->authorizeCard)) {
             $last4 = $this->authorizeCard['cc_last4'];
-            return $this->filterLast4($last4);
+            $last4 = $this->filterLast4($last4);
         }
 
-        return parent::getLast4();
+        $this->log('Last4 found on payment helper: ' . (empty($last4) ? 'false' : 'true'));
+
+        if (empty($last4)) {
+            $last4 = parent::getLast4();
+        }
+
+        return $last4;
     }
 
     /**
@@ -82,10 +98,16 @@ class Signifyd_Connect_Helper_Payment_Authorizenet extends Signifyd_Connect_Help
     {
         if (!empty($this->authorizeCard)) {
             $expiryMonth = $this->authorizeCard['cc_exp_month'];
-            return $this->filterExpiryMonth($expiryMonth);
+            $expiryMonth = $this->filterExpiryMonth($expiryMonth);
         }
 
-        return parent::getExpiryMonth();
+        $this->log('Expiry month found on payment helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth));
+
+        if (empty($expiryMonth)) {
+            $expiryMonth = parent::getExpiryMonth();
+        }
+
+        return $expiryMonth;
     }
 
     /**
@@ -95,9 +117,15 @@ class Signifyd_Connect_Helper_Payment_Authorizenet extends Signifyd_Connect_Help
     {
         if (!empty($this->authorizeCard)) {
             $expiryYear = $this->authorizeCard['cc_exp_year'];
-            return $this->filterExpiryYear($expiryYear);
+            $expiryYear = $this->filterExpiryYear($expiryYear);
         }
 
-        return parent::getExpiryYear();
+        $this->log('Expiry year found on payment helper: ' . (empty($expiryYear) ? 'false' : $expiryYear));
+
+        if (empty($expiryYear)) {
+            $expiryYear = parent::getExpiryYear();
+        }
+
+        return $expiryYear;
     }
 }
