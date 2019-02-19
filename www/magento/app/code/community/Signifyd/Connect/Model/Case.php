@@ -66,7 +66,9 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
     public function setMagentoStatusTo($case, $status)
     {
         $id  = (is_array($case))? $case['order_increment'] : $case->getId();
+        /** @var Signifyd_Connect_Model_Case $caseLoaded */
         $caseLoaded = Mage::getModel('signifyd_connect/case')->load($id);
+
         try {
             $caseLoaded->setMagentoStatus($status);
             $caseLoaded->save();
@@ -120,7 +122,6 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $case = $this->updateStatus($case);
         $case = $this->updateGuarantee($case);
 
-        $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         try {
             $case->save();
             $this->processAdditional($case);
@@ -306,8 +307,6 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $case = $this->updateStatus($case);
         $case = $this->updateGuarantee($case);
 
-        $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
-
         if (isset($request['testInvestigation'])) {
             $case->setEntries('testInvestigation', $request['testInvestigation']);
         }
@@ -387,7 +386,6 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $case = $this->updateStatus($case);
         $case = $this->updateGuarantee($case);
 
-        $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
         try {
             $case->save();
             $this->processAdditional($case);
@@ -427,5 +425,35 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
     public function getOrder()
     {
         return $this->order;
+    }
+
+    /**
+     * Set updated at only if Magento status is changing
+     *
+     * @param $magentoStatus
+     * @return mixed
+     */
+    public function setMagentoStatus($magentoStatus)
+    {
+        $currentMagentoStatus = $this->getMagentoStatus();
+
+        if ($magentoStatus != $currentMagentoStatus) {
+            $this->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
+        }
+
+        return parent::setMagentoStatus($magentoStatus);
+    }
+
+    /**
+     * Everytime a update is triggered reset retries
+     *
+     * @param $updated
+     * @return mixed
+     */
+    public function setUpdated($updated)
+    {
+        $this->setRetries(0);
+
+        return parent::setUpdated($updated);
     }
 }

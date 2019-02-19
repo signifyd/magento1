@@ -7,4 +7,15 @@ $this->startSetup();
 // This script eliminates the table if it exists
 $this->run("DROP TABLE IF EXISTS `{$this->getTable('signifyd_connect/retries')}`;");
 
+$this->getConnection()->addColumn(
+    $this->getTable('signifyd_connect/case'),
+    'retries',
+    array(
+        'type' => Varien_Db_Ddl_Table::TYPE_INTEGER,
+        'nullable' => false,
+        'default' => 0,
+        'comment' => 'Number of retries for current case magento_status'
+    )
+);
+
 $this->endSetup();

@@ -739,7 +739,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
                 $case->setOrderIncrement($orderIncrementId);
                 $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
-                $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
+                $case->setMagentoStatus(Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS);
                 $case->setEntries('md5', $newMd5);
                 $case->setEntries('card_data', $cardData);
                 $case->setEntries('purchase_data', $purchaseData);
@@ -805,7 +805,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                             }
                         }
                     } else {
-                        $case->setUpdated(strftime('%Y-%m-%d %H:%M:%S', time()));
                         $case->setTransactionId($case['purchase']['transactionId']);
                         $case->setMagentoStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
                         $case->save();

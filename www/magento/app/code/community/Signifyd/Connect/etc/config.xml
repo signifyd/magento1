@@ -180,7 +180,7 @@
         <jobs>
             <signifyd_retry>
                 <schedule>
-                    <cron_expr>*/30 * * * *</cron_expr>
+                    <cron_expr>*/1 * * * *</cron_expr>
                 </schedule>
                 <run>
                     <model>signifyd_connect/cron::retry</model>
