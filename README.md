@@ -9,7 +9,7 @@ View our Magento 1 product manual for instructions on installing the extension v
 
 Before getting started "Compilation Status" must be "Disabled". You can disable this by going to the Magento admin System > Tools > Compilation. 
 
-Download the [latest realease](https://github.com/signifyd/magento1/releases/latest) and copy/upload folder www/magento/app to the root of your Magento installation.
+Download the [latest release](https://github.com/signifyd/magento1/releases/latest) and copy/upload folder www/magento/app to the root of your Magento installation.
 
 - For FTP and SFTP use a client software of your choice and upload www/magento/app folder at the root of your Magento installation
 - For SSH, upload compressed file to target environment, decompress files and copy files using the following command line:
