@@ -1,10 +1,10 @@
-[Signifyd Extension for Magento 1](../README.md) > Pass payment gateway details
+﻿[Signifyd Extension for Magento 1](../README.md) > Pass payment gateway details
 
 # Pass payment gateway details
 
 ## Overview
 
-The functionality tries to fetch most as possible of these payment informations:
+The functionality tries to fetch as much as possible out of these payment information:
 
 - AVS Response Code
 - CVV Response Code
@@ -13,24 +13,24 @@ The functionality tries to fetch most as possible of these payment informations:
 - Expiry Month
 - Expiry Year
 
-As each payment method has it own workflow, there is no guarantee that informations will be found at same database locations. However many payment methods follow some Magento standards, and we’ve used this.
+As each payment method has it own workflow, there is no guarantee that information will be found at the same database locations. However many payment methods follow some Magento standards, so we made use of those.
 
 ## Basic Structure
 
-The solution fetch the desired information using helpers. There are helpers working on specific payment methods and also exists helpers to work on Payment Bridge default behavior and another helper that tries to found the informations on any other payment method.
+The solution fetches the desired information using helpers. There are helpers working on specific payment methods. There are also helpers to work on the Payment Bridge default behavior, as well as another helper that tries to find the information on any other payment method.
 
 The workflow is:
-1. Use the specific helper, if exists
-2. If the payment method is using Payment Bridge, use default Payment Bridge helper
+1. Use the specific helper, if it exists
+2. If the payment method is using Payment Bridge, use the default Payment Bridge helper
 3. Use the helper for other payment methods
 
 All helpers are implemented based on ` Signifyd_Connect_Helper_Payment_Interface`, that guides which methods are expected.
 
-There is also the helper `Signifyd_Connect_Helper_Payment_Default`, which main objective is to implement data colect for the Magento default locations for the desired informations. All other helpers developed so far extends this helper. Most of the other helpers uses this one as a fallback: if the information it is not found on the method specific location, try the default location. This helper also initializes some data on the object and has filters for data validations.
+There is also the helper `Signifyd_Connect_Helper_Payment_Default`, whose purpose is to implement data colect for the Magento default locations for the desired information. All the other helpers developed so far extend this helper. Most of the other helpers use this one as a fallback: if the information is not found on the method-specific location, try the default location. This helper also initializes some data on the object and has filters for data validations.
 
-The helper for other payment methods tries first the default locations and if the information is not found, it tries to found it on additional informations of the payment method, which is the field available for the payment methods to save these kind of information on Magento database.
+The helper for the other payment methods tries first the default locations and if the information is not found, it tries to find it on the additional information of the payment method (which is the field available for the payment methods to save these kind of information on the Magento database).
 
-In addition to helpers, there is also a process that capture and save informations from payment data submitted to the store server. The extension does not submit any new data to store server, it only take advantage of the data already submitted. The data collected and saved on this process are: cardholder name, expiry month, expiry year, bin and last 4 digits. In order to be able to collect these informations, the credit card form submitted to store server must have fields named as: cc_owner, cc_exp_month, cc_exp_year, cc_number. The whole credit card number or the CVV it is not saved on database by this functionality.
+In addition to helpers, there is also a process that captures and saves information from payment data submitted to the store server. The extension does not submit any new data to the store server, it only takes advantage of the data already submitted. The data collected and saved during this process is: cardholder name, expiry month, expiry year, bin and last 4 digits. In order to be able to collect these informations, the credit card form submitted to store server must have fields named as: cc_owner, cc_exp_month, cc_exp_year, cc_number. The whole credit card number or the CVV is not saved to the database by this functionality.
 
 ## Including custom payment method
 
@@ -50,7 +50,7 @@ Usually it is possible to find the payment method code inside the payment method
 </default>
 ```
 
-Another way to find out the payment method code it is on the database. Get a increment ID of any order placed with the desired payment method and use the follow script on database to get the payment method code.
+Another way to find out the payment method code is on the database. Get an increment ID of any order placed with the desired payment method and use the following script on the database to get the payment method code.
 
 **_Replace INCREMENT_ID with the order increment ID_**
 
@@ -60,7 +60,7 @@ SELECT method FROM sales_flat_order_payment WHERE parent_id IN (SELECT entity_id
 
 ### Method 01: code/local pool
 
-Create a helper inside the folder app/code/local/Signifyd/Connect/Helper/Payment naming the subfolders and PHP file according the payment method code. There must exist a subfolder for each part of the payment method code separated by a underline, and the last part must be the PHP file.
+Create a helper inside the folder app/code/local/Signifyd/Connect/Helper/Payment naming the subfolders and PHP file according to the payment method code. There must be a subfolder for each part of the payment method code separated by an underline, and the last part must be the PHP file.
 
 **Example 01**
 - Payment method code: vendor_payment_method
@@ -76,7 +76,7 @@ Create a helper inside the folder app/code/local/Signifyd/Connect/Helper/Payment
 
 ### Method 02: using rewrite on a custom extension
 
-If the development is been done by the payment method extension developer or on a custom extension, use this method.
+If the development is being done by the payment method extension developer or on a custom extension, use this method.
 
 Open the config.xml file of the extension and add the follow code:
 
@@ -100,7 +100,7 @@ Open the config.xml file of the extension and add the follow code:
 
 ### Writing the Helper
 
-The helper should implement `Signifyd_Connect_Helper_Payment_Interface` interface. To fulfill this requirement extend the class `Signifyd_Connect_Helper_Payment_Default`, which already implements the desired interface and handle a couple of other things of the process. The class declaration should look like this:
+The helper should implement `Signifyd_Connect_Helper_Payment_Interface` interface. To fulfill this requirement extend the class `Signifyd_Connect_Helper_Payment_Default`, which already implements the desired interface and handles a couple of other things of the process. The class declaration should look like this:
 
 **Using code/local pool method**
 
@@ -129,9 +129,9 @@ public function getExpiryMonth();
 public function getExpiryYear();
 ```
 
-It is not required to implement all the methods, only the ones that will actually get data from the custom payment method. If a method it is not implemented, the default one will be used, that is, the one on parent class (Signifyd_Connect_Helper_Payment_Default).
+It is not required to implement all the methods, only the ones that will actually get data from the custom payment method. If a method is not implemented, the default one will be used, that is, the one on the parent class (Signifyd_Connect_Helper_Payment_Default).
 
-Each implemented method should return the related data as the result. Before return the data, it is possible to validate it with some filter methods listed bellow. These same filters will also be applied later on the API integration.
+Each implemented method should return the related data as the result. Before returning the data, it is possible to validate it with some filter methods listed bellow. These same filters will also be applied later on the API integration.
 
 ```
 public function filterAvsResponseCode($avsResponseCode);
@@ -142,7 +142,7 @@ public function filterExpiryMonth($expiryMonth);
 public function filterExpiryYear($expiryYear);
 ```
 
-Some relevant data are initialized on helper and the developer can use them to write his code.
+Some relevant data is initialized on the helper and the developer can use it to write their code.
 
 ```
 $this->order; //Mage_Sales_Model_Order
@@ -168,7 +168,7 @@ class Signifyd_Connect_Helper_Payment_Vendor_Payment_Method
 
 ## Built in helpers
 
-Here is a list of the payment methods that have a built in helper on extension and which data is been collected so far. For cardholder name if it is not found, billing first and last name will be used.
+Here is a list of the payment methods that have a built in helper on the extension and which have data being collected so far. If the cardholder name is not found, billing first and last name will be used.
 
 ### Authorize.Net
 - Code: authorizenet

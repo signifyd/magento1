@@ -2,9 +2,9 @@
 
 # Restrict orders by states
 
-The actions of the extension can also be restricted according to the order state. E.g. by default, the extension restricts any action on payment_review state, to make sure that extension will not interfere with the payment workflow.
+The actions of the extension can also be restricted according to the order state. E.g. by default, the extension restricts any action on payment_review state, to make sure that the extension will not interfere with the payment workflow.
 
-**_Warning: the wrong settings can interfere on the checkout and payment workflow and make the process to not work as expected. It is recommended to test settings on a development environment carefully. Default settings have been tested with Magento default payment methods on clean installations and all of them work well._**
+**_Warning: the wrong settings can interfere on the checkout and payment workflows and make the process no longer work as expected. It is recommended to test new settings on a development environment carefully. Default settings have been tested with Magento default payment methods on clean installations and all of them work well._**
 
 There are three different settings for states restrictions: default, create and update. By default, these settings are as below:
 - default: `pending_payment,payment_review,canceled,closed,complete`
@@ -64,7 +64,7 @@ DELETE FROM core_config_data WHERE path='signifyd_connect/settings/restrict_stat
 
 ## Changing default setting
 
-**_Warning: changing the default settings is not recommended and can impact the checkout and payment workflows. Also it can cause malfunction of the Signifyd integration._**
+**_Warning: changing the default settings is not recommended and can impact the checkout and payment workflows. Also it can cause the Signifyd integration to malfunction._**
 
 Use the commands below on the database to work with the default setting. Replace
 `pending_payment,payment_review,canceled,closed,complete` with the desired states. Default setting will be used to restrict all workflow actions (hold, remove from hold, capture and cancel) - also for restricting case creation and update if no specific settings are defined for those.
