@@ -47,38 +47,30 @@ class Signifyd_Connect_Model_Cron
         
         // Getting all the cases that were not submitted to Signifyd
         $casesForResubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS);
-        /** @var Signifyd_Connect_Model_Case $currentCase */
-        foreach ($casesForResubmit as $currentCase) {
-            $currentOrderId = $currentCase->getData('order_increment');
-            /** @var Mage_Sales_Model_Order $currentOrder */
-            $currentOrder = Mage::getModel('sales/order')->loadByIncrementId($currentOrderId);
+        /** @var Signifyd_Connect_Model_Case $case */
+        foreach ($casesForResubmit as $case) {
+            $this->getLogger()->addLog("Send {$case->getOrderIncrement()}, retry {$case->getRetries()}");
+            $this->getLogger()->addLog("Order state: {$case->getOrder()->getState()}, event: cron retry");
 
-            $this->getLogger()->addLog("Preparing for send case no: {$currentOrderId}");
-            $this->getLogger()->addLog("Order {$currentOrderId} state: {$currentOrder->getState()}, event: cron retry");
-
-            $this->getHelper()->buildAndSendOrderToSignifyd($currentOrder, true);
+            $this->getHelper()->buildAndSendOrderToSignifyd($case->getOrder(), true);
         }
 
         // Getting all the cases that are awaiting review from Signifyd
         $casesForResubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
-        /** @var Signifyd_Connect_Model_Case $currentCase */
-        foreach ($casesForResubmit as $currentCase) {
-            $this->getLogger()->addLog('Preparing for review case no: ' . $currentCase->getData('order_increment'));
-            $this->processInReviewCase($currentCase);
+        /** @var Signifyd_Connect_Model_Case $case */
+        foreach ($casesForResubmit as $case) {
+            $this->getLogger()->addLog("Review {$case->getOrderIncrement()}, retry {$case->getRetries()}");
+            $this->processInReviewCase($case);
         }
 
         // Getting all the cases that need processing after the response was received
         $casesForResubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::PROCESSING_RESPONSE_STATUS);
-        /** @var Signifyd_Connect_Model_Case $currentCase */
-        foreach ($casesForResubmit as $currentCase) {
-            $currentOrderId = $currentCase->getData('order_increment');
-            /** @var Mage_Sales_Model_Order $currentOrder */
-            $currentOrder = Mage::getModel('sales/order')->loadByIncrementId($currentOrderId);
+        /** @var Signifyd_Connect_Model_Case $case */
+        foreach ($casesForResubmit as $case) {
+            $this->getLogger()->addLog("Process response for {$case->getOrderIncrement()}, retry {$case->getRetries()}");
+            $this->getLogger()->addLog("Order state: {$case->getOrder()->getState()}, event: cron retry");
 
-            $this->getLogger()->addLog("Preparing for response processing of case no: {$currentOrderId}");
-            $this->getLogger()->addLog("Order {$currentOrderId} state: {$currentOrder->getState()}, event: cron retry");
-
-            Mage::getModel('signifyd_connect/case')->processAdditional($currentCase->getData(), $currentOrder);
+            Mage::getModel('signifyd_connect/case')->processAdditional($case);
         }
 
         $this->getLogger()->addLog("Main retry method ended");
@@ -112,7 +104,7 @@ class Signifyd_Connect_Model_Cron
         $casesToRetry = array();
 
         foreach ($casesCollection->getItems() as $case) {
-            $retries = $case->getData('retries');
+            $retries = $case->getRetries();
             $secondsAfterUpdate = $case->getData('seconds_after_update');
 
             if ($secondsAfterUpdate > $retryTimes[$retries]) {
