@@ -4,7 +4,7 @@
 
 ## Overview
 
-The functionality tries to fetch as much as possible out of these payment information:
+The extension will try to fetch the following payment data:
 
 - AVS Response Code
 - CVV Response Code
@@ -13,24 +13,20 @@ The functionality tries to fetch as much as possible out of these payment inform
 - Expiry Month
 - Expiry Year
 
-As each payment method has it own workflow, there is no guarantee that information will be found at the same database locations. However many payment methods follow some Magento standards, so we made use of those.
+As each payment gateway has it own workflow, there is no guarantee that the extension will find the payment data. To support a variety of payment gateways and extensibliity helpers can be used to pass payment data from any payment gateway.  
 
 ## Basic Structure
 
-The solution fetches the desired information using helpers. There are helpers working on specific payment methods. There are also helpers to work on the Payment Bridge default behavior, as well as another helper that tries to find the information on any other payment method.
+There are pre-built helpers for specific payment gateways (authorize.net, braintree, stripe, and paypal payflow), as well as, helpers for Payment Bridge, and a generic helper that tries to find payment details for any other payment gateway.
 
-The workflow is:
+You should follow these guidelines
 1. Use the specific helper, if it exists
 2. If the payment method is using Payment Bridge, use the default Payment Bridge helper
 3. Use the helper for other payment methods
 
 All helpers are implemented based on ` Signifyd_Connect_Helper_Payment_Interface`, that guides which methods are expected.
 
-There is also the helper `Signifyd_Connect_Helper_Payment_Default`, whose purpose is to implement data colect for the Magento default locations for the desired information. All the other helpers developed so far extend this helper. Most of the other helpers use this one as a fallback: if the information is not found on the method-specific location, try the default location. This helper also initializes some data on the object and has filters for data validations.
-
-The helper for the other payment methods tries first the default locations and if the information is not found, it tries to find it on the additional information of the payment method (which is the field available for the payment methods to save these kind of information on the Magento database).
-
-In addition to helpers, there is also a process that captures and saves information from payment data submitted to the store server. The extension does not submit any new data to the store server, it only takes advantage of the data already submitted. The data collected and saved during this process is: cardholder name, expiry month, expiry year, bin and last 4 digits. In order to be able to collect these informations, the credit card form submitted to store server must have fields named as: cc_owner, cc_exp_month, cc_exp_year, cc_number. The whole credit card number or the CVV is not saved to the database by this functionality.
+There is also the helper `Signifyd_Connect_Helper_Payment_Default`, whose purpose is to implement data collection from the Magento default locations. Most of the other helpers use this one as a fallback: if the information is not found on the payment method-specific location, then it will try the default location. This helper also initializes some data on the object and has filters for data validation.
 
 ## Including custom payment method
 
@@ -50,7 +46,7 @@ Usually it is possible to find the payment method code inside the payment method
 </default>
 ```
 
-Another way to find out the payment method code is on the database. Get an increment ID of any order placed with the desired payment method and use the following script on the database to get the payment method code.
+Another way to find the payment method code is on the database. Get an increment ID of any order placed with the desired payment method and use the following script on the database to get the payment method code.
 
 **_Replace INCREMENT_ID with the order increment ID_**
 
@@ -129,9 +125,9 @@ public function getExpiryMonth();
 public function getExpiryYear();
 ```
 
-It is not required to implement all the methods, only the ones that will actually get data from the custom payment method. If a method is not implemented, the default one will be used, that is, the one on the parent class (Signifyd_Connect_Helper_Payment_Default).
+It is not required to implement all the methods, only the ones that will actually get data from the custom payment method. If a method is not implemented, the default one will be used, that is, the one on the parent class. (Signifyd_Connect_Helper_Payment_Default).
 
-Each implemented method should return the related data as the result. Before returning the data, it is possible to validate it with some filter methods listed bellow. These same filters will also be applied later on the API integration.
+Each implemented method should return the related data as the result. Before returning the data, it is possible to validate it with some filter methods listed bellow. These same filters will also be applied later when the API call to create a case is made to the Signifyd API.
 
 ```
 public function filterAvsResponseCode($avsResponseCode);
@@ -168,7 +164,7 @@ class Signifyd_Connect_Helper_Payment_Vendor_Payment_Method
 
 ## Built in helpers
 
-Here is a list of the payment methods that have a built in helper on the extension and which have data being collected so far. If the cardholder name is not found, billing first and last name will be used.
+Here is a list of the payment methods that have a built in helper on the extension and will have payment data collected. If the cardholder name is not found, the billing first and last name will be used.
 
 ### Authorize.Net
 - Code: authorizenet
