@@ -65,4 +65,4 @@ The results of the above command should match with `<version>` tag from config.x
 
 ## All of the steps were followed but some error prevented the extension from installing succesfully
 
-Check for any log errors on the web server (e.g. Apache, NGINX) and on PHP logs. Also check for errors on MAGENTO_ROOT/var/log on files system.log, exception.log and signifyd_connect.log. If you are still stuck you can [contact our support team] (https://community.signifyd.com/support/s/)
+Check for any log errors on the web server (e.g. Apache, NGINX) and on PHP logs. Also check for errors on MAGENTO_ROOT/var/log on files system.log, exception.log and signifyd_connect.log. If you are still stuck you can [contact our support team](https://community.signifyd.com/support/s/)
