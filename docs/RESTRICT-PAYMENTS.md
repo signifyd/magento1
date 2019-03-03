@@ -2,23 +2,25 @@
 
 # Restrict orders by payment methods
 
-The extension can be restricted from acting on some payment methods. Orders placed with restricted payment methods will not have a case created on Signifyd, neither will the extension interfere in any way with their status workflow.
+### IMPORTANT: These steps should only be performed under the instruction and supervision of Signifyd. If these steps are not completed correctly you may experience issues with the Signifyd extension and or your Magento store. It is recommended to test this on a development environment first. 
 
-On all below SQL statements, `checkmo,cashondelivery,banktransfer,purchaseorder` must be replaced with the desired settings. The list of payment methods codes must be comma separated in order for them to be restricted for Signifyd cases creation. So include the payment methods that must not have their orders submitted to Signifyd analysis on the list.
+Orders placed using a specific payment method can be excluded from being sent to Signifyd. These orders will not be created in Signifyd and the extension will not interfere with the order workflow i.e. place the order on hold or capture the payment.
 
-To modify the restricted payment methods, run the command below on the database:
+By default the extension will automatically exclude orders with the following payment methods from being sent to Signifyd  `checkmo,cashondelivery,banktransfer,purchaseorder`. If you want to modify the payment methods (add or remove) you will need to provide a list of payment methods codes in a comma separated list. 
 
-```
-INSERT INTO core_config_data (path, value) VALUES ('signifyd_connect/settings/restrict_payment_methods', 'paypal_express,checkmo,cashondelivery,banktransfer,purchaseorder');
-```
-
-To modify an existing setting use the command below:
+Insert the list of payment codes you want to restict and then run the command below on your database:
 
 ```
-UPDATE core_config_data SET value='checkmo,cashondelivery,banktransfer,purchaseorder' WHERE path='signifyd_connect/settings/restrict_payment_methods';
+INSERT INTO core_config_data (path, value) VALUES ('signifyd_connect/settings/restrict_payment_methods', 'INSERT-LIST-OF-PAYMENT-METHODS-HERE');
 ```
 
-To exclude a setting and use the extension's defaults, just delete it from the database:
+To modify an existing restricted list, insert the list of new payment codes you want to restict and then run the following command on your database:
+
+```
+UPDATE core_config_data SET value='INSERT-LIST-OF-PAYMENT-METHODS-HERE' WHERE path='signifyd_connect/settings/restrict_payment_methods';
+```
+
+To revert back to the extension's default restricted payment methods, just delete it from the database:
 
 ```
 DELETE FROM core_config_data WHERE path='signifyd_connect/settings/restrict_payment_methods';
@@ -26,7 +28,7 @@ DELETE FROM core_config_data WHERE path='signifyd_connect/settings/restrict_paym
 
 ## Checking current restriction settings
 
-To check all current restriction settings on the database, run the command below:
+To check the current restricted payment methods, run the command below on your database:
 
 ```
 SELECT * FROM core_config_data WHERE path LIKE 'signifyd_connect/settings/restrict%';
