@@ -2,7 +2,7 @@
 
 # Restrict orders by payment methods
 
-**_Warning: These steps should only be performed under the instruction and supervision of Signifyd. If these steps are not completed correctly you may experience issues with the Signifyd extension and or your Magento store. It is recommended to test this on a development environment first. 
+**_Warning: These steps should only be performed under the instruction and supervision of Signifyd. If these steps are not completed correctly you may experience issues with the Signifyd extension and or your Magento store. It is recommended to test this on a development environment first._**
 
 ## Things to know before getting started
 
