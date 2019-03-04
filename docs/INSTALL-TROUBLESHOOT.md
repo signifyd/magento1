@@ -2,35 +2,35 @@
 
 # Install Troubleshoot
 
-##Third-party cache errors
+## Third-party cache errors
 
-If anything does not go as expected, try to clear any additional caches on environment (e.g. PHP APC or OPCache, Redis, Varnish).
+If something does not go as expected, try to clear any additional caches on the environment (e.g. PHP APC or OPCache, Redis, Varnish).
 
-##There is no "SIGNIFYD" session on System > Configuration
+## There is no "SIGNIFYD" session on System > Configuration
 
-Go to System > Configuration, click on section ADVANCED > Advanced and look for Signifyd_Connect on modules list at "Disable Modules Output" tab. It must be present and must be Enable.
+Go to System > Configuration, click on section ADVANCED > Advanced and look for Signifyd_Connect on the modules list. This can found on the "Disable Modules Output" tab. Be sure that this section is visible and the setting is enabled.
 
-If it is "Disable", enable it, clear Magento cache, log out, log in again and check for it again.
+If it is "Disabled", enable it, clear Magento cache, log out, log in again and check for it again.
 
-If it is not present check if it is possible to see below files on Magento installation folder:
+If it is not present, check if it is possible to see the files below on the Magento installation folder:
 - MAGENTO_ROOT/app/etc/modules/Signifyd_Connect.xml
 - MAGENTO_ROOT/app/code/community/Signifyd/Connect/etc/system.xml
 
-If above files are not present, please repeat installation steps.
+If the above files are not present, please repeat the installation steps.
 
-##A 404 page shows when accessing Signifyd session on System > Configuration
+## A 404 page shows when accessing Signifyd session on System > Configuration
 
 Try to log out and log in on admin and check it again.
 
-##Logs show database related errors
+## Logs show database related errors
 
-On MySQL database check for the existence of 'signifyd_connect_case' table using below command:
+On the MySQL database check for the existence of 'signifyd_connect_case' table using below command:
 
 ```
 DESC signifyd_connect_case
 ```
 
-It is expected to see below columns on this table:
+Verify you see the following columns on the table:
 - order_increment
 - signifyd_status
 - code
@@ -43,7 +43,7 @@ It is expected to see below columns on this table:
 - magento_status
 - retries
 
-If anything it is out of expected, check if Magento installation scripts had run for the latest version. 
+If you find any missing columns or issues with the table, check if the Magento installation scripts has been ran for the latest version. 
 
 On file MAGENTO_ROOT/app/code/community/Signifyd/Connect/etc/config.xml check for `<version>` tag
 
@@ -61,8 +61,8 @@ Run below SQL command on MySQL:
 SELECT * FROM core_resource WHERE code='signifyd_connect_setup';
 ```
 
-Results of above command should match with `<version>` tag from config.xml file. If does not match, run installation steps again and make sure to clean every possible cache on Magento administration and environment.
+The results of the above command should match with `<version>` tag from config.xml file. If does not match, run installation steps again and make sure to clean every possible cache on Magento administration and environment.
 
-##All steps followed and some error prevents extension to work as expected for installation
+## All of the steps were followed but some error prevented the extension from installing succesfully
 
-Check for any log errors on web server (e.g. Apache, NGINX) and on PHP logs. Also check for errors on MAGENTO_ROOT/var/log on files system.log, exception.log and signifyd_connect.log.
+Check for any log errors on the web server (e.g. Apache, NGINX) and on PHP logs. Also check for errors on MAGENTO_ROOT/var/log on files system.log, exception.log and signifyd_connect.log. If you are still stuck you can [contact our support team](https://community.signifyd.com/support/s/)

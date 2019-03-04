@@ -2,61 +2,68 @@
 
 # Restrict orders by states
 
-The actions of the extension can also be restricted according to the order state. E.g. by default, the extension restricts any action on payment_review state, to make sure that the extension will not interfere with the payment workflow.
+Orders with a specific state can be excluded from being sent to Signifyd. E.g. by default, the extension restricts any action on payment_review state, to ensure the extension does not interfere with the payment workflow.
 
-**_Warning: the wrong settings can interfere on the checkout and payment workflows and make the process no longer work as expected. It is recommended to test new settings on a development environment carefully. Default settings have been tested with Magento default payment methods on clean installations and all of them work well._**
+**_Warning: the wrong settings can interfere with the checkout and payment workflows. If you need to modify the restricted states it's recommended you first test it on your development environment. The default restricted states have already been tested with Magento's default payment methods._**
 
 There are three different settings for states restrictions: default, create and update. By default, these settings are as below:
 - default: `pending_payment,payment_review,canceled,closed,complete`
 - create: `holded,pending_payment,payment_review,canceled,closed,complete`
 - update: `[empty]`
 
-Default setting will be used on all actions that do not have a setting of their own. Create setting will be used for Signifyd case creation. Update setting will be used to restrict states for case update.
+The default settings will be used on all actions that do not have a setting of their own. The create setting will be used for sending an order to Signifyd and the update setting will be used to restrict states for case update.
 
-As default setting includes values for default and create, and does not include any setting for update, case creation will use create setting and all other situations will use the default one.
+Besides case creation and update, the default setting is also used for order workflow actions: hold, remove from hold, cancel and capture payment.
 
-Besides case creation and update, the default setting is also used on order workflow actions: hold, remove from hold, cancel and capture payment.
+## Things to know before getting started
+Be aware that these settings use Magento states (not status), which must be one of these: `new, pending_payment, payment_review, processing, complete, closed, canceled, holded`. States should be provided as a comma separated list of one or more values.
 
-Be aware that these settings use Magento states (not status), which must be one of these: new, pending_payment, payment_review, processing, complete, closed, canceled, holded. States should be provided as a comma separated list of one or more of those values.
+## Changing create states
 
-## Changing create setting
+Use the command below on the database to work with the create setting. Replace `holded,pending_payment,payment_review,canceled,closed,complete` with the desired states. 
 
-Use the commands below on the database to work with the create setting. Replace `holded,pending_payment,payment_review,canceled,closed,complete` with desired states. The extension will not submit the case to Signifyd for provided states:
+### Add custom states
 
-To include create setting in the database, use the command below on your database:
+To include custom create states use the command below on your database:
 
 ```
 INSERT INTO core_config_data (path, value) VALUES ('signifyd_connect/settings/restrict_states_create', 'holded,pending_payment,payment_review,canceled,closed,complete');
 ```
+### Update custom states
 
-To modify an existing setting, use the command below:
+To modify an existing custom state, use the command below:
 
 ```
 UPDATE core_config_data SET value='holded,pending_payment,payment_review,canceled,closed,complete' WHERE path='signifyd_connect/settings/restrict_states_create';
 ```
+### Delete custom states
 
-To exclude a setting and use the extension defaults, just delete it from database:
+To use the extension default states, use the command below:
 
 ```
 DELETE FROM core_config_data WHERE path='signifyd_connect/settings/restrict_states_create';
 ```
 
 ## Changing update setting
-Use the commands below on database to work with the update setting. Replace `pending_payment,payment_review,canceled,closed,complete` with desired states. The extension will not update the case on Signifyd for the provided states.
-   
-To include update setting in the database, use the command below on your database:
+Use the command below on database to work with the update setting. Replace `pending_payment,payment_review,canceled,closed,complete` with the desired states. 
+
+### Add custom states
+
+To add custom states for updates, use the command below on your database:
 
 ```   
 INSERT INTO core_config_data (path, value) VALUES ('signifyd_connect/settings/restrict_states_update', 'pending_payment,payment_review,canceled,closed,complete');
 ```
+### Update custom states
 
-To modify an existing setting, use the command below:
+To modify an existing custom state, use the command below:
    
 ```
 UPDATE core_config_data SET value='pending_payment,payment_review,canceled,closed,complete' WHERE path='signifyd_connect/settings/restrict_states_update';
 ```
+### Delete custom states
 
-To exclude a setting and use the extension defaults, just delete it from the database:
+To use the extension defaults, use the command below:
 
 ```   
 DELETE FROM core_config_data WHERE path='signifyd_connect/settings/restrict_states_update';
@@ -64,24 +71,27 @@ DELETE FROM core_config_data WHERE path='signifyd_connect/settings/restrict_stat
 
 ## Changing default setting
 
-**_Warning: changing the default settings is not recommended and can impact the checkout and payment workflows. Also it can cause the Signifyd integration to malfunction._**
+**_Warning: changing the default settings is not recommended as it can impact the checkout and payment workflows._**
 
 Use the commands below on the database to work with the default setting. Replace
-`pending_payment,payment_review,canceled,closed,complete` with the desired states. Default setting will be used to restrict all workflow actions (hold, remove from hold, capture and cancel) - also for restricting case creation and update if no specific settings are defined for those.
+`pending_payment,payment_review,canceled,closed,complete` with the desired states. The default setting will be used to restrict all workflow actions (hold, remove from hold, capture and cancel) - also for restricting case creation and update if no specific settings are defined for those.
 
-To include default setting in the database, use the command below on your database:
+### Add custom states
+To add custom default states, use the command below on your database:
 
 ```
 INSERT INTO core_config_data (path, value) VALUES ('signifyd_connect/settings/restrict_states_default', 'pending_payment,payment_review,canceled,closed,complete');
 ```
 
+### Update custom states
 To modify an existing setting, use the command below:
 
 ```
 UPDATE core_config_data SET value='pending_payment,payment_review,canceled,closed,complete' WHERE path='signifyd_connect/settings/restrict_states_default';
 ```
+### Delete custom states
 
-To exclude a setting and use the extension defaults, just delete it from the database:
+To use the extension defaults, use the command below:
 
 ```
 DELETE FROM core_config_data WHERE path='signifyd_connect/settings/restrict_states_default';
@@ -89,7 +99,7 @@ DELETE FROM core_config_data WHERE path='signifyd_connect/settings/restrict_stat
 
 ### Checking current restriction settings
 
-To check all current restriction settings on the database, run the command below:
+To check the current custom state settings, run the command below:
 
 ```
 SELECT * FROM core_config_data WHERE path LIKE 'signifyd_connect/settings/restrict%';
