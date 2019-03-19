@@ -699,8 +699,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             }
 
             $state = $order->getState();
+            $caseCreateError = $case->getEntries('create_error');
 
-            if ($this->isRestricted($order->getPayment()->getMethod(), $state, ($isUpdate ? 'update' : 'create'))) {
+            // If case is marked with a case creation error and it is trying to create, do not restrict
+            if (($isUpdate == false && $caseCreateError && $state == Mage_Sales_Model_Order::STATE_HOLDED) == false &&
+                $this->isRestricted($order->getPayment()->getMethod(), $state, ($isUpdate ? 'update' : 'create'))) {
+
                 $this->log('Case creation/update for order ' . $orderIncrementId . ' with state ' . $state . ' is restricted');
                 return 'restricted';
             }
@@ -771,6 +775,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
                 if ($responseCode == 204) {
                     $case->setMagentoStatus($case::COMPLETED_STATUS);
+                    $case->setEntries('create_error', null);
                     $case->save();
 
                     $orderComment = 'Signifyd: order requested to be excluded from guarantee';
@@ -807,16 +812,32 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     } else {
                         $case->setTransactionId($case['purchase']['transactionId']);
                         $case->setMagentoStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
-                        $case->save();
 
                         $orderComment = "Signifyd: case created {$caseId}";
                         $return = 'sent';
                     }
 
+                    $case->setEntries('create_error', null);
+                    $case->save();
+
                     $order->addStatusHistoryComment($orderComment);
-                    $order->save(); // Note: this will trigger recursion
+                    $order->save();
 
                     return $return;
+                } else {
+                    if ($case->getMagentoStatus() == Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS &&
+                        $response->getData('timeout') == true) {
+
+                        if ($order->canHold()) {
+                            $order->hold();
+                        }
+
+                        $order->addStatusHistoryComment('Signifyd: failed to create case');
+                        $order->save();
+
+                        $case->setEntries('create_error', 1);
+                        $case->save();
+                    }
                 }
             } catch (Exception $e) {
                 $this->log($e->__toString());
@@ -991,8 +1012,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         $code = intval($response->getHttpCode());
+        $curlErrNo = curl_errno($curl);
 
-        if ($code >= 400 || curl_errno($curl)) {
+        if ($code >= 400 || $curlErrNo) {
             $error = curl_error($curl);
 
             if (Mage::getStoreConfig('signifyd_connect/log/all')) {
@@ -1000,6 +1022,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             }
 
             $response->setData('error', $error);
+
+            if ($curlErrNo == 28) {
+                $response->setData('timeout', true);
+            }
         }
 
         curl_close($curl);

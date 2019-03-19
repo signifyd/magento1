@@ -365,7 +365,12 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
             $entries = $index;
         } elseif (is_string($index)) {
             $entries = $this->getEntries();
-            $entries[$index] = $value;
+
+            if (is_null($value) && isset($entries[$index])) {
+                unset($entries[$index]);
+            } else {
+                $entries[$index] = $value;
+            }
         }
 
         @$entries = serialize($entries);
