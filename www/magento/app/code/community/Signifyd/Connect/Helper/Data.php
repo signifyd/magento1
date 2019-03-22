@@ -702,7 +702,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $caseCreateError = $case->getEntries('create_error');
 
             // If case is marked with a case creation error and it is trying to create, do not restrict
-            if (($isUpdate == false && $caseCreateError && $state == Mage_Sales_Model_Order::STATE_HOLDED) == false &&
+            if (($isUpdate == false && $caseCreateError == 1 && $state == Mage_Sales_Model_Order::STATE_HOLDED) == false &&
                 $this->isRestricted($order->getPayment()->getMethod(), $state, ($isUpdate ? 'update' : 'create'))) {
 
                 $this->log('Case creation/update for order ' . $orderIncrementId . ' with state ' . $state . ' is restricted');
@@ -825,18 +825,21 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
                     return $return;
                 } else {
-                    if ($case->getMagentoStatus() == Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS &&
-                        $response->getData('timeout') == true) {
+                    if ($case->getMagentoStatus() == Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS) {
+                        if ($response->getData('timeout') == true ||
+                            $responseCode == 409 ||
+                            substr($responseCode, 0, 1) == '5') {
 
-                        if ($order->canHold()) {
-                            $order->hold();
+                            if ($order->canHold()) {
+                                $order->hold();
+                            }
+
+                            $order->addStatusHistoryComment('Signifyd: failed to create case');
+                            $order->save();
+
+                            $case->setEntries('create_error', 1);
+                            $case->save();
                         }
-
-                        $order->addStatusHistoryComment('Signifyd: failed to create case');
-                        $order->save();
-
-                        $case->setEntries('create_error', 1);
-                        $case->save();
                     }
                 }
             } catch (Exception $e) {
