@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<config>
+    <placeholders>
+        <signifyd_connect_fingerprint>
+            <block>signifyd_connect/device</block>
+            <placeholder>SIGNIFYD_CONNECT_FINGERPRINT</placeholder>
+            <container>Signifyd_Connect_Model_Container_Fingerprint</container>
+            <cache_lifetime>86400</cache_lifetime>
+        </signifyd_connect_fingerprint>
+    </placeholders>
+</config>

@@ -326,29 +326,84 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
      */
     public function generateInvoice(Mage_Sales_Model_Order $order)
     {
+        $incrementId = $order->getIncrementId();
+
         if (!$order->canInvoice()) {
-            $this->logger->addLog("Order {$order->getIncrementId()} cannot be invoiced");
+            $state = $order->getState();
+
+            $notInvoiceableStates = array(
+                $order::STATE_CANCELED,
+                $order::STATE_PAYMENT_REVIEW,
+                $order::STATE_COMPLETE,
+                $order::STATE_CLOSED,
+                $order::STATE_HOLDED
+            );
+
+            if (in_array($state, $notInvoiceableStates)) {
+                $reason = "order is on {$state} state";
+            } elseif ($order->getActionFlag($order::ACTION_FLAG_UNHOLD) === false) {
+                $reason = "order action flag is set to do not invoice";
+            } else {
+                $canInvoiceAny = false;
+
+                /** @var Mage_Sales_Model_Order_Item $item */
+                foreach ($order->getAllItems() as $item) {
+                    if ($item->getQtyToInvoice() > 0 && !$item->getLockedDoInvoice()) {
+                        $canInvoiceAny = true;
+                        break;
+                    }
+                }
+
+                if ($canInvoiceAny) {
+                    $reason = "unknown reason";
+                } else {
+                    $reason = "no items can be invoiced";
+                }
+            }
+
+            $order->addStatusHistoryComment("Signifyd: unable to create invoice, {$reason}");
+            $order->save();
+
+            $this->logger->addLog("Order {$incrementId}, unable to create invoice, {$reason}");
+
             return false;
         }
 
         try {
             /** @var Mage_Sales_Model_Order_Invoice $invoice */
             $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
+
+            if ($invoice->isEmpty()) {
+                throw new Exception('failed to generate invoice');
+            }
+
+            if ($invoice->getTotalQty() == 0) {
+                throw new Exception('no items found to invoice');
+            }
+
             $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::CAPTURE_ONLINE);
             $invoice->register();
+
             $transactionSave = Mage::getModel('core/resource_transaction')
                 ->addObject($invoice)
                 ->addObject($invoice->getOrder());
             $transactionSave->save();
+
             $this->logger->addLog("Invoice was created for order: {$order->getIncrementId()}");
+
             $invoice->addComment('Signifyd: create order invoice', false);
             $invoice->sendEmail();
             $invoice->setEmailSent(true);
             $invoice->save();
+
             $order->addStatusHistoryComment("Signifyd: create order invoice: {$invoice->getIncrementId()}");
             $order->save();
         } catch (Exception $e) {
             $this->logger->addLog('Exception while creating invoice: ' . $e->__toString());
+
+            $order->addStatusHistoryComment("Signifyd: unable to create invoice, {$e->getMessage()}");
+            $order->save();
+
             return false;
         }
 
