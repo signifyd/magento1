@@ -23,6 +23,7 @@
             <sales>
                 <rewrite>
                     <order_payment>Signifyd_Connect_Model_Order_Payment</order_payment>
+                    <order>Signifyd_Connect_Model_Order_Order</order>
                 </rewrite>
             </sales>
             <signifyd_connect>
