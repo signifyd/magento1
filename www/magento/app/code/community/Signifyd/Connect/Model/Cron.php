@@ -49,8 +49,8 @@ class Signifyd_Connect_Model_Cron
         $casesForResubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS);
         /** @var Signifyd_Connect_Model_Case $case */
         foreach ($casesForResubmit as $case) {
-            $this->getLogger()->addLog("Send {$case->getOrderIncrement()}, retry {$case->getRetries()}");
-            $this->getLogger()->addLog("Order state: {$case->getOrder()->getState()}, event: cron retry");
+            $this->getLogger()->addLog("Send {$case->getOrderIncrement()}, retry {$case->getRetries()}", $case);
+            $this->getLogger()->addLog("Order state: {$case->getOrder()->getState()}, event: cron retry", $case);
 
             $this->getHelper()->buildAndSendOrderToSignifyd($case->getOrder(), true);
         }
@@ -59,7 +59,7 @@ class Signifyd_Connect_Model_Cron
         $casesForResubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::IN_REVIEW_STATUS);
         /** @var Signifyd_Connect_Model_Case $case */
         foreach ($casesForResubmit as $case) {
-            $this->getLogger()->addLog("Review {$case->getOrderIncrement()}, retry {$case->getRetries()}");
+            $this->getLogger()->addLog("Review {$case->getOrderIncrement()}, retry {$case->getRetries()}", $case);
             $this->processInReviewCase($case);
         }
 
@@ -67,8 +67,8 @@ class Signifyd_Connect_Model_Cron
         $casesForResubmit = $this->getRetryCasesByStatus(Signifyd_Connect_Model_Case::PROCESSING_RESPONSE_STATUS);
         /** @var Signifyd_Connect_Model_Case $case */
         foreach ($casesForResubmit as $case) {
-            $this->getLogger()->addLog("Process response for {$case->getOrderIncrement()}, retry {$case->getRetries()}");
-            $this->getLogger()->addLog("Order state: {$case->getOrder()->getState()}, event: cron retry");
+            $this->getLogger()->addLog("Process response for {$case->getOrderIncrement()}, retry {$case->getRetries()}", $case);
+            $this->getLogger()->addLog("Order state: {$case->getOrder()->getState()}, event: cron retry", $case);
 
             Mage::getModel('signifyd_connect/case')->processAdditional($case);
         }
@@ -152,10 +152,10 @@ class Signifyd_Connect_Model_Cron
             return false;
         }
 
-        $this->getLogger()->addLog('Process in review case: ' . $code);
+        $this->getLogger()->addLog('Process in review case: ' . $code, $case);
         $caseUrl = $this->getHelper()->getCaseUrl($code);
         $auth = $auth = $this->getHelper()->getConfigData('settings/key', $case);
-        $response = $this->getHelper()->request($caseUrl, null, $auth, 'application/json');
+        $response = $this->getHelper()->request($caseUrl, null, $auth, 'application/json', null, false, $case);
 
         try {
             $responseCode = $response->getHttpCode();
@@ -166,7 +166,7 @@ class Signifyd_Connect_Model_Cron
                 return true;
             }
         } catch (Exception $e) {
-            $this->getLogger()->addLog($e->__toString());
+            $this->getLogger()->addLog($e->__toString(), $case);
             return false;
         }
 

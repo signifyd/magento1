@@ -72,9 +72,9 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         try {
             $caseLoaded->setMagentoStatus($status);
             $caseLoaded->save();
-            $this->logger->addLog("Case no:{$caseLoaded->getId()} status set to {$status}");
+            $this->logger->addLog("Case no:{$caseLoaded->getId()} status set to {$status}", $caseLoaded);
         } catch (Exception $e){
-            $this->logger->addLog("Error setting case no:{$caseLoaded->getId()} status to {$status}");
+            $this->logger->addLog("Error setting case no:{$caseLoaded->getId()} status to {$status}", $caseLoaded);
             return false;
         }
 
@@ -83,13 +83,14 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
 
     public function processFallback($request)
     {
-        $this->logger->addLog('Attempting auth via fallback request');
         $request = json_decode($request, true);
         $this->_request = $request;
         $this->topic = "cases/review"; // Topic header is most likely not available
 
         if (is_array($request) && isset($request['orderId'])) {
+            /** @var Signifyd_Connect_Model_Case $case */
             $case = $this->load($request['orderId']);
+            $this->logger->addLog('Attempting auth via fallback request', $case);
         } else {
             return false;
         }
@@ -99,10 +100,12 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
             if ($lookup && is_array($lookup)) {
                 $this->processReview($case, $lookup);
             } else {
-                $this->logger->addLog('Fallback failed with an invalid response from Signifyd');
+                $this->logger->addLog('Fallback failed with an invalid response from Signifyd', $case);
             }
         } else {
-            $this->logger->addLog('Fallback failed with no matching case found');
+            /** @var Mage_Sales_Model_Order $order */
+            $order = Mage::getModel('sales/order')->loadByIncrementId($request['orderId']);
+            $this->logger->addLog('Fallback failed with no matching case found for orderId ' . $request['orderId'], $order);
         }
 
         return true;
@@ -113,7 +116,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         if (!$case) return;
         $this->_request = $request;
         $this->setPrevious($case);
-        $this->logger->addLog('Process review case:' . $case->getId());
+        $this->logger->addLog('Process review case:' . $case->getId(), $case);
 
         $case = $this->updateScore($case);
         $case = $this->updateStatus($case);
@@ -123,7 +126,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
             $case->save();
             $this->processAdditional($case);
         } catch (Exception $e) {
-            $this->logger->addLog('Process review error: ' . $e->__toString());
+            $this->logger->addLog('Process review error: ' . $e->__toString(), $case);
         }
 
     }
@@ -136,7 +139,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
      */
     public function processAdditional(Signifyd_Connect_Model_Case $case)
     {
-        $this->logger->addLog('Process additional for case ' . $case->getOrderIncrement());
+        $this->logger->addLog('Process additional for case ' . $case->getOrderIncrement(), $case);
 
         $order = $case->getOrder();
 
@@ -178,7 +181,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
                             break;
 
                         default:
-                            $this->logger->addLog("Unknown positive action $negativeAction");
+                            $this->logger->addLog("Unknown positive action $negativeAction", $case);
                     }
 
                     break;
@@ -206,34 +209,34 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
                             break;
 
                         default:
-                            $this->logger->addLog("Unknown negative action $negativeAction");
+                            $this->logger->addLog("Unknown negative action $negativeAction", $case);
                     }
 
                     break;
             }
         } else {
-            $this->logger->addLog("Order {$case->getOrderIncrement()} not found");
+            $this->logger->addLog("Order {$case->getOrderIncrement()} not found", $case);
         }
 
         return $this;
     }
 
-    public function caseLookup($case)
+    public function caseLookup(Signifyd_Connect_Model_Case $case)
     {
         $result = false;
 
         try {
             $url = $this->getHelper()->getCaseUrl($case->getCode());
             $auth = $this->getHelper()->getConfigData('settings/key', $case);
-            $response = $this->getHelper()->request($url, null, $auth, null, 'application/json');
+            $response = $this->getHelper()->request($url, null, $auth, null, 'application/json', false, $case);
             $responseCode = $response->getHttpCode();
             if (substr($responseCode, 0, 1) == '2') {
                 $result = json_decode($response->getRawResponse(), true);
             } else {
-                $this->logger->addLog('Fallback request received a ' . $responseCode . ' response from Signifyd');
+                $this->logger->addLog('Fallback request received a ' . $responseCode . ' response from Signifyd', $case);
             }
         } catch (Exception $e) {
-            $this->logger->addLog('Fallback issue: ' . $e->__toString());
+            $this->logger->addLog('Fallback issue: ' . $e->__toString(), $case);
         }
 
         return $result;
@@ -243,9 +246,9 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
     {
         if (isset($this->_request['score'])) {
             $case->setScore($this->_request['score']);
-            $this->logger->addLog('Set score to ' . $this->_request['score']);
+            $this->logger->addLog('Set score to ' . $this->_request['score'], $case);
         } else {
-            $this->logger->addLog('No score value available');
+            $this->logger->addLog('No score value available', $case);
         }
 
         return $case;
@@ -255,9 +258,9 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
     {
         if (isset($this->_request['status'])) {
             $case->setSignifydStatus($this->_request['status']);
-            $this->logger->addLog('Set status to ' . $this->_request['status']);
+            $this->logger->addLog('Set status to ' . $this->_request['status'], $case);
         } else {
-            $this->logger->addLog('No status value available');
+            $this->logger->addLog('No status value available', $case);
         }
 
         return $case;
@@ -277,13 +280,13 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
                     $case->setMagentoStatus(self::PROCESSING_RESPONSE_STATUS);
                 }
 
-                $this->logger->addLog('Set guarantee to ' . $this->_request['guaranteeDisposition']);
+                $this->logger->addLog('Set guarantee to ' . $this->_request['guaranteeDisposition'], $case);
             } else if ($this->_request['status'] == 'DISMISSED' &&
                 $case->getMagentoStatus() == self::IN_REVIEW_STATUS) {
                 $case->setMagentoStatus(self::COMPLETED_STATUS);
             }
         } catch(Exception $e) {
-            $this->logger->addLog('ERROR ON WEBHOOK: ' . $e->__toString());
+            $this->logger->addLog('ERROR ON WEBHOOK: ' . $e->__toString(), $case);
         }
 
         return $case;
@@ -313,9 +316,9 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         try {
             $case->save();
             $this->processAdditional($case);
-            $this->logger->addLog('Case ' . $case->getId() . ' created/updated with status ' . $case->getSignifydStatus() . ' and score ' . $case->getScore());
+            $this->logger->addLog('Case ' . $case->getId() . ' created/updated with status ' . $case->getSignifydStatus() . ' and score ' . $case->getScore(), $case);
         } catch (Exception $e) {
-            $this->logger->addLog('Process creation/update error: ' . $e->__toString());
+            $this->logger->addLog('Process creation/update error: ' . $e->__toString(), $case);
             return false;
         }
 
@@ -393,7 +396,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
             $case->save();
             $this->processAdditional($case);
         } catch (Exception $e) {
-            $this->logger->addLog('Process guarantee error: ' . $e->__toString());
+            $this->logger->addLog('Process guarantee error: ' . $e->__toString(), $case);
             return false;
         }
 

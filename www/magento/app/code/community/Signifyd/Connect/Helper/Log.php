@@ -8,17 +8,31 @@
  */
 class Signifyd_Connect_Helper_Log extends Mage_Core_Helper_Abstract
 {
+    protected $log;
+
     protected $logFile = 'signifyd_connect.log';
 
-    public function addLog($msg)
+    public function isGlobalLogEnabled()
     {
-        if ($this->isLogEnabled()) {
-            Mage::log($msg, null, $this->logFile);
+        if (!isset($this->log)) {
+            $this->log = Mage::helper('signifyd_connect')->getConfigData('log/all');
         }
+
+        return $this->log;
     }
 
-    public function isLogEnabled()
+    public function addLog($msg, $entity = null)
     {
-        return Mage::getStoreConfig('signifyd_connect/log/all');
+        if (is_object($entity)) {
+            $log = Mage::helper('signifyd_connect')->getConfigData('log/all', $entity);
+        } else {
+            $log = $this->isGlobalLogEnabled();
+        }
+
+        if ($log == false) {
+            return false;
+        }
+
+        Mage::log($msg, null, $this->logFile);
     }
 }

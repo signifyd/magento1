@@ -82,7 +82,7 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
             }
         }
 
-        $this->log('AVS found on payment helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode));
+        $this->logger->addLog('AVS found on payment helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode), $this->payment);
 
         return $avsResponseCode;
     }
@@ -102,7 +102,7 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
             }
         }
 
-        $this->log('CVV found on payment helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode));
+        $this->logger->addLog('CVV found on payment helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode), $this->payment);
 
         return $cvvResponseCode;
     }
@@ -129,7 +129,7 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
             $last4 = $this->filterLast4($this->charge->source->last4);
         }
 
-        $this->log('Last4 found on payment helper: ' . (empty($last4) ? 'false' : 'true'));
+        $this->logger->addLog('Last4 found on payment helper: ' . (empty($last4) ? 'false' : 'true'), $this->payment);
 
         if (empty($last4)) {
             $last4 = parent::getLast4();
@@ -147,7 +147,7 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
             $expiryMonth = $this->filterExpiryMonth($this->charge->source->exp_month);
         }
 
-        $this->log('Expiry month found on payment helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth));
+        $this->logger->addLog('Expiry month found on payment helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth), $this->payment);
 
         if (empty($expiryMonth)) {
             $expiryMonth = parent::getExpiryMonth();
@@ -165,7 +165,7 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
             $expiryYear = $this->filterExpiryYear($this->charge->source->exp_year);
         }
 
-        $this->log('Expiry year found on payment helper: ' . (empty($expiryYear) ? 'false' : $expiryYear));
+        $this->logger->addLog('Expiry year found on payment helper: ' . (empty($expiryYear) ? 'false' : $expiryYear), $this->payment);
 
         if (empty($expiryYear)) {
             $expiryYear = parent::getExpiryYear();

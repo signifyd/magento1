@@ -130,9 +130,8 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             /** @var Signifyd_Connect_Model_Case $case */
             $case = Mage::getModel('signifyd_connect/case')->load($requestJson['orderId']);
 
-
             if (!Mage::helper('signifyd_connect')->isEnabled($case)) {
-                $this->logger->addLog('API extension disabled');
+                $this->logger->addLog('API extension disabled', $case);
                 $this->getResponse()->setBody($this->getDisabledMessage());
                 return;
             }
@@ -149,7 +148,7 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                     Mage::register('signifyd_action_' . $requestJson['orderId'], 1);
                 }
 
-                $this->logger->addLog('API processing');
+                $this->logger->addLog('API processing', $case);
 
                 switch ($topic) {
                     case "cases/creation":
@@ -163,12 +162,12 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                         Mage::getModel('signifyd_connect/case')->processGuarantee($case, $requestJson);
                         break;
                     default:
-                        $this->logger->addLog('API invalid topic');
+                        $this->logger->addLog('API invalid topic', $case);
                         $this->getResponse()->setHttpResponseCode(403);
                         $this->getResponse()->setBody('This request type is currently unsupported');
                 }
             } else {
-                $this->logger->addLog('API request failed auth');
+                $this->logger->addLog('API request failed auth', $case);
                 Mage::getModel('signifyd_connect/case')->processFallback($request);
             }
         }

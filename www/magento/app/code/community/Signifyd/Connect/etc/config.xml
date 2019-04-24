@@ -85,7 +85,7 @@
                 <observers>
                     <signifyd_connect>
                         <class>signifyd_connect/observer</class>
-                        <method>openCaseCheckout</method>
+                        <method>openCase</method>
                     </signifyd_connect>
                 </observers>
             </checkout_submit_all_after>
@@ -93,7 +93,7 @@
                 <observers>
                     <signifyd_connect>
                         <class>signifyd_connect/observer</class>
-                        <method>openCaseOrderSave</method>
+                        <method>openCase</method>
                     </signifyd_connect>
                 </observers>
             </sales_order_save_commit_after>

@@ -42,7 +42,7 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             }
         }
 
-        $this->log('AVS found on payment helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode));
+        $this->logger->addLog('AVS found on payment helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode), $this->payment);
 
         return $avsResponseCode;
     }
@@ -61,7 +61,7 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             }
         }
 
-        $this->log('CVV found on payment helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode));
+        $this->logger->addLog('CVV found on payment helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode), $this->payment);
 
         return $cvvResponseCode;
     }
@@ -73,7 +73,7 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             $last4 = $this->filterLast4($last4);
         }
 
-        $this->log('Last4 found on payment helper: ' . (empty($last4) ? 'false' : 'true'));
+        $this->logger->addLog('Last4 found on payment helper: ' . (empty($last4) ? 'false' : 'true'), $this->payment);
 
         if (empty($last4)) {
             $last4 = parent::getLast4();
@@ -89,7 +89,7 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             $expiryMonth = $this->filterExpiryMonth($expiryMonth);
         }
 
-        $this->log('Expiry month found on payment helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth));
+        $this->logger->addLog('Expiry month found on payment helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth), $this->payment);
 
         if (empty($expiryMonth)) {
             $expiryMonth = parent::getExpiryMonth();
@@ -105,7 +105,7 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             $expiryYear = $this->filterExpiryYear($expiryYear);
         }
 
-        $this->log('Expiry year found on payment helper: ' . (empty($expiryYear) ? 'false' : $expiryYear));
+        $this->logger->addLog('Expiry year found on payment helper: ' . (empty($expiryYear) ? 'false' : $expiryYear), $this->payment);
 
         if (empty($expiryYear)) {
             $expiryYear = parent::getExpiryYear();
@@ -146,7 +146,7 @@ class Signifyd_Connect_Helper_Payment_Payflow extends Signifyd_Connect_Helper_Pa
             }
         }
         catch (Exception $e) {
-            Mage::helper('signifyd_connect/log')->addLog('Failed to collect data from Payflow: ' . $e->getMessage());
+            Mage::helper('signifyd_connect/log')->addLog('Failed to collect data from Payflow: ' . $e->getMessage(), $this->payment);
         }
     }
 }
