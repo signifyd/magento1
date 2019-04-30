@@ -15,6 +15,18 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
     protected $orderModel;
 
     /**
+     * @var Signifyd_Connect_Helper_Log
+     */
+    protected $logger;
+
+    public function _construct()
+    {
+        $this->logger = Mage::helper('signifyd_connect/log');
+
+        parent::_construct();
+    }
+
+    /**
      * @return Signifyd_Connect_Helper_Data
      */
     public function getHelper()
@@ -38,22 +50,8 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         return $this->orderModel;
     }
 
-    public function openCaseCheckout($observer)
-    {
-        $this->getHelper()->log('openCaseCheckout');
-        return $this->openCase($observer);
-    }
-
-    public function openCaseOrderSave($observer)
-    {
-        $this->getHelper()->log('openCaseOrderSave');
-        return $this->openCase($observer);
-    }
-
     public function updateCaseAddressSave($observer)
     {
-        $this->getHelper()->log('updateCaseAddressSave');
-
         /** @var Mage_Sales_Model_Order_Address $orderAddress */
         $orderAddress = $observer->getAddress();
         $observer->getEvent()->setOrder($orderAddress->getOrder());
@@ -63,8 +61,6 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
 
     public function updateCasePaymentSave($observer)
     {
-        $this->getHelper()->log('updateCasePaymentSave');
-
         /** @var Mage_Sales_Model_Order_Payment $orderPayment */
         $orderPayment = $observer->getPayment();
         $observer->getEvent()->setOrder($orderPayment->getOrder());
@@ -101,7 +97,6 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             foreach ($orders as $order) {
                 try {
                     if (!is_object($order) || $order->isEmpty()) {
-                        $this->getHelper()->log('Empty order passed to observer to open case. Ignoring order.');
                         continue;
                     }
 
@@ -122,10 +117,10 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                     }
 
                     $eventName = $observer->getEvent()->getName();
-                    $this->getHelper()->log("Order {$order->getIncrementId()} state: {$order->getState()}, event: {$eventName}");
+                    $this->logger->addLog("Order {$order->getIncrementId()} state: {$order->getState()}, event: {$eventName}", $order);
 
                     $result = $this->getHelper()->buildAndSendOrderToSignifyd($order, false, $updateOnly);
-                    $this->getHelper()->log("Create case result for " . $order->getIncrementId() . ": {$result}");
+                    $this->logger->addLog("Create case result for " . $order->getIncrementId() . ": {$result}", $order);
 
                     //PayPal express can't be put on hold before everything is processed or
                     //it won't send confirmation e-mail to customer
@@ -137,7 +132,7 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 } catch (Exception $e) {
                     $incrementId = $order->getIncrementId();
                     $incrementId = empty($incrementId) ? '' : " $incrementId";
-                    $this->getHelper()->log("Failed to open case for order{$incrementId}: " . $e->__toString());
+                    $this->logger->addLog("Failed to open case for order{$incrementId}: " . $e->__toString(), $order);
                 }
 
                 if (!is_null(Mage::registry('signifyd_action_' . $order->getIncrementId()))) {
@@ -145,43 +140,11 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 }
             }
         } catch (Exception $e) {
-            $this->getHelper()->log($e->__toString());
+            $this->logger->addLog("Open case exception: " . $e->__toString());
         }
 
         // If we get here, then we have failed to create the case.
         return $this;
-    }
-
-    public function logData($order, $payment, $quote)
-    {
-        // Used to capture data for testing with
-
-        $order_data = json_encode($order->getData());
-        $billing_data = json_encode($order->getBillingAddress()->getData());
-        $shipping_data = json_encode($order->getShippingAddress()->getData());
-        $customer_data = json_encode($order->getCustomer()->getData());
-        $payment_data = json_encode($payment->getData());
-        $quote_data = json_encode($quote->getData());
-        $items = array();
-        $products = array();
-
-        foreach ($quote->getAllItems() as $item) {
-            $items[$item->getId()] = $item->getData();
-            $product = Mage::getModel('catalog/product')->load($item->getProductId());
-            $products[$item->getId()] = $product->getData();
-        }
-
-        $items = json_encode($items);
-        $products = json_encode($products);
-
-        Mage::log("Order:\n $order_data", null, 'signifyd_connect_objects.log');
-        Mage::log("Billing:\n $billing_data", null, 'signifyd_connect_objects.log');
-        Mage::log("Shipping:\n $shipping_data", null, 'signifyd_connect_objects.log');
-        Mage::log("Customer:\n $customer_data", null, 'signifyd_connect_objects.log');
-        Mage::log("Payment:\n $payment_data", null, 'signifyd_connect_objects.log');
-        Mage::log("Quote:\n $quote_data", null, 'signifyd_connect_objects.log');
-        Mage::log("Items:\n $items", null, 'signifyd_connect_objects.log');
-        Mage::log("Products:\n $products", null, 'signifyd_connect_objects.log');
     }
 
     public function getAdminRoute()
@@ -362,33 +325,31 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         if ($order instanceof Mage_Sales_Model_Order == false) {
             return false;
         } elseif ($order->canCancel()) {
-            $this->getHelper()->log("Order {$order->getIncrementId()} still can be canceled, case will not be cancelled. Event: {$event}");
+            $this->logger->addLog("Order {$order->getIncrementId()} still can be canceled, case will not be cancelled. Event: {$event}", $order);
             return false;
         } elseif ($order->canCreditmemo()) {
-            $this->getHelper()->log("Order {$order->getIncrementId()} still can be refunded, case will not be cancelled. Event: {$event}");
+            $this->logger->addLog("Order {$order->getIncrementId()} still can be refunded, case will not be cancelled. Event: {$event}", $order);
             return false;
         }
 
         /** @var Signifyd_Connect_Model_Case $case */
         $case = Mage::getModel('signifyd_connect/case')->load($order->getIncrementId());
         if ($case->isObjectNew()) {
-            $this->getHelper()->log("Guarantee cancel: Signifyd case for order {$order->getIncrementId()} does not exist in DB");
+            $this->logger->addLog("Guarantee cancel: Signifyd case for order {$order->getIncrementId()} does not exist in DB", $order);
             return;
         }
 
         if (in_array($case->getGuarantee(), array('N/A', 'DECLINED', 'CANCELED'))) {
-            $this->getHelper()->log('Guarantee cancel skipped, because case guarantee is ' . $case->getGuarantee());
+            $this->logger->addLog('Guarantee cancel skipped, because case guarantee is ' . $case->getGuarantee(), $order);
             return;
         }
 
-        $this->getHelper()->log("Guarantee cancel for case {$case->getCode()}. Event: {$event}");
+        $this->logger->addLog("Guarantee cancel for case {$case->getCode()}. Event: {$event}", $order);
         $this->getHelper()->cancelGuarantee($case);
     }
 
     public function salesOrderPaymentCancel($observer)
     {
-        $helper = $this->getHelper();
-
         try {
             /** @var Mage_Sales_Model_Order_Payment $payment */
             $payment = $observer->getEvent()->getPayment();
@@ -397,25 +358,21 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                 $this->handleCancel($payment->getOrder(), 'salesOrderPaymentCancel');
             }
         } catch (Exception $e) {
-            $helper->log("Guarantee cancel: " . $e->getMessage());
+            $this->logger->addLog("Guarantee cancel: " . $e->getMessage());
         }
     }
 
     public function salesOrderCancel($observer)
     {
-        $helper = $this->getHelper();
-
         try {
             $this->handleCancel($observer->getEvent()->getOrder(), 'salesOrderCancel');
         } catch (Exception $e) {
-            $helper->log("Guarantee cancel: " . $e->getMessage());
+            $this->logger->addLog("Guarantee cancel: " . $e->getMessage());
         }
     }
 
     public function salesOrderCreditmemoRefund(Varien_Event_Observer $observer)
     {
-        $helper = $this->getHelper();
-
         try {
             /** @var Mage_Sales_Model_Order_Creditmemo $creditmemo */
             $creditmemo = $observer->getEvent()->getCreditmemo();
@@ -423,11 +380,11 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
             if ($creditmemo instanceof Mage_Sales_Model_Order_Creditmemo) {
                 $this->handleCancel($creditmemo->getOrder(), 'salesOrderCreditmemoRefund');
             } else {
-                $helper->log("Event salesOrderCreditmemoCancel has no order");
+                $this->logger->addLog("Event salesOrderCreditmemoCancel has no order");
                 return;
             }
         } catch(Exception $e) {
-            $helper->log("Guarantee cancel: " . $e->getMessage());
+            $this->logger->addLog("Guarantee cancel: " . $e->getMessage());
         }
     }
 
@@ -482,8 +439,6 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         if (empty($incrementId)) {
             $incrementId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
         }
-
-        $this->getHelper()->log("putOrderOnHoldAsync: " . $incrementId);
 
         if (!empty($incrementId)) {
             Mage::unregister('signifyd_last_increment_id');

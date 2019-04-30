@@ -157,7 +157,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
             $avsResponseCode = $this->performExpressionSearch($this->avsResponseCodeExpressions, 'filterAvsResponseCode');
         }
 
-        $this->log('AVS found on other helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode));
+        $this->logger->addLog('AVS found on other helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode), $this->payment);
 
         return $avsResponseCode;
     }
@@ -179,7 +179,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
             $cvvResponseCode = $this->performExpressionSearch($this->cvvResponseCodeExpressions, 'filterCvvResponseCode');
         }
 
-        $this->log('CVV found on other helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode));
+        $this->logger->addLog('CVV found on other helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode), $this->payment);
 
         return $cvvResponseCode;
     }
@@ -201,7 +201,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
             $bin = $this->performExpressionSearch($this->binExpressions, 'filterBin');
         }
 
-        $this->log('Bin found on other helper: ' . (empty($bin) ? 'false' : $bin));
+        $this->logger->addLog('Bin found on other helper: ' . (empty($bin) ? 'false' : $bin), $this->payment);
 
         return $bin;
     }
@@ -223,7 +223,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
             $last4 = $this->performExpressionSearch($this->last4Expressions, 'filterLast4');
         }
 
-        $this->log('Last4 found on other helper: ' . (empty($last4) ? 'false' : 'true'));
+        $this->logger->addLog('Last4 found on other helper: ' . (empty($last4) ? 'false' : 'true'), $this->payment);
 
         return $last4;
     }
@@ -245,7 +245,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
             $expiryMonth = $this->performExpressionSearch($this->expiryMonthExpressions, 'filterExpiryMonth');
         }
 
-        $this->log('Expiry month found on other helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth));
+        $this->logger->addLog('Expiry month found on other helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth), $this->payment);
 
         return $expiryMonth;
     }
@@ -267,7 +267,7 @@ class Signifyd_Connect_Helper_Payment_Other extends Signifyd_Connect_Helper_Paym
             $expiryYear = $this->performExpressionSearch($this->expiryYearExpressions, 'filterExpiryYear');
         }
 
-        $this->log('Expiry year found on other helper: ' . (empty($expiryYear) ? 'false' : $expiryYear));
+        $this->logger->addLog('Expiry year found on other helper: ' . (empty($expiryYear) ? 'false' : $expiryYear), $this->payment);
 
         return $expiryYear;
     }

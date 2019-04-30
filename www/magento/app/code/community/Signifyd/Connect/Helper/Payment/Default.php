@@ -26,6 +26,16 @@ class Signifyd_Connect_Helper_Payment_Default
     protected $signifydData = array();
 
     /**
+     * @var Signifyd_Connect_Helper_Log
+     */
+    protected $logger;
+
+    public function __construct()
+    {
+        $this->logger = Mage::helper('signifyd_connect/log');
+    }
+
+    /**
      * @param Mage_Sales_Model_Order $order
      * @param Mage_Sales_Model_Order_Payment $payment
      * @return $this
@@ -78,7 +88,7 @@ class Signifyd_Connect_Helper_Payment_Default
      */
     public function getCardData()
     {
-        $this->log('Getting card data informations using ' . get_class($this));
+        $this->logger->addLog('Getting card data informations using ' . get_class($this), $this->payment);
 
         $card = array();
 
@@ -90,7 +100,7 @@ class Signifyd_Connect_Helper_Payment_Default
 
         $filteredDataCard = $card;
         $filteredDataCard['last4'] = empty($filteredDataCard['last4']) ? 'not found' : 'found';
-        $this->log("Data collected from payment method: " . json_encode($filteredDataCard));
+        $this->logger->addLog("Data collected from payment method: " . json_encode($filteredDataCard), $this->payment);
 
         $card['bin'] = $this->filterBin($card['bin']);
         $card['last4'] = $this->filterLast4($card['last4']);
@@ -105,7 +115,7 @@ class Signifyd_Connect_Helper_Payment_Default
 
         $filteredDataCard = $card;
         $filteredDataCard['last4'] = empty($filteredDataCard['last4']) ? 'not found' : 'found';
-        $this->log("Filtered data: " . json_encode($filteredDataCard));
+        $this->logger->addLog("Filtered data: " . json_encode($filteredDataCard), $this->payment);
 
         return $card;
     }
@@ -118,7 +128,7 @@ class Signifyd_Connect_Helper_Payment_Default
         $avsResponseCode = $this->payment->getCcAvsStatus();
         $avsResponseCode = $this->filterAvsResponseCode($avsResponseCode);
 
-        $this->log('AVS found on default helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode));
+        $this->logger->addLog('AVS found on default helper: ' . (empty($avsResponseCode) ? 'false' : $avsResponseCode), $this->payment);
 
         return $avsResponseCode;
     }
@@ -131,7 +141,7 @@ class Signifyd_Connect_Helper_Payment_Default
         $cvvResponseCode = $this->payment->getCcCidStatus();
         $cvvResponseCode = $this->filterCvvResponseCode($cvvResponseCode);
 
-        $this->log('CVV found on default helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode));
+        $this->logger->addLog('CVV found on default helper: ' . (empty($cvvResponseCode) ? 'false' : $cvvResponseCode), $this->payment);
 
         return $cvvResponseCode;
     }
@@ -169,7 +179,7 @@ class Signifyd_Connect_Helper_Payment_Default
             $bin = $this->filterBin($bin);
         }
 
-        $this->log('Bin found on default helper: ' . (empty($bin) ? 'false' : $bin));
+        $this->logger->addLog('Bin found on default helper: ' . (empty($bin) ? 'false' : $bin), $this->payment);
 
         return $bin;
     }
@@ -187,7 +197,7 @@ class Signifyd_Connect_Helper_Payment_Default
             $last4 = $this->filterLast4($last4);
         }
 
-        $this->log('Last4 found on default helper: ' . (empty($last4) ? 'false' : 'true'));
+        $this->logger->addLog('Last4 found on default helper: ' . (empty($last4) ? 'false' : 'true'), $this->payment);
 
         return $last4;
     }
@@ -204,7 +214,7 @@ class Signifyd_Connect_Helper_Payment_Default
             $expiryMonth = $this->filterExpiryMonth($this->signifydData['cc_exp_month']);
         }
 
-        $this->log('Expiry month found on default helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth));
+        $this->logger->addLog('Expiry month found on default helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth), $this->payment);
 
         return $expiryMonth;
     }
@@ -221,7 +231,7 @@ class Signifyd_Connect_Helper_Payment_Default
             $expiryYear = $this->filterExpiryYear($this->signifydData['cc_exp_year']);
         }
 
-        $this->log('Expiry year found on default helper: ' . (empty($expiryYear) ? 'false' : $expiryYear));
+        $this->logger->addLog('Expiry year found on default helper: ' . (empty($expiryYear) ? 'false' : $expiryYear), $this->payment);
 
         return $expiryYear;
     }
@@ -329,10 +339,5 @@ class Signifyd_Connect_Helper_Payment_Default
         }
 
         return null;
-    }
-
-    public function log($message)
-    {
-        Mage::helper('signifyd_connect/log')->addLog($message);
     }
 }

@@ -128,21 +128,21 @@
                     </fields>
                 </webhook>
                 <log translate="label">
-                    <label>Logging</label>
+                    <label>Enable Logging</label>
                     <frontend_type>text</frontend_type>
                     <sort_order>4</sort_order>
                     <show_in_default>1</show_in_default>
-                    <show_in_website>0</show_in_website>
-                    <show_in_store>0</show_in_store>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
                     <fields>
                         <all>
-                            <label>Enable Logging</label>
+                            <label>Log Options</label>
                             <frontend_type>select</frontend_type>
-                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <source_model>signifyd_connect/system_config_source_options_loglevel</source_model>
                             <sort_order>1</sort_order>
                             <show_in_default>1</show_in_default>
-                            <show_in_website>0</show_in_website>
-                            <show_in_store>0</show_in_store>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
                             <comment><![CDATA[Enables logging of errors related to the plugin for debugging and troubleshooting issues.]]></comment>
                         </all>
                     </fields>

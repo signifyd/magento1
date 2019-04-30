@@ -54,12 +54,12 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         }
 
         if ($this->helper->isRestricted($order->getPayment()->getMethod(), $order->getState())) {
-            $this->logger->addLog("Order {$order->getIncrementId()} payment method or order state is restricted");
+            $this->logger->addLog("Order {$order->getIncrementId()} payment method or order state is restricted", $order);
             return false;
         }
 
         if ($this->helper->isIgnored($order)) {
-            $this->logger->addLog("Order {$order->getIncrementId()} ignored");
+            $this->logger->addLog("Order {$order->getIncrementId()} ignored", $order);
             return false;
         }
 
@@ -96,7 +96,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: order status cannot be updated, {$reason}");
             $order->save();
 
-            $this->logger->addLog("Order {$incrementId} cannot be updated, {$reason}");
+            $this->logger->addLog("Order {$incrementId} cannot be updated, {$reason}", $order);
             return false;
         }
 
@@ -105,9 +105,9 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: order status updated, {$reason}");
             $order->save();
 
-            $this->logger->addLog("Order {$order->getIncrementId()} removed from hold: {$reason}");
+            $this->logger->addLog("Order {$order->getIncrementId()} removed from hold: {$reason}", $order);
         } catch (Exception $e) {
-            $this->logger->addLog("Order {$order->getIncrementId()} was not removed from hold: {$e->getMessage()}");
+            $this->logger->addLog("Order {$order->getIncrementId()} was not removed from hold: {$e->getMessage()}", $order);
             return false;
         }
 
@@ -146,7 +146,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: order cannot be updated to on hold, {$reason}");
             $order->save();
 
-            $this->logger->addLog("Order {$incrementId} cannot be updated to on hold, {$reason}");
+            $this->logger->addLog("Order {$incrementId} cannot be updated to on hold, {$reason}", $order);
 
             return false;
         }
@@ -156,9 +156,9 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: {$reason}");
             $order->save();
 
-            $this->logger->addLog("Order {$incrementId} put on hold: {$reason}");
+            $this->logger->addLog("Order {$incrementId} put on hold: {$reason}", $order);
         } catch (Exception $e) {
-            $this->logger->addLog("Order {$incrementId} was not put on hold: " . $e->getMessage());
+            $this->logger->addLog("Order {$incrementId} was not put on hold: " . $e->getMessage(), $order);
             return false;
         }
 
@@ -214,7 +214,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             }
 
             $this->holdOrder($order, $reason);
-            $this->logger->addLog("Order {$incrementId} cannot be canceled, {$reason}");
+            $this->logger->addLog("Order {$incrementId} cannot be canceled, {$reason}", $order);
             $order->addStatusHistoryComment("Signifyd: order cannot be canceled, {$reason}");
             $order->save();
 
@@ -226,10 +226,10 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: order canceled, {$reason}");
             $order->save();
 
-            $this->logger->addLog("Order {$incrementId} cancelled, {$reason}");
+            $this->logger->addLog("Order {$incrementId} cancelled, {$reason}", $order);
         } catch (Exception $e){
-            $this->logger->addLog("Order {$incrementId} unable to be saved, {$e->getMessage()}");
-            $this->logger->addLog("Order {$incrementId} was not canceled");
+            $this->logger->addLog("Order {$incrementId} unable to be saved, {$e->getMessage()}", $order);
+            $this->logger->addLog("Order {$incrementId} was not canceled", $order);
             return false;
         }
 
@@ -276,7 +276,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             }
         } catch (Exception $e) {
             $this->holdOrder($order, 'failed to authorize/invoice order');
-            $this->logger->addLog("Order {$order->getIncrementId()} was not removed from hold: {$e->getMessage()}");
+            $this->logger->addLog("Order {$order->getIncrementId()} was not removed from hold: {$e->getMessage()}", $order);
             return false;
         }
 
@@ -293,14 +293,14 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         $status = $this->helper->getOrderPaymentStatus($order);
 
         if($status['authorize']){
-            $this->logger->addLog("Order {$order->getIncrementId()} is already authorize");
+            $this->logger->addLog("Order {$order->getIncrementId()} is already authorize", $order);
             return true;
         }
 
         $payment = $order->getPayment();
         $method = $payment->getMethodInstance();
         if(!$method->canAuthorize()){
-            $this->logger->addLog("Order {$order->getIncrementId()} cannot be authorize");
+            $this->logger->addLog("Order {$order->getIncrementId()} cannot be authorize", $order);
             return true;
         }
 
@@ -309,10 +309,10 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         try{
             // check if method authorize returns anything usefully
             $method->authorize($payment, $amount);
-            $this->logger->addLog("Authorize order {$order->getIncrementId()} was successful");
+            $this->logger->addLog("Authorize order {$order->getIncrementId()} was successful", $order);
         } catch (Exception $e) {
-            $this->logger->addLog("Authorize order {$order->getIncrementId()} was not authorized:");
-            $this->logger->addLog($e->__toString());
+            $this->logger->addLog("Authorize order {$order->getIncrementId()} was not authorized:", $order);
+            $this->logger->addLog($e->__toString(), $order);
             return false;
         }
 
@@ -364,7 +364,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: unable to create invoice, {$reason}");
             $order->save();
 
-            $this->logger->addLog("Order {$incrementId}, unable to create invoice, {$reason}");
+            $this->logger->addLog("Order {$incrementId}, unable to create invoice, {$reason}", $order);
 
             return false;
         }
@@ -389,7 +389,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
                 ->addObject($invoice->getOrder());
             $transactionSave->save();
 
-            $this->logger->addLog("Invoice was created for order: {$order->getIncrementId()}");
+            $this->logger->addLog("Invoice was created for order: {$order->getIncrementId()}", $order);
 
             $invoice->addComment('Signifyd: create order invoice', false);
             $invoice->sendEmail();
@@ -399,7 +399,7 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
             $order->addStatusHistoryComment("Signifyd: create order invoice: {$invoice->getIncrementId()}");
             $order->save();
         } catch (Exception $e) {
-            $this->logger->addLog('Exception while creating invoice: ' . $e->__toString());
+            $this->logger->addLog('Exception while creating invoice: ' . $e->__toString(), $order);
 
             $order->addStatusHistoryComment("Signifyd: unable to create invoice, {$e->getMessage()}");
             $order->save();

@@ -30,6 +30,16 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     protected $paymentHelper;
 
     /**
+     * @var Signifyd_Connect_Helper_Log
+     */
+    protected $logger;
+
+    public function __construct()
+    {
+        $this->logger = Mage::helper('signifyd_connect/log');
+    }
+
+    /**
      * Used on mysql4-upgrade-4.4.0-4.4.1.php for backward compatibility
      *
      * Do not remove this method
@@ -109,18 +119,13 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $createdAtDate = Varien_Date::toTimestamp($order->getCreatedAt());
 
         if ($createdAtDate < $installationDate) {
-            $this->log('Installation date: ' . $installationDate);
-            $this->log('Created at date: ' . $createdAtDate);
+            $this->logger->addLog('Installation date: ' . $installationDate, $order);
+            $this->logger->addLog('Created at date: ' . $createdAtDate, $order);
 
             return true;
         } else {
             return false;
         }
-    }
-
-    public function log($message)
-    {
-        Mage::helper('signifyd_connect/log')->addLog($message);
     }
 
     public function getDiscountCodes(Mage_Sales_Model_Order $order)
@@ -261,11 +266,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
         $count = $this->pregMatchAllIps($order->getXForwardedFor(), $matches);
 
-        $this->log($order->getXForwardedFor());
-        $this->log("Count: {$count}");
+        $this->logger->addLog($order->getXForwardedFor(), $order);
+        $this->logger->addLog("Count: {$count}", $order);
 
         if ($count > 0) {
-            $this->log(print_r($matches, true));
+            $this->logger->addLog(print_r($matches, true), $order);
             return $matches[0];
         }
 
@@ -397,7 +402,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $purchase['avsResponseCode'] = $paymentHelper->filterAvsResponseCode($purchase['avsResponseCode']);
         $purchase['cvvResponseCode'] = $paymentHelper->filterCvvResponseCode($purchase['cvvResponseCode']);
 
-        $this->log("Purchase from payment method: " . json_encode($purchase));
+        $this->logger->addLog("Purchase from payment method: " . json_encode($purchase), $order);
 
         if (is_object($case) && $case->getId()) {
             $purchaseData = $case->getEntries('purchase_data');
@@ -412,7 +417,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             }
         }
 
-        $this->log("Purchase with database data: " . json_encode($purchase));
+        $this->logger->addLog("Purchase with database data: " . json_encode($purchase), $order);
 
         // Sorting array by key to avoid unnecessary case updates to Signifyd
         ksort($purchase);
@@ -651,6 +656,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $storeId = $this->getCaseStoreId($entity);
         } elseif ($entity instanceof Mage_Sales_Model_Order_Shipment && $entity->getId() > 0) {
             $storeId = $entity->getStoreId();
+        } elseif ($entity instanceof Mage_Sales_Model_Order_Payment && $entity->getId() > 0) {
+            $storeId = $entity->getOrder()->getStoreId();
         } else {
             $storeId = null;
         }
@@ -667,7 +674,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function buildAndSendOrderToSignifyd($order, $forceSend = false, $updateOnly = false)
     {
-        $this->log('buildAndSendOrderToSignifyd');
+        $this->logger->addLog('buildAndSendOrderToSignifyd', $order);
 
         if ($order instanceof Mage_Sales_Model_Order && !$order->isEmpty()) {
             if (!$this->isEnabled($order)) {
@@ -705,12 +712,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             if (($isUpdate == false && $caseCreateError == 1 && $state == Mage_Sales_Model_Order::STATE_HOLDED) == false &&
                 $this->isRestricted($order->getPayment()->getMethod(), $state, ($isUpdate ? 'update' : 'create'))) {
 
-                $this->log('Case creation/update for order ' . $orderIncrementId . ' with state ' . $state . ' is restricted');
+                $this->logger->addLog('Case creation/update for order ' . $orderIncrementId . ' with state ' . $state . ' is restricted', $order);
                 return 'restricted';
             }
 
             if ($this->isIgnored($order)) {
-                $this->log('Case creation/update for order ' . $orderIncrementId . ' ignored');
+                $this->logger->addLog('Case creation/update for order ' . $orderIncrementId . ' ignored', $order);
                 return 'ignored';
             }
 
@@ -767,11 +774,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             }
 
             $apiKey = $this->getConfigData('settings/key', $order);
-            $response = $this->request($requestUri, $caseJson, $apiKey, 'application/json', null, $isUpdate);
+            $response = $this->request($requestUri, $caseJson, $apiKey, 'application/json', null, $isUpdate, $order);
 
             try {
                 $responseCode = $response->getHttpCode();
-                $this->log("Response code: {$responseCode}");
+                $this->logger->addLog("Response code: {$responseCode}", $order);
 
                 if ($responseCode == 204) {
                     $case->setMagentoStatus($case::COMPLETED_STATUS);
@@ -782,7 +789,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     $order->addStatusHistoryComment($orderComment);
                     $order->save();
 
-                    $this->log($orderComment);
+                    $this->logger->addLog($orderComment, $order);
 
                     return 'signifyd_restricted';
                 } elseif (substr($responseCode, 0, 1) == '2') {
@@ -843,7 +850,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     }
                 }
             } catch (Exception $e) {
-                $this->log($e->__toString());
+                $this->logger->addLog($e->__toString(), $order);
             }
 
             return "error";
@@ -902,13 +909,13 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return Mage::getBaseUrl();
     }
 
-    public function cancelGuarantee($case)
+    public function cancelGuarantee(Signifyd_Connect_Model_Case $case)
     {
         $caseId = $case->getCode();
         $url = $this->getCaseUrl($caseId) . '/guarantee';
         $body = json_encode(array("guaranteeDisposition" => "CANCELED"));
         $auth = $this->getConfigData('settings/key', $case);
-        $response = $this->request($url, $body, $auth, 'application/json', null, true);
+        $response = $this->request($url, $body, $auth, 'application/json', null, true, $case);
 
         $code = $response->getHttpCode();
 
@@ -927,16 +934,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $orderComment .= " with message '{$messages}'";
         }
 
-        $this->log("{$orderComment} (HTTP code {$code})");
+        $this->logger->addLog("{$orderComment} (HTTP code {$code})", $case);
 
-        if (!empty($orderComment)) {
-            /** @var Mage_Sales_Model_Order $order */
-            $order = Mage::getModel('sales/order')->loadByIncrementId($case->getOrderIncrement());
-
-            if (!$order->isEmpty()) {
-                $order->addStatusHistoryComment($orderComment);
-                $order->save();
-            }
+        if (!empty($orderComment) && !$case->getOrder()->isEmpty()) {
+            $case->getOrder()->addStatusHistoryComment($orderComment);
+            $case->getOrder()->save();
         }
     }
 
@@ -946,9 +948,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $auth = null,
         $contenttype = "application/x-www-form-urlencoded",
         $accept = null,
-        $is_update = false
+        $isUpdate = false,
+        $entity = null
     ) {
-        if (Mage::getStoreConfig('signifyd_connect/log/all')) {
+        $isLogEnable = $this->getConfigData('signifyd_connect/log/all', $entity);
+
+        if ($isLogEnable) {
             $dataObject = json_decode($data);
             $jsonError = json_last_error();
 
@@ -963,7 +968,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             }
 
             $authMask = preg_replace("/\S/", "*", $auth, strlen($auth) - 4);
-            $this->log("Request:\nURL: {$url} \nAuth: {$authMask}\nData: {$logData}");
+            $this->logger->addLog("Request:\nURL: {$url} \nAuth: {$authMask}\nData: {$logData}", $entity);
         }
 
         $curl = curl_init();
@@ -989,7 +994,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         if ($data) {
-            if ($is_update) curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
+            if ($isUpdate) curl_setopt($curl, CURLOPT_CUSTOMREQUEST, "PUT");
             else curl_setopt($curl, CURLOPT_POST, 1);
 
             $headers[] = "Content-Type: $contenttype";
@@ -1010,9 +1015,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $response_data = curl_getinfo($curl);
         $response->addData($response_data);
 
-        if (Mage::getStoreConfig('signifyd_connect/log/all')) {
-            $this->log("Response ($url):\n " . print_r($response, true));
-        }
+        $this->logger->addLog("Response ($url):\n " . print_r($response, true), $entity);
 
         $code = intval($response->getHttpCode());
         $curlErrNo = curl_errno($curl);
@@ -1020,9 +1023,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if ($code >= 400 || $curlErrNo) {
             $error = curl_error($curl);
 
-            if (Mage::getStoreConfig('signifyd_connect/log/all')) {
-                $this->log("ERROR ($url):\n$error");
-            }
+            $this->logger->addLog("ERROR ($url):\n$error", $entity);
 
             $response->setData('error', $error);
 
@@ -1044,7 +1045,6 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     public function getOrderPaymentStatus($order)
     {
         $status = array('authorize' => false, 'capture' => false, 'credit_memo' => false);
-        $logger = Mage::helper('signifyd_connect/log');
         $paymentMethod = $order->getPayment();
         $paymentAuthorized = $paymentMethod->getBaseAmountAuthorized();
         $baseTotalPaid = $order->getBaseTotalPaid();
@@ -1074,7 +1074,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         // Log status
-        $logger->addLog("Order: {$order->getIncrementId()} has a status of " . json_encode($status));
+        $this->logger->addLog("Order: {$order->getIncrementId()} has a status of " . json_encode($status), $order);
 
         return $status;
     }
@@ -1211,12 +1211,12 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             return false;
         }
 
-        $this->log("Fulfillment for case order {$orderIncrementId}");
+        $this->logger->addLog("Fulfillment for case order {$orderIncrementId}", $shipment);
 
         try {
             $fulfillmentData = $this->generateFulfillmentData($shipment);
         } catch (Exception $e) {
-            $this->log("Fulfillment error: {$e->getMessage()}");
+            $this->logger->addLog("Fulfillment error: {$e->getMessage()}", $shipment);
             return false;
         }
 
@@ -1227,7 +1227,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $fulfillmentJson = json_encode($fulfillmentData);
         $requestUri = $this->getFulfillmentUrl($orderIncrementId);
         $apiKey = $this->getConfigData('settings/key', $shipment);
-        $response = $this->request($requestUri, $fulfillmentJson, $apiKey, 'application/json', null);
+        $response = $this->request($requestUri, $fulfillmentJson, $apiKey, 'application/json', null, false, $shipment);
 
         $responseHttpCode = $response->getHttpCode();
 
@@ -1243,7 +1243,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             $message = "Signifyd: Fullfilment failed to send";
         }
 
-        $this->log($message);
+        $this->logger->addLog($message, $shipment);
 
         $shipment->addComment($message);
         $shipment->save();

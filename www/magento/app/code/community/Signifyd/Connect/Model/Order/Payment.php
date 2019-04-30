@@ -14,10 +14,14 @@ class Signifyd_Connect_Model_Order_Payment extends Mage_Sales_Model_Order_Paymen
 
         /** @var Signifyd_Connect_Helper_Data $helper */
         $helper = Mage::helper('signifyd_connect');
+
+        /** @var Signifyd_Connect_Helper_Log $logger */
+        $logger = Mage::helper('signifyd_connect/log');
+
         $order = $this->getOrder();
 
         if ($helper->isGuarantyDeclined($order)) {
-            $helper->log("Register capture notification execute hold order {$order->getIncrementId()}");
+            $logger->addLog("Register capture notification execute hold order {$order->getIncrementId()}", $order);
             Mage::getModel('signifyd_connect/order')->holdOrder($order, "guarantee declined");
         }
 
