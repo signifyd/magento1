@@ -1207,7 +1207,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
             return false;
         }
 
-        if ($case->getEntries('fulfilled') == 1) {
+        $fulfillment = Mage::getModel('signifyd_connect/fulfillment')->load($shipment->getIncrementId());
+
+        if ($fulfillment->getId()) {
+            $this->logger->addLog("Fulfillment for shipment {$shipment->getIncrementId()} already sent", $shipment);
             return false;
         }
 
@@ -1221,9 +1224,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         if ($fulfillmentData == false) {
+            $this->logger->addLog("Fulfillment for shipment {$shipment->getId()} is not ready to be sent", $shipment);
             return false;
         }
 
+        $fulfillment = $this->prepareFulfillmentToDatabase($fulfillmentData);
         $fulfillmentJson = json_encode($fulfillmentData);
         $requestUri = $this->getFulfillmentUrl($orderIncrementId);
         $apiKey = $this->getConfigData('settings/key', $shipment);
@@ -1239,6 +1244,9 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
             $case->setEntries('fulfilled', 1);
             $case->save();
+
+            $fulfillment->setMagentoStatus(Signifyd_Connect_Model_Fulfillment::COMPLETED_STATUS);
+            $fulfillment->save();
         } else {
             $message = "Signifyd: Fullfilment failed to send";
         }
@@ -1247,6 +1255,32 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
         $shipment->addComment($message);
         $shipment->save();
+    }
+
+    /**
+     * @param $fulfillmentData
+     * @return Signifyd_Connect_Model_Fulfillment
+     */
+    public function prepareFulfillmentToDatabase($fulfillmentData)
+    {
+        /** @var Signifyd_Connect_Model_Fulfillment $fulfillment */
+        $fulfillment = Mage::getModel('signifyd_connect/fulfillment');
+        $fulfillment->setData('id', $fulfillmentData['fulfillments'][0]['id']);
+        $fulfillment->setData('order_id', $fulfillmentData['fulfillments'][0]['orderId']);
+        $fulfillment->setData('created_at', $fulfillmentData['fulfillments'][0]['createdAt']);
+        $fulfillment->setData('delivery_email', $fulfillmentData['fulfillments'][0]['deliveryEmail']);
+        $fulfillment->setData('fulfillment_status', $fulfillmentData['fulfillments'][0]['fulfillmentStatus']);
+        $fulfillment->setData('tracking_numbers', serialize($fulfillmentData['fulfillments'][0]['trackingNumbers']));
+        $fulfillment->setData('tracking_urls', serialize($fulfillmentData['fulfillments'][0]['trackingUrls']));
+        $fulfillment->setData('products', serialize($fulfillmentData['fulfillments'][0]['products']));
+        $fulfillment->setData('shipment_status', $fulfillmentData['fulfillments'][0]['shipmentStatus']);
+        $fulfillment->setData('delivery_address', serialize($fulfillmentData['fulfillments'][0]['deliveryAddress']));
+        $fulfillment->setData('recipient_name', $fulfillmentData['fulfillments'][0]['recipientName']);
+        $fulfillment->setData('confirmation_name', $fulfillmentData['fulfillments'][0]['confirmationName']);
+        $fulfillment->setData('confirmation_phone', $fulfillmentData['fulfillments'][0]['confirmationPhone']);
+        $fulfillment->setData('shipping_carrier', $fulfillmentData['fulfillments'][0]['shippingCarrier']);
+
+        return $fulfillment;
     }
 
     public function generateFulfillmentData(Mage_Sales_Model_Order_Shipment $shipment)
@@ -1323,15 +1357,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function getFulfillmentStatus(Mage_Sales_Model_Order_Shipment $shipment)
     {
-        $validFulfillmentStatus = array(
-            'partial',
-            'complete',
-            'replacement'
-        );
-
-        $shipmentsCount = $shipment->getOrder()->getShipmentsCollection()->count();
-
-        if ($shipmentsCount == 1 && $shipment->getOrder()->canShip() == false) {
+        if ($shipment->getOrder()->canShip() == false) {
             return 'complete';
         } else {
             return 'partial';
