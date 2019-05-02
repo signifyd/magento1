@@ -16,7 +16,7 @@ The default settings will be used on all actions that do not have a setting of t
 Besides case creation and update, the default setting is also used for order workflow actions: hold, remove from hold, cancel and capture payment.
 
 ## Things to know before getting started
-Be aware that these settings use Magento states (not status), which must be one of these: `new, pending_payment, payment_review, processing, complete, closed, canceled, holded`. States should be provided as a comma separated list of one or more values.
+Be aware that these settings use Magento states (not status), which must be one of these: `new, pending_payment, payment_review, processing, complete, closed, canceled, holded`. States should be provided as a comma separated list of one or more values. You will also need to clear the configuration or full cache for the change to take effect. 
 
 ## Changing create states
 
