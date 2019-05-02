@@ -1239,7 +1239,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         if (substr($responseHttpCode, 0, 1) == '2') {
             $message = "Signifyd: Fullfilment sent";
 
-            $shipment->getOrder()->addStatusHistoryComment("Signifyd: created fulfillment");
+            $shipment->getOrder()->addStatusHistoryComment($message);
             $shipment->getOrder()->save();
 
             $case->setEntries('fulfilled', 1);
