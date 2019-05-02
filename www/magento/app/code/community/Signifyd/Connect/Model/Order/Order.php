@@ -47,7 +47,9 @@ class Signifyd_Connect_Model_Order_Order extends Mage_Sales_Model_Order
                             $function .= $step['class'];
 
                             if ($step['class'] != 'Signifyd_Connect_Model_Order_Order') {
-                                list($vendor, $module, $class) = explode('_', $step['class'], 3);
+                                $parts = explode('_', $step['class'], 3);
+                                $vendor = isset($parts[0]) ? $parts[0] : null;
+                                $module = isset($parts[1]) ? $parts[1] : null;
 
                                 if ($vendor != "Mage") {
                                     $nonMagentoModules["{$vendor}_{$module}"] = '';
