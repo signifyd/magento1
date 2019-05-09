@@ -21,7 +21,7 @@ class Signifyd_Connect_Model_Order_Order extends Mage_Sales_Model_Order
      * @param null $isCustomerNotified
      * @return Mage_Sales_Model_Order
      */
-    public function setState($state, $status = false, $comment = '', $isCustomerNotified = null)
+    protected function _setState($state, $status = false, $comment = '', $isCustomerNotified = null, $shouldProtectState = false)
     {
         try {
             $log = Mage::helper('signifyd_connect')->getConfigData('log/all', $this);
@@ -89,6 +89,6 @@ class Signifyd_Connect_Model_Order_Order extends Mage_Sales_Model_Order
             $this->logger->addLog('Exception logging order state change: ' . $e->getMessage(), $this);
         }
         
-        return parent::setState($state, $status, $comment, $isCustomerNotified);
+        return parent::_setState($state, $status, $comment, $isCustomerNotified, $shouldProtectState);
     }
 }
