@@ -36,11 +36,11 @@ class Signifyd_Connect_Model_Order_Order extends Mage_Sales_Model_Order
                     $this->logger->addLog("Request URL: {$currentUrl}", $this);
 
                     $debugBacktrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-                    $debugBacktraceLog = [];
-                    $nonMagentoModules = [];
+                    $debugBacktraceLog = array();
+                    $nonMagentoModules = array();
 
                     foreach ($debugBacktrace as $i => $step) {
-                        $debugBacktraceLog[$i] = [];
+                        $debugBacktraceLog[$i] = array();
                         $function = '';
 
                         if (isset($step['class'])) {
