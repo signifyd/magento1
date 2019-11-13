@@ -165,70 +165,67 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
     {
         $products = array();
 
-        /** @var Mage_Sales_Model_Quote_Item $item */
+        /** @var Mage_Sales_Model_Order_Item $item */
         foreach ($order->getAllItems() as $item) {
-            $productType = $item->getProductType();
+            $children = $item->getChildrenItems();
 
-            if (!$productType || $productType == 'simple' || $productType == 'downloadable'
-                || $productType == 'grouped' || $productType == 'virtual') {
+            if (is_array($children) == false || empty($children)) {
                 $productObject = $item->getData('product');
 
-                if (!$productObject || !$productObject->getId()) {
-                    $productObject = Mage::getModel('catalog/product')->load($productType);
+                if (is_object($productObject) == false || empty($productObject->getId())) {
+                    continue;
                 }
 
-                if ($productObject) {
-                    $product = array();
+                $product = array();
 
-                    $product['itemId'] = $item->getSku();
-                    $product['itemName'] = $item->getName();
-                    $product['itemIsDigital'] = (bool) $item->getIsVirtual();
-                    $product['itemUrl'] = $this->getProductUrl($productObject);
-                    $product['itemImage'] = $this->getProductImage($productObject);
+                $product['itemId'] = $item->getSku();
+                $product['itemName'] = $item->getName();
+                $product['itemIsDigital'] = (bool) $item->getIsVirtual();
+                $product['itemUrl'] = $this->getProductUrl($productObject);
+                $product['itemImage'] = $this->getProductImage($productObject);
 
-                    $qty = 1;
-                    if ($item->getQty()) {
-                        $qty = $item->getQty();
-                    } else if ($item->getQtyOrdered()) {
-                        $qty = $item->getQtyOrdered();
-                    }
-
-                    $price = 0;
-                    if ($item->getPrice() > 0) {
-                        $price = $item->getPrice();
-                    } else if ($item->getBasePrice() > 0) {
-                        $price = $item->getBasePrice();
-                    } else if ($productObject->getData('price') > 0) {
-                        $price = $productObject->getData('price');
-                    } else {
-                        $parent = $item->getData('parent');
-
-                        if (!$parent) {
-                            $parent = $item->getParentItem();
-                        }
-
-                        if ($parent) {
-                            if ($parent->getBasePrice() > 0) {
-                                $price = $parent->getBasePrice();
-                            } else if ($parent->getPrice()) {
-                                $price = $parent->getPrice();
-                            }
-                        }
-                    }
-
-                    $weight = 0;
-                    if ($item->hasWeight()) {
-                        $weight = $item->getWeight();
-                    } else if ($productObject->hasWeight()) {
-                        $weight = $productObject->getWeight();
-                    }
-
-                    $product['itemQuantity'] = intval($qty);
-                    $product['itemPrice'] = floatval($price);
-                    $product['itemWeight'] = floatval($weight);
-
-                    $products[] = $product;
+                $qty = 1;
+                if ($item->getQty()) {
+                    $qty = $item->getQty();
+                } else if ($item->getQtyOrdered()) {
+                    $qty = $item->getQtyOrdered();
                 }
+
+                $price = 0;
+                if ($item->getPrice() > 0) {
+                    $price = $item->getPrice();
+                } else if ($item->getBasePrice() > 0) {
+                    $price = $item->getBasePrice();
+                } else if ($productObject->getData('price') > 0) {
+                    $price = $productObject->getData('price');
+                } else {
+                    $parent = $item->getData('parent');
+
+                    if (!$parent) {
+                        $parent = $item->getParentItem();
+                    }
+
+                    if ($parent) {
+                        if ($parent->getBasePrice() > 0) {
+                            $price = $parent->getBasePrice();
+                        } else if ($parent->getPrice()) {
+                            $price = $parent->getPrice();
+                        }
+                    }
+                }
+
+                $weight = 0;
+                if ($item->hasWeight()) {
+                    $weight = $item->getWeight();
+                } else if ($productObject->hasWeight()) {
+                    $weight = $productObject->getWeight();
+                }
+
+                $product['itemQuantity'] = intval($qty);
+                $product['itemPrice'] = floatval($price);
+                $product['itemWeight'] = floatval($weight);
+
+                $products[] = $product;
             }
         }
 
@@ -951,7 +948,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $isUpdate = false,
         $entity = null
     ) {
-        $isLogEnable = $this->getConfigData('signifyd_connect/log/all', $entity);
+        $isLogEnable = $this->getConfigData('log/all', $entity);
 
         if ($isLogEnable) {
             $dataObject = json_decode($data);
