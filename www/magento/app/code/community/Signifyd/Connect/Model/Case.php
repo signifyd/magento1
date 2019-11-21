@@ -276,7 +276,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
                     $this->_request['guaranteeDisposition'] == 'N/A' &&
                     $case->getMagentoStatus() == self::IN_REVIEW_STATUS) {
                     $case->setMagentoStatus(self::COMPLETED_STATUS);
-                } else {
+                } elseif ($this->_request['guaranteeDisposition'] != 'PENDING') {
                     $case->setMagentoStatus(self::PROCESSING_RESPONSE_STATUS);
                 }
 
