@@ -1415,8 +1415,14 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
              */
 
             try {
-                $imageUrl = $item->getOrderItem()->getProduct()->getImageUrl();
+                if (is_object($product) && $product instanceof Mage_Catalog_Model_Product) {
+                    $itemUrl = $product->getUrlInStore();
+                    $imageUrl = $product->getImageUrl();
+                } else {
+                    throw new Exception('Product not found');
+                }
             } catch (Exception $e) {
+                $itemUrl = null;
                 $imageUrl = null;
             }
 
@@ -1426,7 +1432,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 'itemIsDigital' => (bool) $item->getOrderItem()->getIsVirtual(),
                 'itemCategory' => null,
                 'itemSubCategory' => null,
-                'itemUrl' => $product->getUrlInStore(),
+                'itemUrl' => $itemUrl,
                 'itemImage' => $imageUrl,
                 'itemQuantity' => floatval($item->getQty()),
                 'itemPrice' => floatval($item->getPrice()),
