@@ -128,15 +128,16 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
                 return;
             }
 
-            /** @var Signifyd_Connect_Model_Case $case */
-            $case = Mage::getModel('signifyd_connect/case')->load($requestJson['orderId']);
-
-            if ($case->isObjectNew()) {
+            if (isset($requestJson['orderId'])) {
+                /** @var Signifyd_Connect_Model_Case $case */
+                $case = Mage::getModel('signifyd_connect/case')->load($requestJson['orderId']);
+            } elseif (isset($requestJson['caseId'])) {
+                /** @var Signifyd_Connect_Model_Case $case */
                 $case = Mage::getModel('signifyd_connect/case')->load($requestJson['caseId'], 'code');
             }
 
             if ($case->isObjectNew()) {
-                $this->logger->addLog('Case not yet in DB. Likely timing issue. order_increment: ' . $requestJson['orderId']);
+                $this->logger->addLog('Case not yet in DB. Likely timing issue.');
                 $this->getResponse()->setHttpResponseCode(409);
                 return;
             }
@@ -148,9 +149,11 @@ class Signifyd_Connect_ConnectController extends Mage_Core_Controller_Front_Acti
             }
 
             if ($this->validateRequest($request, $hash, $case)) {
+                $orderId = $case->getId();
+
                 // Prevent recurring on save
-                if (is_null(Mage::registry('signifyd_action_' . $requestJson['orderId']))) {
-                    Mage::register('signifyd_action_' . $requestJson['orderId'], 1);
+                if (is_null(Mage::registry('signifyd_action_' . $orderId))) {
+                    Mage::register('signifyd_action_' . $orderId, 1);
                 }
 
                 $this->logger->addLog('API processing', $case);

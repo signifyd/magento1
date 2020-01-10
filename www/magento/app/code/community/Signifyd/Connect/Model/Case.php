@@ -416,12 +416,6 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $this->_request = $request;
         $this->setPrevious($case);
 
-        if ($this->_request['status'] == 'DISMISSED' &&
-            $this->_request['guaranteeDisposition'] == 'N/A' &&
-            $case->getMagentoStatus() == self::IN_REVIEW_STATUS) {
-
-        }
-
         try {
             $case->setGuarantee('INELIGIBLE');
             $case->setMagentoStatus(self::COMPLETED_STATUS);
@@ -429,7 +423,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
             $case->save();
             $this->processAdditional($case);
         } catch (Exception $e) {
-            $this->logger->addLog('Process guarantee error: ' . $e->__toString(), $case);
+            $this->logger->addLog('Process ineligible error: ' . $e->__toString(), $case);
             return false;
         }
 
