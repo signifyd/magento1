@@ -213,6 +213,10 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
                     }
 
                     break;
+
+                case 'INELIGIBLE':
+                    $orderModel->unholdOrder($order, "guarantee ineligible");
+                    break;
             }
         } else {
             $this->logger->addLog("Order {$case->getOrderIncrement()} not found", $case);
@@ -397,6 +401,29 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
             $this->processAdditional($case);
         } catch (Exception $e) {
             $this->logger->addLog('Process guarantee error: ' . $e->__toString(), $case);
+            return false;
+        }
+
+        return true;
+    }
+
+    public function processIneligible($case, $request)
+    {
+        if (!$case) {
+            return false;
+        }
+
+        $this->_request = $request;
+        $this->setPrevious($case);
+
+        try {
+            $case->setGuarantee('INELIGIBLE');
+            $case->setMagentoStatus(self::COMPLETED_STATUS);
+
+            $case->save();
+            $this->processAdditional($case);
+        } catch (Exception $e) {
+            $this->logger->addLog('Process ineligible error: ' . $e->__toString(), $case);
             return false;
         }
 
