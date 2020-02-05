@@ -458,25 +458,25 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $card;
     }
 
-    public function getSignifydAddress($address_object)
+    public function getSignifydAddress($addressObject)
     {
         $address = array();
-
-        $address['streetAddress'] = $address_object->getStreet1();
         $address['unit'] = null;
-
-        if ($address_object->getStreet2()) {
-            $address['unit'] = $address_object->getStreet2();
-        }
-
-        $address['city'] = $address_object->getCity();
-
-        $address['provinceCode'] = $address_object->getRegionCode();
-        $address['postalCode'] = $address_object->getPostcode();
-        $address['countryCode'] = $address_object->getCountryId();
-
         $address['latitude'] = null;
         $address['longitude'] = null;
+
+        if (is_object($addressObject)) {
+            $address['streetAddress'] = $addressObject->getStreet1();
+
+            if ($addressObject->getStreet2()) {
+                $address['unit'] = $addressObject->getStreet2();
+            }
+
+            $address['city'] = $addressObject->getCity();
+            $address['provinceCode'] = $addressObject->getRegionCode();
+            $address['postalCode'] = $addressObject->getPostcode();
+            $address['countryCode'] = $addressObject->getCountryId();
+        }
 
         return $address;
     }
@@ -520,35 +520,36 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         );
 
         if ($customer && $customer->getId()) {
+            $billing = $order->getBillingAddress();
+            
+            if ($billing instanceof Mage_Sales_Model_Order_Address) {
+                $user['phone'] = $billing->getTelephone();
+            }
+
             $user['emailAddress'] = $customer->getEmail();
-
-            $user['phone'] = $order->getBillingAddress()->getTelephone();
-
             $user['createdDate'] = date('c', strtotime($customer->getCreatedAt()));
             $user['lastUpdateDate'] = date('c', strtotime($customer->getUpdatedAt()));
-
             $user['accountNumber'] = $customer->getId();
-
-            $last_order_id = null;
 
             $orders = Mage::getModel('sales/order')->getCollection()->addFieldToFilter('customer_id', $customer->getId());
             $orders->getSelect()->order('created_at DESC');
 
-            $aggregate_total = 0.;
-            $order_count = 0;
+            $aggregateTotal = 0.;
+            $orderCount = 0;
+            $lastOrderId = null;
 
             foreach ($orders as $order) {
-                if ($last_order_id === null) {
-                    $last_order_id = $order->getIncrementId();
+                if ($lastOrderId === null) {
+                    $lastOrderId = $order->getIncrementId();
                 }
 
-                $aggregate_total += floatval($order->getGrandTotal());
-                $order_count += 1;
+                $aggregateTotal += floatval($order->getGrandTotal());
+                $orderCount += 1;
             }
 
-            $user['lastOrderId'] = $last_order_id;
-            $user['aggregateOrderCount'] = $order_count;
-            $user['aggregateOrderDollars'] = floatval($aggregate_total);
+            $user['lastOrderId'] = $lastOrderId;
+            $user['aggregateOrderCount'] = $orderCount;
+            $user['aggregateOrderDollars'] = floatval($aggregateTotal);
         }
 
         return $user;
