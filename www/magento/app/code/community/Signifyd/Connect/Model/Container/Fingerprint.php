@@ -20,6 +20,8 @@ class Signifyd_Connect_Model_Container_Fingerprint extends Enterprise_PageCache_
      */
     protected function _renderBlock()
     {
-        return $this->_getPlaceHolderBlock()->toHtml();
+        if (method_exists($this, '_getPlaceHolderBlock')) {
+            return $this->_getPlaceHolderBlock()->toHtml();
+        }
     }
 }
