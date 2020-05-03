@@ -71,10 +71,10 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
         $avsResponseCode = null;
 
         if (is_object($this->charge) &&
-            isset($this->charge->source->address_line1_check) &&
-            isset($this->charge->source->address_zip_check) ) {
-            $addressLine1Check = $this->charge->source->address_line1_check;
-            $addressZipCheck = $this->charge->source->address_zip_check;
+            isset($this->charge->source->card->address_line1_check) &&
+            isset($this->charge->source->card->address_zip_check) ) {
+            $addressLine1Check = $this->charge->source->card->address_line1_check;
+            $addressZipCheck = $this->charge->source->card->address_zip_check;
             $key = "{$addressLine1Check}-{$addressZipCheck}";
 
             if (isset($this->avsMap[$key])) {
@@ -94,8 +94,8 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
     {
         $cvvResponseCode = null;
 
-        if (is_object($this->charge) && isset($this->charge->source->cvc_check)) {
-            $cvcCheck = $this->charge->source->cvc_check;
+        if (is_object($this->charge) && isset($this->charge->source->card->cvc_check)) {
+            $cvcCheck = $this->charge->source->card->cvc_check;
 
             if (isset($this->cvvMap[$cvcCheck])) {
                 $cvvResponseCode = $this->filterCvvResponseCode($this->cvvMap[$cvcCheck]);
@@ -112,8 +112,8 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
      */
     public function getCardHolderName()
     {
-        if (is_object($this->charge) && isset($this->charge->source->name)) {
-            $cardHolderName = trim($this->charge->source->name);
+        if (is_object($this->charge) && isset($this->charge->source->card->name)) {
+            $cardHolderName = trim($this->charge->source->card->name);
             if (!empty($cardHolderName)) return $cardHolderName;
         }
 
@@ -125,8 +125,8 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
      */
     public function getLast4()
     {
-        if (is_object($this->charge) && isset($this->charge->source->last4)) {
-            $last4 = $this->filterLast4($this->charge->source->last4);
+        if (is_object($this->charge) && isset($this->charge->source->card->last4)) {
+            $last4 = $this->filterLast4($this->charge->source->card->last4);
         }
 
         $this->logger->addLog('Last4 found on payment helper: ' . (empty($last4) ? 'false' : 'true'), $this->payment);
@@ -143,8 +143,8 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
      */
     public function getExpiryMonth()
     {
-        if (is_object($this->charge) && isset($this->charge->source->exp_month)) {
-            $expiryMonth = $this->filterExpiryMonth($this->charge->source->exp_month);
+        if (is_object($this->charge) && isset($this->charge->source->card->exp_month)) {
+            $expiryMonth = $this->filterExpiryMonth($this->charge->source->card->exp_month);
         }
 
         $this->logger->addLog('Expiry month found on payment helper: ' . (empty($expiryMonth) ? 'false' : $expiryMonth), $this->payment);
@@ -161,8 +161,8 @@ class Signifyd_Connect_Helper_Payment_Cryozonic_Stripe extends Signifyd_Connect_
      */
     public function getExpiryYear()
     {
-        if (is_object($this->charge) && isset($this->charge->source->exp_year)) {
-            $expiryYear = $this->filterExpiryYear($this->charge->source->exp_year);
+        if (is_object($this->charge) && isset($this->charge->source->card->exp_year)) {
+            $expiryYear = $this->filterExpiryYear($this->charge->source->card->exp_year);
         }
 
         $this->logger->addLog('Expiry year found on payment helper: ' . (empty($expiryYear) ? 'false' : $expiryYear), $this->payment);
