@@ -691,7 +691,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
             $caseUpdateData = $this->generateCaseUpdateData($order, $lastPayment, $case);
             $caseJson = json_encode($caseUpdateData);
-            $newMd5 = md5($caseJson);
+            $newHash = sha1($caseJson);
 
             if ($case->getId()) {
                 if ($case->getMagentoStatus() == Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS) {
@@ -749,22 +749,22 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $case->setOrderIncrement($orderIncrementId);
                 $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
                 $case->setMagentoStatus(Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS);
-                $case->setEntries('md5', $newMd5);
+                $case->setEntries('hash', $newHash);
                 $case->setEntries('card_data', $cardData);
                 $case->setEntries('purchase_data', $purchaseData);
                 $case->save();
 
                 $requestUri = $this->getCaseUrl();
-            } else {
+             } else {
                 $caseCode = $case->getCode();
                 if (empty($caseCode)) {
                     return 'no case for update';
                 }
 
-                $currentMd5 = $case->getEntries('md5');
+                $currentHash = $case->getEntries('hash');
                 // If the case exists and has not changed, return 'exists'
-                // MD5 checks must occur on case update data only
-                if ($currentMd5 == $newMd5) {
+                // Hash checks must occur on case update data only
+                if ($currentHash == $newHash) {
                     return 'exists';
                 }
 
@@ -798,7 +798,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     $case->setCode($caseId);
 
                     if ($isUpdate) {
-                        $case->setEntries('md5', $newMd5);
+                        $case->setEntries('hash', $newHash);
                         $previousScore = intval($case->getScore());
                         Mage::getModel('signifyd_connect/case')->processCreation($case, $responseData);
                         $newScore = intval($case->getScore());
@@ -1261,6 +1261,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function prepareFulfillmentToDatabase($fulfillmentData)
     {
+        $serializer = new Zend_Serializer_Adapter_PhpSerialize();
+
         /** @var Signifyd_Connect_Model_Fulfillment $fulfillment */
         $fulfillment = Mage::getModel('signifyd_connect/fulfillment');
         $fulfillment->setData('id', $fulfillmentData['fulfillments'][0]['id']);
@@ -1268,11 +1270,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $fulfillment->setData('created_at', $fulfillmentData['fulfillments'][0]['createdAt']);
         $fulfillment->setData('delivery_email', $fulfillmentData['fulfillments'][0]['deliveryEmail']);
         $fulfillment->setData('fulfillment_status', $fulfillmentData['fulfillments'][0]['fulfillmentStatus']);
-        $fulfillment->setData('tracking_numbers', serialize($fulfillmentData['fulfillments'][0]['trackingNumbers']));
-        $fulfillment->setData('tracking_urls', serialize($fulfillmentData['fulfillments'][0]['trackingUrls']));
-        $fulfillment->setData('products', serialize($fulfillmentData['fulfillments'][0]['products']));
+        $fulfillment->setData('tracking_numbers', $serializer->serialize($fulfillmentData['fulfillments'][0]['trackingNumbers']));
+        $fulfillment->setData('tracking_urls', $serializer->serialize($fulfillmentData['fulfillments'][0]['trackingUrls']));
+        $fulfillment->setData('products', $serializer->serialize($fulfillmentData['fulfillments'][0]['products']));
         $fulfillment->setData('shipment_status', $fulfillmentData['fulfillments'][0]['shipmentStatus']);
-        $fulfillment->setData('delivery_address', serialize($fulfillmentData['fulfillments'][0]['deliveryAddress']));
+        $fulfillment->setData('delivery_address', $serializer->serialize($fulfillmentData['fulfillments'][0]['deliveryAddress']));
         $fulfillment->setData('recipient_name', $fulfillmentData['fulfillments'][0]['recipientName']);
         $fulfillment->setData('confirmation_name', $fulfillmentData['fulfillments'][0]['confirmationName']);
         $fulfillment->setData('confirmation_phone', $fulfillmentData['fulfillments'][0]['confirmationPhone']);
