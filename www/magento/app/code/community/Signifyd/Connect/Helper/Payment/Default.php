@@ -159,7 +159,12 @@ class Signifyd_Connect_Helper_Payment_Default
             return $this->signifydData['cc_owner'];
         } else {
             $billing = $this->order->getBillingAddress();
-            return $billing->getFirstname() . ' ' . $billing->getLastname();
+
+            if ($billing instanceof Mage_Sales_Model_Order_Address) {
+                return $billing->getFirstname() . ' ' . $billing->getLastname();
+            } else {
+                return null;
+            }
         }
     }
 

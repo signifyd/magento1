@@ -26,6 +26,11 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
     /* The request data */
     protected $_request;
 
+    /**
+     * @var Zend_Serializer_Adapter_PhpSerialize();
+     */
+    protected $serializer;
+
     /* The previous guarantee for the case */
     public $_previousGuarantee = false;
 
@@ -49,6 +54,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $this->_init('signifyd_connect/case');
         $this->_isPkAutoIncrement = false;
         $this->logger = Mage::helper('signifyd_connect/log');
+        $this->serializer = $serializer = new Zend_Serializer_Adapter_PhpSerialize();
     }
 
     /**
@@ -347,7 +353,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $entries = $this->getData('entries');
 
         if (!empty($entries)) {
-            @$entries = unserialize($entries);
+            $entries = $this->serializer->unserialize($entries);
         }
 
         if (!is_array($entries)) {
@@ -380,7 +386,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
             }
         }
 
-        @$entries = serialize($entries);
+        $entries = $this->serializer->serialize($entries);
         $this->setData('entries', $entries);
 
         return $this;

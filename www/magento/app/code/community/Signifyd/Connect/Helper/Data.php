@@ -458,25 +458,25 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         return $card;
     }
 
-    public function getSignifydAddress($address_object)
+    public function getSignifydAddress($addressObject)
     {
         $address = array();
-
-        $address['streetAddress'] = $address_object->getStreet1();
         $address['unit'] = null;
-
-        if ($address_object->getStreet2()) {
-            $address['unit'] = $address_object->getStreet2();
-        }
-
-        $address['city'] = $address_object->getCity();
-
-        $address['provinceCode'] = $address_object->getRegionCode();
-        $address['postalCode'] = $address_object->getPostcode();
-        $address['countryCode'] = $address_object->getCountryId();
-
         $address['latitude'] = null;
         $address['longitude'] = null;
+
+        if (is_object($addressObject)) {
+            $address['streetAddress'] = $addressObject->getStreet1();
+
+            if ($addressObject->getStreet2()) {
+                $address['unit'] = $addressObject->getStreet2();
+            }
+
+            $address['city'] = $addressObject->getCity();
+            $address['provinceCode'] = $addressObject->getRegionCode();
+            $address['postalCode'] = $addressObject->getPostcode();
+            $address['countryCode'] = $addressObject->getCountryId();
+        }
 
         return $address;
     }
@@ -520,35 +520,36 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         );
 
         if ($customer && $customer->getId()) {
+            $billing = $order->getBillingAddress();
+            
+            if ($billing instanceof Mage_Sales_Model_Order_Address) {
+                $user['phone'] = $billing->getTelephone();
+            }
+
             $user['emailAddress'] = $customer->getEmail();
-
-            $user['phone'] = $order->getBillingAddress()->getTelephone();
-
             $user['createdDate'] = date('c', strtotime($customer->getCreatedAt()));
             $user['lastUpdateDate'] = date('c', strtotime($customer->getUpdatedAt()));
-
             $user['accountNumber'] = $customer->getId();
-
-            $last_order_id = null;
 
             $orders = Mage::getModel('sales/order')->getCollection()->addFieldToFilter('customer_id', $customer->getId());
             $orders->getSelect()->order('created_at DESC');
 
-            $aggregate_total = 0.;
-            $order_count = 0;
+            $aggregateTotal = 0.;
+            $orderCount = 0;
+            $lastOrderId = null;
 
             foreach ($orders as $order) {
-                if ($last_order_id === null) {
-                    $last_order_id = $order->getIncrementId();
+                if ($lastOrderId === null) {
+                    $lastOrderId = $order->getIncrementId();
                 }
 
-                $aggregate_total += floatval($order->getGrandTotal());
-                $order_count += 1;
+                $aggregateTotal += floatval($order->getGrandTotal());
+                $orderCount += 1;
             }
 
-            $user['lastOrderId'] = $last_order_id;
-            $user['aggregateOrderCount'] = $order_count;
-            $user['aggregateOrderDollars'] = floatval($aggregate_total);
+            $user['lastOrderId'] = $lastOrderId;
+            $user['aggregateOrderCount'] = $orderCount;
+            $user['aggregateOrderDollars'] = floatval($aggregateTotal);
         }
 
         return $user;
@@ -690,7 +691,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
             $caseUpdateData = $this->generateCaseUpdateData($order, $lastPayment, $case);
             $caseJson = json_encode($caseUpdateData);
-            $newMd5 = md5($caseJson);
+            $newHash = sha1($caseJson);
 
             if ($case->getId()) {
                 if ($case->getMagentoStatus() == Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS) {
@@ -748,22 +749,22 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                 $case->setOrderIncrement($orderIncrementId);
                 $case->setCreated(strftime('%Y-%m-%d %H:%M:%S', time()));
                 $case->setMagentoStatus(Signifyd_Connect_Model_Case::WAITING_SUBMISSION_STATUS);
-                $case->setEntries('md5', $newMd5);
+                $case->setEntries('hash', $newHash);
                 $case->setEntries('card_data', $cardData);
                 $case->setEntries('purchase_data', $purchaseData);
                 $case->save();
 
                 $requestUri = $this->getCaseUrl();
-            } else {
+             } else {
                 $caseCode = $case->getCode();
                 if (empty($caseCode)) {
                     return 'no case for update';
                 }
 
-                $currentMd5 = $case->getEntries('md5');
+                $currentHash = $case->getEntries('hash');
                 // If the case exists and has not changed, return 'exists'
-                // MD5 checks must occur on case update data only
-                if ($currentMd5 == $newMd5) {
+                // Hash checks must occur on case update data only
+                if ($currentHash == $newHash) {
                     return 'exists';
                 }
 
@@ -797,7 +798,7 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
                     $case->setCode($caseId);
 
                     if ($isUpdate) {
-                        $case->setEntries('md5', $newMd5);
+                        $case->setEntries('hash', $newHash);
                         $previousScore = intval($case->getScore());
                         Mage::getModel('signifyd_connect/case')->processCreation($case, $responseData);
                         $newScore = intval($case->getScore());
@@ -1260,6 +1261,8 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function prepareFulfillmentToDatabase($fulfillmentData)
     {
+        $serializer = new Zend_Serializer_Adapter_PhpSerialize();
+
         /** @var Signifyd_Connect_Model_Fulfillment $fulfillment */
         $fulfillment = Mage::getModel('signifyd_connect/fulfillment');
         $fulfillment->setData('id', $fulfillmentData['fulfillments'][0]['id']);
@@ -1267,11 +1270,11 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
         $fulfillment->setData('created_at', $fulfillmentData['fulfillments'][0]['createdAt']);
         $fulfillment->setData('delivery_email', $fulfillmentData['fulfillments'][0]['deliveryEmail']);
         $fulfillment->setData('fulfillment_status', $fulfillmentData['fulfillments'][0]['fulfillmentStatus']);
-        $fulfillment->setData('tracking_numbers', serialize($fulfillmentData['fulfillments'][0]['trackingNumbers']));
-        $fulfillment->setData('tracking_urls', serialize($fulfillmentData['fulfillments'][0]['trackingUrls']));
-        $fulfillment->setData('products', serialize($fulfillmentData['fulfillments'][0]['products']));
+        $fulfillment->setData('tracking_numbers', $serializer->serialize($fulfillmentData['fulfillments'][0]['trackingNumbers']));
+        $fulfillment->setData('tracking_urls', $serializer->serialize($fulfillmentData['fulfillments'][0]['trackingUrls']));
+        $fulfillment->setData('products', $serializer->serialize($fulfillmentData['fulfillments'][0]['products']));
         $fulfillment->setData('shipment_status', $fulfillmentData['fulfillments'][0]['shipmentStatus']);
-        $fulfillment->setData('delivery_address', serialize($fulfillmentData['fulfillments'][0]['deliveryAddress']));
+        $fulfillment->setData('delivery_address', $serializer->serialize($fulfillmentData['fulfillments'][0]['deliveryAddress']));
         $fulfillment->setData('recipient_name', $fulfillmentData['fulfillments'][0]['recipientName']);
         $fulfillment->setData('confirmation_name', $fulfillmentData['fulfillments'][0]['confirmationName']);
         $fulfillment->setData('confirmation_phone', $fulfillmentData['fulfillments'][0]['confirmationPhone']);

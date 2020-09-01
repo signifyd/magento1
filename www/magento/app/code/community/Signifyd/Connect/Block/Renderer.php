@@ -7,8 +7,6 @@ class Signifyd_Connect_Block_Renderer extends Mage_Adminhtml_Block_Widget_Grid_C
         $value = $row->getData($this->getColumn()->getIndex());
         $column = $this->getColumn()->getId();
 
-
-
         switch ($column) {
             case 'score':
                 if ($column == 'score' && !is_numeric($value)) {
@@ -21,7 +19,9 @@ class Signifyd_Connect_Block_Renderer extends Mage_Adminhtml_Block_Widget_Grid_C
             case 'guarantee':
                 $entries = $row->getEntries();
                 if (!empty($entries)) {
-                    @$entries = unserialize($entries);
+                    $serializer = new Zend_Serializer_Adapter_PhpSerialize();
+                    $entries = $serializer->unserialize($entries);
+
                     if (is_array($entries) && isset($entries['testInvestigation']) && $entries['testInvestigation'] == true) {
                         $value = "TEST: {$value}";
                     }

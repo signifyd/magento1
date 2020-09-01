@@ -261,12 +261,6 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         $status = $this->helper->getOrderPaymentStatus($order);
 
         try {
-            // Authorize the order
-            $result = $this->authorizeOrder($order);
-            if ($result === false) {
-                $this->holdOrder($order, 'failed to authorise order');
-            }
-
             // Generate the invoice
             if ($status['capture'] !== true) {
                 $result = $this->generateInvoice($order);
@@ -277,42 +271,6 @@ class Signifyd_Connect_Model_Order extends Mage_Core_Model_Abstract
         } catch (Exception $e) {
             $this->holdOrder($order, 'failed to authorize/invoice order');
             $this->logger->addLog("Order {$order->getIncrementId()} was not removed from hold: {$e->getMessage()}", $order);
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * @param Mage_Sales_Model_Order $order
-     * @return bool
-     */
-    public function authorizeOrder(Mage_Sales_Model_Order $order)
-    {
-        // Get the payment status for this order
-        $status = $this->helper->getOrderPaymentStatus($order);
-
-        if($status['authorize']){
-            $this->logger->addLog("Order {$order->getIncrementId()} is already authorize", $order);
-            return true;
-        }
-
-        $payment = $order->getPayment();
-        $method = $payment->getMethodInstance();
-        if(!$method->canAuthorize()){
-            $this->logger->addLog("Order {$order->getIncrementId()} cannot be authorize", $order);
-            return true;
-        }
-
-        $amount = $order->getData('grand_total');
-
-        try{
-            // check if method authorize returns anything usefully
-            $method->authorize($payment, $amount);
-            $this->logger->addLog("Authorize order {$order->getIncrementId()} was successful", $order);
-        } catch (Exception $e) {
-            $this->logger->addLog("Authorize order {$order->getIncrementId()} was not authorized:", $order);
-            $this->logger->addLog($e->__toString(), $order);
             return false;
         }
 
