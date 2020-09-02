@@ -1377,10 +1377,10 @@ class Signifyd_Connect_Helper_Data extends Mage_Core_Helper_Abstract
 
         /** @var Mage_Sales_Model_Order_Shipment_Track $tracking */
         foreach ($trackingCollection->getItems() as $tracking) {
-            $number = trim($tracking->getNumber());
+            $number = trim((string) $tracking->getNumber());
 
             if (empty($number) == false) {
-                $trackingNumbers[] = $tracking->getNumber();
+                $trackingNumbers[] = $number;
             }
         }
 
