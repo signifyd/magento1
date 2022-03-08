@@ -94,15 +94,13 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $this->topic = "cases/review"; // Topic header is most likely not available
         $orderIncrementId = false;
 
-        if (isset($request['orderId'])) {
+        if (is_array($request) && isset($request['orderId'])) {
             $orderIncrementId = $request['orderId'];
-        }
-
-        if (isset($request['customerCaseId'])) {
+        } elseif (is_array($request) && isset($request['customerCaseId'])) {
             $orderIncrementId = $request['customerCaseId'];
         }
 
-        if (is_array($request) && $orderIncrementId != false) {
+        if ($orderIncrementId !== false) {
             /** @var Signifyd_Connect_Model_Case $case */
             $case = $this->load($orderIncrementId);
             $this->logger->addLog('Attempting auth via fallback request', $case);
@@ -292,15 +290,13 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         try {
             $guarantee = false;
 
-            if (isset($this->_request['guaranteeDisposition'])) {
+            if (is_array($this->_request) && isset($this->_request['guaranteeDisposition'])) {
                 $guarantee = $this->_request['guaranteeDisposition'];
-            }
-
-            if (isset($this->_request['checkpointAction'])) {
+            } elseif (is_array($this->_request) && isset($this->_request['checkpointAction'])) {
                 $guarantee = $this->_request['checkpointAction'];
             }
 
-            if ($guarantee != false) {
+            if ($guarantee !== false) {
                 $case->setGuarantee($guarantee);
 
                 if ($this->_request['status'] == 'DISMISSED' &&
