@@ -98,8 +98,21 @@
                         <class>signifyd_connect/observer</class>
                         <method>openCase</method>
                     </signifyd_connect>
+                    <signifyd_connect_debug_logs>
+                        <class>signifyd_connect/observer</class>
+                        <method>debugLog</method>
+                    </signifyd_connect_debug_logs>
                 </observers>
             </sales_order_save_commit_after>
+
+            <cron_before>
+                <observers>
+                    <signifyd_connect_cron_debug>
+                        <class>signifyd_connect/observer</class>
+                        <method>cronJob</method>
+                    </signifyd_connect_cron_debug>
+                </observers>
+            </cron_before>
 
             <!-- Order update events to check and trigger Signifyd update if it is the case -->
             <sales_order_address_save_commit_after>

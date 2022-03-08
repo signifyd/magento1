@@ -92,10 +92,19 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
         $request = json_decode($request, true);
         $this->_request = $request;
         $this->topic = "cases/review"; // Topic header is most likely not available
+        $orderIncrementId = false;
 
-        if (is_array($request) && isset($request['orderId'])) {
+        if (isset($request['orderId'])) {
+            $orderIncrementId = $request['orderId'];
+        }
+
+        if (isset($request['customerCaseId'])) {
+            $orderIncrementId = $request['customerCaseId'];
+        }
+
+        if (is_array($request) && $orderIncrementId != false) {
             /** @var Signifyd_Connect_Model_Case $case */
-            $case = $this->load($request['orderId']);
+            $case = $this->load($orderIncrementId);
             $this->logger->addLog('Attempting auth via fallback request', $case);
         } else {
             return false;
@@ -110,8 +119,8 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
             }
         } else {
             /** @var Mage_Sales_Model_Order $order */
-            $order = Mage::getModel('sales/order')->loadByIncrementId($request['orderId']);
-            $this->logger->addLog('Fallback failed with no matching case found for orderId ' . $request['orderId'], $order);
+            $order = Mage::getModel('sales/order')->loadByIncrementId($orderIncrementId);
+            $this->logger->addLog('Fallback failed with no matching case found for orderId ' . $orderIncrementId, $order);
         }
 
         return true;
@@ -157,6 +166,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
             $orderModel = Mage::getModel('signifyd_connect/order');
 
             switch ($case->getGuarantee()) {
+                case 'ACCEPT':
                 case 'APPROVED':
                     switch ($positiveAction) {
                         // Update order status
@@ -192,6 +202,7 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
 
                     break;
 
+                case "REJECT":
                 case 'DECLINED':
                     switch ($negativeAction) {
                         // Leave on hold
@@ -279,18 +290,28 @@ class Signifyd_Connect_Model_Case extends Mage_Core_Model_Abstract
     private function updateGuarantee($case)
     {
         try {
+            $guarantee = false;
+
             if (isset($this->_request['guaranteeDisposition'])) {
-                $case->setGuarantee($this->_request['guaranteeDisposition']);
+                $guarantee = $this->_request['guaranteeDisposition'];
+            }
+
+            if (isset($this->_request['checkpointAction'])) {
+                $guarantee = $this->_request['checkpointAction'];
+            }
+
+            if ($guarantee != false) {
+                $case->setGuarantee($guarantee);
 
                 if ($this->_request['status'] == 'DISMISSED' &&
-                    $this->_request['guaranteeDisposition'] == 'N/A' &&
+                    $guarantee == 'N/A' &&
                     $case->getMagentoStatus() == self::IN_REVIEW_STATUS) {
                     $case->setMagentoStatus(self::COMPLETED_STATUS);
-                } elseif ($this->_request['guaranteeDisposition'] != 'PENDING') {
+                } elseif ($guarantee != 'PENDING') {
                     $case->setMagentoStatus(self::PROCESSING_RESPONSE_STATUS);
                 }
 
-                $this->logger->addLog('Set guarantee to ' . $this->_request['guaranteeDisposition'], $case);
+                $this->logger->addLog('Set guarantee to ' . $guarantee, $case);
             } else if ($this->_request['status'] == 'DISMISSED' &&
                 $case->getMagentoStatus() == self::IN_REVIEW_STATUS) {
                 $case->setMagentoStatus(self::COMPLETED_STATUS);

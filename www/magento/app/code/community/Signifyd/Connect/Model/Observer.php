@@ -147,6 +147,116 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
         return $this;
     }
 
+    public function debugLog($observer)
+    {
+        try {
+            $orders = array();
+
+            if ($observer->getEvent()->hasOrder()) {
+                // Onepage checkout and API
+                $orders[] = $observer->getEvent()->getOrder();
+            } elseif ($observer->getEvent()->hasOrders()) {
+                // Multishipping
+                $orders = $observer->getEvent()->getOrders();
+            } else {
+                // Look for registry key, for methods that open case on other events than sales_order_place_after
+                $incrementId = Mage::registry('signifyd_last_increment_id');
+                Mage::unregister('signifyd_last_increment_id');
+
+                if (empty($incrementId)) {
+                    $incrementId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
+                }
+
+                if (!empty($incrementId)) {
+                    $orders[] = Mage::getModel('sales/order')->loadByIncrementId($incrementId);
+                }
+            }
+
+            /** @var Mage_Sales_Model_Order $order */
+            foreach ($orders as $order) {
+                $log = Mage::helper('signifyd_connect')->getConfigData('log/all', $order);
+
+                if ($log == 2) {
+                    $state = $order->getState();
+                    $currentState = $order->getOrigData('state');
+                    $incrementId = $order->getIncrementId();
+                    $currentUrl = Mage::helper('core/url')->getCurrentUrl();
+                    $cronJob = Mage::registry('signifyd_cron_job_run');
+
+                    if (isset($cronJob)) {
+                        $this->logger->addLog("cron job current process: {$cronJob}");
+                    }
+
+                    $this->logger->addLog("Order {$incrementId} state change from {$currentState} to {$state}", $order);
+                    $this->logger->addLog("Request URL: {$currentUrl}", $order);
+
+                    $debugBacktrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+                    $debugBacktraceLog = array();
+                    $nonMagentoModules = array();
+
+                    foreach ($debugBacktrace as $i => $step) {
+                        $debugBacktraceLog[$i] = array();
+                        $function = '';
+
+                        if (isset($step['class'])) {
+                            $function .= $step['class'];
+
+                            if ($step['class'] != 'Signifyd_Connect_Model_Order_Order') {
+                                $parts = explode('_', $step['class'], 3);
+                                $vendor = isset($parts[0]) ? $parts[0] : null;
+                                $module = isset($parts[1]) ? $parts[1] : null;
+
+                                if ($vendor != "Mage") {
+                                    $nonMagentoModules["{$vendor}_{$module}"] = '';
+                                }
+                            }
+                        }
+
+                        if (isset($step['type'])) {
+                            $function .= $step['type'];
+                        }
+
+                        if (isset($step['function'])) {
+                            $function .= $step['function'];
+                        }
+
+                        $debugBacktraceLog[$i][] = "\t[{$i}] {$function}";
+
+                        $file = isset($step['file']) ? str_replace(BP, '', $step['file']) : false;
+
+                        if ($file !== false) {
+                            $debugBacktraceLog[$i][] = "line {$step['line']} on {$file}";
+                        }
+
+                        $debugBacktraceLog[$i] = implode(', ', $debugBacktraceLog[$i]);
+                    }
+
+                    if (empty($nonMagentoModules) == false) {
+                        $nonMagentoModulesList = implode(', ', array_keys($nonMagentoModules));
+                        $this->logger->addLog("WARNING: non Magento modules found on backtrace: {$nonMagentoModulesList}", $this);
+                    }
+
+                    $debugBacktraceLog = implode("\n", $debugBacktraceLog);
+                    $this->logger->addLog("Backtrace: \n{$debugBacktraceLog}\n\n", $this);
+                }
+            }
+        } catch (\Exception $e) {
+            $this->logger->addLog("State debug failed: " . $e->getMessage(), $this);
+        }
+    }
+
+    public function cronJob($observer)
+    {
+        $cronJob = $observer->getEvent()->getData('schedule')->getData('job_code');
+        $cronJobRegistry = Mage::registry('signifyd_cron_job_run');
+
+        if (isset($cronJobRegistry)) {
+            Mage::unregister('signifyd_cron_job_run');
+        }
+
+        Mage::register('signifyd_cron_job_run', $cronJob);
+    }
+
     public function getAdminRoute()
     {
         $route = false;
