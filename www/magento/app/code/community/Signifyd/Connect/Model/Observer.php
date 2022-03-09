@@ -184,11 +184,15 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
                     $cronJob = Mage::registry('signifyd_cron_job_run');
 
                     if (isset($cronJob)) {
-                        $this->logger->addLog("cron job current process: {$cronJob}");
+                        Mage::helper('signifyd_connect/debug')->addLog("cron job current process: {$cronJob}");
                     }
 
-                    $this->logger->addLog("Order {$incrementId} state change from {$currentState} to {$state}", $order);
-                    $this->logger->addLog("Request URL: {$currentUrl}", $order);
+                    Mage::helper('signifyd_connect/debug')->addLog(
+                        "Order {$incrementId} state change from {$currentState} to {$state}", $order
+                    );
+                    Mage::helper('signifyd_connect/debug')->addLog(
+                        "Request URL: {$currentUrl}", $order
+                    );
 
                     $debugBacktrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
                     $debugBacktraceLog = array();
@@ -233,15 +237,17 @@ class Signifyd_Connect_Model_Observer extends Varien_Object
 
                     if (empty($nonMagentoModules) == false) {
                         $nonMagentoModulesList = implode(', ', array_keys($nonMagentoModules));
-                        $this->logger->addLog("WARNING: non Magento modules found on backtrace: {$nonMagentoModulesList}", $this);
+                        Mage::helper('signifyd_connect/debug')->addLog(
+                            "WARNING: non Magento modules found on backtrace: {$nonMagentoModulesList}", $this
+                        );
                     }
 
                     $debugBacktraceLog = implode("\n", $debugBacktraceLog);
-                    $this->logger->addLog("Backtrace: \n{$debugBacktraceLog}\n\n", $this);
+                    Mage::helper('signifyd_connect/debug')->addLog("Backtrace: \n{$debugBacktraceLog}\n\n", $this);
                 }
             }
         } catch (\Exception $e) {
-            $this->logger->addLog("State debug failed: " . $e->getMessage(), $this);
+            Mage::helper('signifyd_connect/debug')->addLog("State debug failed: " . $e->getMessage(), $this);
         }
     }
 
